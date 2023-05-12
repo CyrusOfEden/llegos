@@ -4,12 +4,12 @@ from typing import Dict, List
 from langchain.agents import Tool
 from pydantic import Field
 
-from dao_agent.agent import AbstractAgent, AgentActor, AgentRequest, AgentResponse
+from llambdao.agent import AbstractAgent, AgentActor, AgentRequest, AgentResponse
 
 
 class DAO(AbstractAgent):
-    agents: List[AbstractAgent] = Field(default_factory=list)
-    actors: Dict[int, AgentActor] = Field(default_factory=dict)
+    agents: List[AbstractAgent] = Field(default_factory=list, allow_mutation=False)
+    actors: Dict[int, AgentActor] = Field(default_factory=dict, allow_mutation=False)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

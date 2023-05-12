@@ -1,11 +1,11 @@
 [tool.poetry]
-name = "dao-agent"
+name = "llambdao"
 version = "0.1.0"
-description = "DAO Agent: A framework for building decentralized autonomous organizations of AI agents."
+description = "A Python framework for implementing LLAMBDAO: Large Language Agents Manifesting Behaviours in Distributed Actor Organizations"
 authors = ["Shaman AI <hello@shaman.ai>"]
 license = "BUSL-1.1"
 readme = "README.md"
-packages = [{ include = "dao_agent" }]
+packages = [{ include = "llambdao" }]
 
 [tool.ruff]
 line-length = 100

@@ -5,12 +5,9 @@ from typing import Any, Dict, List, Union
 import ray
 from langchain.agents import Tool
 from langchain.schema import AIMessage, HumanMessage, SystemMessage
-from pydantic import BaseModel, Field
+from pydantic import Field
 
-
-class BaseObject(BaseModel):
-    class Config:
-        allow_arbitrary_types = True
+from llambdao.base import BaseObject
 
 
 class AgentRequest(BaseObject):
@@ -21,16 +18,19 @@ class AgentResponse(BaseObject):
     response: AIMessage
 
 
-class AbstractAgent(ABC, BaseObject):
+class AbstractAgent(BaseObject, ABC):
     # This is how we define the agent's behaviour
-    directive: str = Field(...)
     tools: List[Tool] = Field(default_factory=list)
-    actor_options: Dict[str, Any] = Field(default_factory=dict)
+    actor_options: Dict[str, Any] = Field(default_factory=dict, allow_mutation=False)
+
+    @property
+    def directive(self) -> str:
+        raise NotImplementedError
 
     @cached_property
     def actor(self):
         """starts an actor that runs in its own process - needed to call future"""
-        AgentActor.options(**self.actor_options).remote(self)
+        return AgentActor.options(**self.actor_options).remote(self)
 
     def as_tool(self) -> Tool:
         """returns a tool that can be used by another agent"""
