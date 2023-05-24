@@ -74,7 +74,7 @@ class Entry(AbstractObject):
 class AgentDispatcher(AbstractObject, meta=ABCMeta):
     lookup: Dict[str, Entry] = Field(default_factory=dict)
 
-    def register(self, agent: AbstractAgent, name: str, **metadata):
+    def register(self, name: str, agent: AbstractAgent, **metadata):
         self.lookup[name] = Entry(agent, metadata)
 
     def deregister(self, name: str):

@@ -28,10 +28,12 @@ class AbstractAsyncAgent(AbstractObject, EventEmitter, meta=ABCMeta):
         raise NotImplementedError()
 
 
-class AsyncAgentDispatcher(AbstractObject, meta=ABCMeta):
+class AsyncAgentDispatcher(AbstractObject, EventEmitter, meta=ABCMeta):
+    _loop: asyncio.AbstractEventLoop = Field(default_factory=asyncio.new_event_loop)
     lookup: Dict[str, Entry] = Field(default_factory=dict)
 
-    async def register(self, agent: AbstractAsyncAgent, name: str, **metadata):
+    async def register(self, name: str, agent: AbstractAsyncAgent, **metadata):
+        agent._loop = self._loop
         self.lookup[name] = Entry(agent, metadata)
 
     async def deregister(self, name: str):

@@ -26,7 +26,7 @@ class Actor:
 class ActorDispatcher(AgentDispatcher):
     namespace: Optional[str] = Field(default=None)
 
-    def register(self, agent: AbstractAgent, name: str, **metadata):
+    def register(self, name: str, agent: AbstractAgent, **metadata):
         actor = Actor.options(
             namespace=self.namespace,
             name=name,
