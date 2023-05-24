@@ -1,0 +1,39 @@
+from typing import Optional
+
+import ray
+from pydantic import Field
+
+from llambdao import AbstractAgent, AgentDispatcher, Message
+
+
+@ray.remote(max_task_retries=3)
+class Actor:
+    agent: AbstractAgent
+
+    def __init__(self, agent: AbstractAgent):
+        self.agent = agent
+
+    def inform(self, message: Message) -> None:
+        self.agent.inform(message)
+
+    def request(self, message: Message) -> Message:
+        return self.agent.request(message)
+
+
+class ActorDispatcher(AgentDispatcher):
+    namespace: Optional[str] = Field(default=None)
+
+    def register(self, agent: AbstractAgent, name: str, **metadata):
+        actor = Actor.options(
+            namespace=self.namespace,
+            name=name,
+            get_if_exists=True
+        ).remote(agent)
+        super().register(name, actor, **metadata)
+
+    def dispatch(self, message: Message) -> Message:
+        return ray.get(self.future(message))
+
+    def future(self, message: Message) -> ray.ObjectRef[Message]:
+        method = getattr(self.route(message), message.action)
+        return method(message)

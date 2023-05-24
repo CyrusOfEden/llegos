@@ -11,14 +11,9 @@ from langchain.retrievers import TimeWeightedVectorStoreRetriever
 from langchain.schema import HumanMessage
 from langchain.utilities import GoogleSerperAPIWrapper, WikipediaAPIWrapper
 
-from llambdao.adapters.langchain import (
-    AutoGPT,
-    AutoGPTMemory,
-    ChatOpenAI,
-    PlanAndExecute,
-    load_agent_executor,
-    load_chat_planner,
-)
+from llambdao.langchain import (AutoGPT, AutoGPTMemory, ChatOpenAI,
+                                          PlanAndExecute, load_agent_executor,
+                                          load_chat_planner)
 
 llm = ChatOpenAI(temperature=0)
 retriever = TimeWeightedVectorStoreRetriever(
@@ -99,6 +94,10 @@ def test_toolkit():
         ),
         Tool(
             name="DateTime",
+            func=lambda _: datetime.utcnow().isoformat(),  # noqa: F821
+            description="Useful for when you want to know the current date and time.",
+        ),
+    ]
             func=lambda _: datetime.utcnow().isoformat(),  # noqa: F821
             description="Useful for when you want to know the current date and time.",
         ),
