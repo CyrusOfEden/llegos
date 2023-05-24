@@ -13,8 +13,8 @@ class Actor:
     def __init__(self, agent: AbstractAgent):
         self.agent = agent
 
-    def act(self, message: Message) -> Optional[Message]:
-        return self.agent.act(message)
+    def receive(self, message: Message) -> Optional[Message]:
+        return self.agent.receive(message)
 
     def inform(self, message: Message) -> None:
         self.agent.inform(message)
@@ -38,4 +38,4 @@ class ActorDispatcher(AgentDispatcher):
         return ray.get(self.future(message))
 
     def future(self, message: Message) -> ray.ObjectRef[Message]:
-        return self.route(message).act(message)
+        return self.route(message).receive(message)

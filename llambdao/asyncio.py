@@ -18,7 +18,7 @@ class AbstractAsyncAgent(AbstractObject, EventEmitter, meta=ABCMeta):
     async def ais_idle(self, agent: str):
         return self.activity[agent] is None
 
-    async def aact(self, message: Message) -> Optional[Message]:
+    async def areceive(self, message: Message) -> Optional[Message]:
         return getattr(self, message.action)(message)
 
     async def ainform(self, message: Message) -> None:
@@ -36,5 +36,5 @@ class AsyncAgentDispatcher(AbstractObject, meta=ABCMeta):
         del self.agents[name]
 
     async def dispatch(self, message: Message):
-        response = await self.route(message).aact(message)
+        response = await self.route(message).areceive(message)
         return response
