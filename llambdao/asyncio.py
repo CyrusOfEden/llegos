@@ -1,11 +1,11 @@
 import asyncio
 from abc import ABCMeta
-from typing import Optional
+from typing import Dict, Optional
 
 from eventemitter import EventEmitter
 from pydantic import Field
 
-from llambdao import AbstractObject, Message
+from llambdao import AbstractObject, Entry, Message
 
 
 class AbstractAsyncAgent(AbstractObject, EventEmitter, meta=ABCMeta):
@@ -29,12 +29,18 @@ class AbstractAsyncAgent(AbstractObject, EventEmitter, meta=ABCMeta):
 
 
 class AsyncAgentDispatcher(AbstractObject, meta=ABCMeta):
-    async def register(self, name: str, agent: AbstractAsyncAgent):
-        self.agents[name] = agent
+    lookup: Dict[str, Entry] = Field(default_factory=dict)
+
+    async def register(self, agent: AbstractAsyncAgent, name: str, **metadata):
+        self.lookup[name] = Entry(agent, metadata)
 
     async def deregister(self, name: str):
-        del self.agents[name]
+        del self.lookup[name]
 
-    async def dispatch(self, message: Message):
-        response = await self.route(message).areceive(message)
+    async def route(self, message: Message) -> AbstractAsyncAgent:
+        return self.lookup[message.recipient].agent
+
+    async def dispatch(self, message: Message) -> Optional[Message]:
+        agent = await self.route(message)
+        response = await agent.areceive(message)
         return response

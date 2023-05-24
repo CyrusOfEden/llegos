@@ -83,5 +83,5 @@ class AgentDispatcher(AbstractObject, meta=ABCMeta):
     def route(self, message: Message) -> AbstractAgent:
         return self.lookup[message.recipient].agent
 
-    def dispatch(self, message: Message):
+    def dispatch(self, message: Message) -> Optional[Message]:
         return self.route(message).receive(message)
