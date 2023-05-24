@@ -1,5 +1,6 @@
 import asyncio
 from abc import ABCMeta
+from typing import Optional
 
 from eventemitter import EventEmitter
 from pydantic import Field
@@ -14,8 +15,11 @@ class AbstractAsyncAgent(AbstractObject, EventEmitter, meta=ABCMeta):
         super(AbstractObject, self).__init__(*args, **kwargs)
         super(EventEmitter, self).__init__(loop=self._loop)
 
-    def is_idle(self, agent: str):
+    async def ais_idle(self, agent: str):
         return self.activity[agent] is None
+
+    async def aact(self, message: Message) -> Optional[Message]:
+        return getattr(self, message.action)(message)
 
     async def ainform(self, message: Message) -> None:
         raise NotImplementedError()
@@ -32,6 +36,5 @@ class AsyncAgentDispatcher(AbstractObject, meta=ABCMeta):
         del self.agents[name]
 
     async def dispatch(self, message: Message):
-        method = getattr(self.route(message), message.action)
-        response = await method(message)
+        response = await self.route(message).aact(message)
         return response

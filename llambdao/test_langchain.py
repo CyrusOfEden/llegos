@@ -1,68 +1,25 @@
 from datetime import datetime
+from typing import List
 
-import yaml
 from dotenv import load_dotenv
 from faiss import IndexFlatL2
 from langchain import FAISS, OpenAI
-from langchain.agents import Tool
+from langchain.chat_models import ChatOpenAI
 from langchain.docstore import InMemoryDocstore
 from langchain.embeddings import OpenAIEmbeddings
+from langchain.experimental.autonomous_agents.autogpt.memory import \
+    AutoGPTMemory
+from langchain.experimental.plan_and_execute import (load_agent_executor,
+                                                     load_chat_planner)
 from langchain.retrievers import TimeWeightedVectorStoreRetriever
-from langchain.schema import HumanMessage
+from langchain.tools import Tool
 from langchain.utilities import GoogleSerperAPIWrapper, WikipediaAPIWrapper
 
-from llambdao.langchain import (AutoGPT, AutoGPTMemory, ChatOpenAI,
-                                          PlanAndExecute, load_agent_executor,
-                                          load_chat_planner)
-
-llm = ChatOpenAI(temperature=0)
-retriever = TimeWeightedVectorStoreRetriever(
-    vectorstore=FAISS(
-        embedding_function=OpenAIEmbeddings().embed_query,
-        index=IndexFlatL2(1536),
-        docstore=InMemoryDocstore({}),
-        index_to_docstore_id={},
-    )
-)
+from llambdao.langchain import (AgentTool, AutoGPTAgent, BabyAGIAgent,
+                                PlanAndExecuteAgent)
 
 
-def test_langchain_autogpt():
-    agent = AutoGPT.from_llm_and_tools(
-        "AutoGPT",
-        "Researcher",
-        memory=AutoGPTMemory(retriever=retriever),
-        tools=test_toolkit(),
-        llm=llm,
-        human_in_the_loop=False,
-    )
-    chat_history = [
-        HumanMessage(
-            content="What are some 3 arrondisements in Paris to explore as a tourist?"
-        )
-    ]
-    agent.on("message", lambda message: chat_history.append(message))
-    agent.request(chat_history=chat_history)
-
-
-def test_langchain_plan_and_execute():
-    PlanAndExecute(
-        directive=yaml.dump(
-            {
-                "name": "PlanAndExecuteActor",
-                "description": "A bot that plans and executes a series of steps.",
-                "abilities": ["expert planner", "expert executor"],
-            }
-        ),
-        actor_options={
-            "max_concurrency": 1,
-        },
-        tools=test_toolkit(),
-        planner=load_chat_planner(llm),
-        executer=load_agent_executor(llm, tools=test_toolkit(), verbose=True),
-    )
-
-
-def test_toolkit():
+def test_toolkit(*tools: List[Tool]):
     load_dotenv()
     return [
         Tool(
@@ -94,11 +51,59 @@ def test_toolkit():
         ),
         Tool(
             name="DateTime",
-            func=lambda _: datetime.utcnow().isoformat(),  # noqa: F821
+            func=lambda _: datetime.utcnow().isoformat(),
             description="Useful for when you want to know the current date and time.",
         ),
+        *tools,
     ]
-            func=lambda _: datetime.utcnow().isoformat(),  # noqa: F821
-            description="Useful for when you want to know the current date and time.",
-        ),
-    ]
+
+
+llm = ChatOpenAI(temperature=0)
+plan_and_execute_agent = PlanAndExecuteAgent(
+    tools=test_toolkit(),
+    planner=load_chat_planner(llm),
+    executer=load_agent_executor(llm, tools=test_toolkit(), verbose=True),
+)
+
+
+def test_langchain_plan_and_execute():
+    plan_and_execute_agent.request()
+
+
+def test_langchain_babyagi():
+    vectorstore=FAISS(
+        embedding_function=OpenAIEmbeddings().embed_query,
+        index=IndexFlatL2(768),
+        docstore=InMemoryDocstore({}),
+        index_to_docstore_id={},
+    )
+    agent = BabyAGIAgent.from_llm(llm, vectorstore=vectorstore)
+    agent.inform()
+    agent.request()
+
+
+def test_langchain_autogpt():
+    agent_tool = AgentTool(
+        plan_and_execute_agent,
+        description="an agent that can plan and execute on a high-level task"
+    )
+
+    vectorstore=FAISS(
+        embedding_function=OpenAIEmbeddings().embed_query,
+        index=IndexFlatL2(768),
+        docstore=InMemoryDocstore({}),
+        index_to_docstore_id={},
+    )
+    retriever = TimeWeightedVectorStoreRetriever(vectorstore)
+
+    agent = AutoGPTAgent.from_llm_and_tools(
+        "AutoGPT",
+        "Researcher",
+        memory=AutoGPTMemory(retriever=retriever),
+        tools=test_toolkit(agent_tool),
+        llm=llm,
+        human_in_the_loop=False,
+    )
+    agent.inform()
+    agent.request()
+

@@ -38,7 +38,7 @@ class Message(AbstractObject):
         )
 
     @classmethod
-    def new_reply(
+    def reply_to(
         cls, to_message: "Message", with_body: str, and_metadata: Metadata = {}
     ):
         metadata = {**to_message.metadata, **and_metadata}
@@ -55,7 +55,10 @@ class Message(AbstractObject):
         return self.metadata["action"]
 
 
-class AbstractAgent(AbstractObject, meta=ABCMeta):  # noqa: F821
+class AbstractAgent(AbstractObject, meta=ABCMeta):
+    def receive(self, message: Message) -> Optional[Message]:
+        return getattr(self, message.action)(message)
+
     def inform(self, message: Message) -> None:
         raise NotImplementedError()
 
@@ -81,5 +84,4 @@ class AgentDispatcher(AbstractObject, meta=ABCMeta):
         return self.lookup[message.recipient].agent
 
     def dispatch(self, message: Message):
-        method = getattr(self.route(message), message.action)
-        return method(message)
+        return self.route(message).receive(message)

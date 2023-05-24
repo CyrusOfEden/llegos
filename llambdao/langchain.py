@@ -1,3 +1,7 @@
+from langchain.experimental.autonomous_agents.autogpt.agent import AutoGPT
+from langchain.experimental.autonomous_agents.baby_agi import BabyAGI
+from langchain.experimental.plan_and_execute import PlanAndExecute
+from langchain.schema import Document
 from langchain.tools import BaseTool
 from pydantic import Field
 
@@ -19,3 +23,34 @@ class AsyncAgentTool(BaseTool):
     async def _run(self, body: str) -> str:
         response = await self.agent.arequest(Message(body))
         return response.body
+
+class AutoGPTAgent(AbstractAgent, AutoGPT):
+    @classmethod
+    def from_llm_and_tools(cls, *args, **kwargs) -> "AutoGPTAgent":
+        return super().from_llm_and_tools(*args, **kwargs)
+
+    def inform(self, message: Message):
+        document = Document(page_content=message.body, metadata=message.metadata)
+        self.memory.add_documents([document])
+
+    def request(self, message: Message) -> Message:
+        goals = message.body.split(", ")
+        return Message.reply_to(message, with_body=self.run(goals))
+
+
+class BabyAGIAgent(AbstractAgent, BabyAGI):
+    @classmethod
+    def from_llm(cls, *args, **kwargs) -> "BabyAGIAgent":
+        return super().from_llm(*args, **kwargs)
+
+    def inform(self, message: Message):
+        document = Document(page_content=message.body, metadata=message.metadata)
+        self.vectorstore.add_documents([document])
+
+    def request(self, message: Message) -> Message:
+        return Message.reply_to(message, with_body=self.run(message.body))
+
+
+class PlanAndExecuteAgent(AbstractAgent, PlanAndExecute):
+    def request(self, message: Message) -> Message:
+        return Message.reply_to(message, with_body=self.run(message.body))
