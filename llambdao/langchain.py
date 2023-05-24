@@ -24,18 +24,10 @@ class AsyncAgentTool(BaseTool):
         response = await self.agent.arequest(Message(body))
         return response.body
 
-class AutoGPTAgent(AbstractAgent, AutoGPT):
-    @classmethod
-    def from_llm_and_tools(cls, *args, **kwargs) -> "AutoGPTAgent":
-        return super().from_llm_and_tools(*args, **kwargs)
 
-    def inform(self, message: Message):
-        document = Document(page_content=message.body, metadata=message.metadata)
-        self.memory.add_documents([document])
-
+class PlanAndExecuteAgent(AbstractAgent, PlanAndExecute):
     def request(self, message: Message) -> Message:
-        goals = message.body.split(", ")
-        return Message.reply_to(message, with_body=self.run(goals))
+        return Message.reply_to(message, with_body=self.run(message.body))
 
 
 class BabyAGIAgent(AbstractAgent, BabyAGI):
@@ -51,6 +43,16 @@ class BabyAGIAgent(AbstractAgent, BabyAGI):
         return Message.reply_to(message, with_body=self.run(message.body))
 
 
-class PlanAndExecuteAgent(AbstractAgent, PlanAndExecute):
+class AutoGPTAgent(AbstractAgent, AutoGPT):
+    @classmethod
+    def from_llm_and_tools(cls, *args, **kwargs) -> "AutoGPTAgent":
+        return super().from_llm_and_tools(*args, **kwargs)
+
+    def inform(self, message: Message):
+        document = Document(page_content=message.body, metadata=message.metadata)
+        self.memory.add_documents([document])
+
     def request(self, message: Message) -> Message:
-        return Message.reply_to(message, with_body=self.run(message.body))
+        goals = message.body.split(", ")
+        return Message.reply_to(message, with_body=self.run(goals))
+
