@@ -7,19 +7,22 @@ from langchain import FAISS, OpenAI
 from langchain.chat_models import ChatOpenAI
 from langchain.docstore import InMemoryDocstore
 from langchain.embeddings import OpenAIEmbeddings
-from langchain.experimental.autonomous_agents.autogpt.memory import \
-    AutoGPTMemory
-from langchain.experimental.plan_and_execute import (load_agent_executor,
-                                                     load_chat_planner)
+from langchain.experimental.autonomous_agents.autogpt.agent import AutoGPT
+from langchain.experimental.autonomous_agents.autogpt.memory import AutoGPTMemory
+from langchain.experimental.autonomous_agents.baby_agi import BabyAGI
+from langchain.experimental.plan_and_execute import (
+    PlanAndExecute,
+    load_agent_executor,
+    load_chat_planner,
+)
 from langchain.retrievers import TimeWeightedVectorStoreRetriever
 from langchain.tools import Tool
 from langchain.utilities import GoogleSerperAPIWrapper, WikipediaAPIWrapper
 
-from llambdao.langchain import (AgentTool, AutoGPTAgent, BabyAGIAgent,
-                                PlanAndExecuteAgent)
+from llambdao.langchain import AutoGPTNode, BabyAGINode, Node, NodeTool
 
 
-def test_toolkit(*tools: List[Tool]):
+def test_toolkit(include: List[Tool] = []):
     load_dotenv()
     return [
         Tool(
@@ -54,37 +57,36 @@ def test_toolkit(*tools: List[Tool]):
             func=lambda _: datetime.utcnow().isoformat(),
             description="Useful for when you want to know the current date and time.",
         ),
-        *tools,
+        *include,
     ]
 
 
 llm = ChatOpenAI(temperature=0)
-plan_and_execute_agent = PlanAndExecuteAgent(
+plan_and_execute_node = Node(chain=PlanAndExecute(
     tools=test_toolkit(),
     planner=load_chat_planner(llm),
     executer=load_agent_executor(llm, tools=test_toolkit(), verbose=True),
-)
+))
 
 
 def test_langchain_plan_and_execute():
-    plan_and_execute_agent.request()
+    plan_and_execute_node.request()
 
 
 def test_langchain_babyagi():
-    vectorstore=FAISS(
+    node = BabyAGINode(chain=BabyAGI.from_llm(llm, vectorstore=FAISS(
         embedding_function=OpenAIEmbeddings().embed_query,
         index=IndexFlatL2(768),
         docstore=InMemoryDocstore({}),
         index_to_docstore_id={},
-    )
-    agent = BabyAGIAgent.from_llm(llm, vectorstore=vectorstore)
-    agent.inform()
-    agent.request()
+    )))
+    node.inform()
+    node.request()
 
 
 def test_langchain_autogpt():
-    agent_tool = AgentTool(
-        plan_and_execute_agent,
+    agent_tool = NodeTool(
+        plan_and_execute_node,
         description="an agent that can plan and execute on a high-level task"
     )
 
@@ -94,16 +96,19 @@ def test_langchain_autogpt():
         docstore=InMemoryDocstore({}),
         index_to_docstore_id={},
     )
-    retriever = TimeWeightedVectorStoreRetriever(vectorstore)
 
-    agent = AutoGPTAgent.from_llm_and_tools(
+    node = AutoGPTNode(chain=AutoGPT.from_llm_and_tools(
         "AutoGPT",
         "Researcher",
-        memory=AutoGPTMemory(retriever=retriever),
-        tools=test_toolkit(agent_tool),
+        memory=AutoGPTMemory(retriever=TimeWeightedVectorStoreRetriever(vectorstore)),
+        tools=test_toolkit(include=[agent_tool]),
         llm=llm,
         human_in_the_loop=False,
-    )
-    agent.inform()
-    agent.request()
+    ))
+    node.inform()
+    node.request()
+
+    node.inform()
+    node.request()
+
 

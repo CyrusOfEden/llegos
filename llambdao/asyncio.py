@@ -1,48 +1,50 @@
 import asyncio
 from abc import ABCMeta
-from typing import Dict, Optional
+from typing import Coroutine, Dict, Optional
 
 from eventemitter import EventEmitter
 from pydantic import Field
 
-from llambdao import AbstractObject, Entry, Message
+from llambdao import AbstractObject, Message, Metadata
 
 
-class AbstractAsyncAgent(AbstractObject, EventEmitter, meta=ABCMeta):
+class AsyncReceiver(meta=ABCMeta):
+    async def areceive(self, message: Message) -> Optional[Message]:
+        raise NotImplementedError
+
+
+class AsyncNode(AbstractObject, EventEmitter, meta=ABCMeta):
+    class AsyncConnection(AbstractObject):
+        receiver: AsyncReceiver = Field()
+        metadata: Optional[Metadata] = Field(default=None)
+
+    id: str = Field(default_factory=lambda: str(id(object())))
+    connections: Dict[str, AsyncConnection] = Field(default_factory=dict)
     _loop: asyncio.AbstractEventLoop = Field(default_factory=asyncio.new_event_loop)
 
     def __init__(self, *args, **kwargs):
         super(AbstractObject, self).__init__(*args, **kwargs)
         super(EventEmitter, self).__init__(loop=self._loop)
 
-    async def ais_idle(self, agent: str):
-        return self.activity[agent] is None
+    def _submit(self, coroutine: Coroutine) -> asyncio.Future:
+        return asyncio.run_coroutine_threadsafe(coroutine, self._loop)
+
+    async def aconnect(self, node: "AsyncNode", **metadata):
+        self.connections[node.id] = self.AsyncConnection(node, metadata)
+        self.emit("connected", node)
+
+    async def adisconnect(self, node: "AsyncNode"):
+        del self.connections[node.id]
+        self.emit("disconnected", node)
+
+    async def aroute(self, message: Message):
+        if message.recipient == self.id:
+            return self
+        return self.connections[message.recipient].node
 
     async def areceive(self, message: Message) -> Optional[Message]:
-        return getattr(self, message.action)(message)
-
-    async def ainform(self, message: Message) -> None:
-        raise NotImplementedError()
-
-    async def arequest(self, message: Message) -> Message:
-        raise NotImplementedError()
-
-
-class AsyncAgentDispatcher(AbstractObject, EventEmitter, meta=ABCMeta):
-    _loop: asyncio.AbstractEventLoop = Field(default_factory=asyncio.new_event_loop)
-    lookup: Dict[str, Entry] = Field(default_factory=dict)
-
-    async def register(self, name: str, agent: AbstractAsyncAgent, **metadata):
-        agent._loop = self._loop
-        self.lookup[name] = Entry(agent, metadata)
-
-    async def deregister(self, name: str):
-        del self.lookup[name]
-
-    async def route(self, message: Message) -> AbstractAsyncAgent:
-        return self.lookup[message.recipient].agent
-
-    async def dispatch(self, message: Message) -> Optional[Message]:
-        agent = await self.route(message)
-        response = await agent.areceive(message)
+        handler = await self.aroute(message)
+        self.emit("received", message, handler)
+        response = await self._submit(handler.areceive(message))
+        self.emit("responded", response)
         return response

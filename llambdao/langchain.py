@@ -1,58 +1,71 @@
-from langchain.experimental.autonomous_agents.autogpt.agent import AutoGPT
-from langchain.experimental.autonomous_agents.baby_agi import BabyAGI
-from langchain.experimental.plan_and_execute import PlanAndExecute
+from langchain.chains.base import Chain
 from langchain.schema import Document
 from langchain.tools import BaseTool
 from pydantic import Field
 
-from llambdao import AbstractAgent, Message
-from llambdao.asyncio import AbstractAsyncAgent
+from llambdao import Message
+from llambdao import Node as SyncNode
+from llambdao.asyncio import AsyncNode
 
 
-class AgentTool(BaseTool):
-    agent: AbstractAgent = Field()
+class NodeTool(BaseTool):
+    """Turns a Node into a Tool that can be used by other agents."""
+    node: SyncNode = Field()
 
     def _run(self, body: str) -> str:
-        response = self.agent.request(Message(body))
+        response = self.node.request(Message(body))
         return response.body
 
 
-class AsyncAgentTool(BaseTool):
-    agent: AbstractAsyncAgent = Field()
+class AsyncNodeTool(BaseTool):
+    """Turns an AsyncNode into an Async Tool that can be used by other agents."""
+    node: AsyncNode = Field()
 
     async def _run(self, body: str) -> str:
-        response = await self.agent.arequest(Message(body))
+        response = await self.node.arequest(Message(body))
         return response.body
 
 
-class PlanAndExecuteAgent(AbstractAgent, PlanAndExecute):
+class Node(SyncNode):
+    chain: Chain
+
+    """A Node that can plan and execute actions, and has no memory."""
     def request(self, message: Message) -> Message:
-        return Message.reply_to(message, with_body=self.run(message.body))
+        return Message.reply_to(message, with_body=self.chain.run(message.body))
 
 
-class BabyAGIAgent(AbstractAgent, BabyAGI):
-    @classmethod
-    def from_llm(cls, *args, **kwargs) -> "BabyAGIAgent":
-        return super().from_llm(*args, **kwargs)
+class BabyAGINode(Node):
+    """
+    Usage:
+
+    >>> from langchain.experimental.autonomous_agents.baby_agi import BabyAGI
+    >>> from lambdao.langchain import BabyAGINode
+    >>> babyagi = BabyAGINode(BabyAGI.from_llm(...))
+    >>> babyagi.inform(Message("The meaning of life is 42.", metadata={...}))
+    >>> babyagi.request(Message("What is the meaning of life?", metadata={...}))
+    """
 
     def inform(self, message: Message):
         document = Document(page_content=message.body, metadata=message.metadata)
-        self.vectorstore.add_documents([document])
-
-    def request(self, message: Message) -> Message:
-        return Message.reply_to(message, with_body=self.run(message.body))
+        self.chain.vectorstore.add_documents([document])
 
 
-class AutoGPTAgent(AbstractAgent, AutoGPT):
-    @classmethod
-    def from_llm_and_tools(cls, *args, **kwargs) -> "AutoGPTAgent":
-        return super().from_llm_and_tools(*args, **kwargs)
+class AutoGPTNode(Node):
+    """
+    Usage:
+
+    >>> from langchain.experimental.autonomous_agents.autogpt import AutoGPT
+    >>> from lambdao.langchain import AutoGPTNode
+    >>> autogpt = AutoGPTNode(AutoGPT.from_llm_and_tools(...))
+    >>> autogpt.inform(Message("The meaning of life is 42.", metadata={...}))
+    >>> autogpt.request(Message("What is the meaning of life?", metadata={...}))
+    """
 
     def inform(self, message: Message):
         document = Document(page_content=message.body, metadata=message.metadata)
-        self.memory.add_documents([document])
+        self.chain.memory.add_documents([document])
 
     def request(self, message: Message) -> Message:
         goals = message.body.split(", ")
-        return Message.reply_to(message, with_body=self.run(goals))
+        return Message.reply_to(message, with_body=self.chain.run(goals))
 
