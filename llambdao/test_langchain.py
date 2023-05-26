@@ -8,18 +8,19 @@ from langchain.chat_models import ChatOpenAI
 from langchain.docstore import InMemoryDocstore
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.experimental.autonomous_agents.autogpt.agent import AutoGPT
-from langchain.experimental.autonomous_agents.autogpt.memory import AutoGPTMemory
+from langchain.experimental.autonomous_agents.autogpt.memory import \
+    AutoGPTMemory
 from langchain.experimental.autonomous_agents.baby_agi import BabyAGI
-from langchain.experimental.plan_and_execute import (
-    PlanAndExecute,
-    load_agent_executor,
-    load_chat_planner,
-)
-from langchain.retrievers import TimeWeightedVectorStoreRetriever
+from langchain.experimental.plan_and_execute import (PlanAndExecute,
+                                                     load_agent_executor,
+                                                     load_chat_planner)
+from langchain.retrievers import SelfQueryRetriever
 from langchain.tools import Tool
 from langchain.utilities import GoogleSerperAPIWrapper, WikipediaAPIWrapper
 
-from llambdao.langchain import AutoGPTNode, BabyAGINode, Node, NodeTool
+from llambdao import Message
+from llambdao.langchain import (AutoGPTNode, BabyAGINode, LangchainNode,
+                                NodeTool)
 
 
 def test_toolkit(include: List[Tool] = []):
@@ -62,37 +63,38 @@ def test_toolkit(include: List[Tool] = []):
 
 
 llm = ChatOpenAI(temperature=0)
-plan_and_execute_node = Node(chain=PlanAndExecute(
+plan_and_execute_node = LangchainNode(chain=PlanAndExecute(
     tools=test_toolkit(),
     planner=load_chat_planner(llm),
-    executer=load_agent_executor(llm, tools=test_toolkit(), verbose=True),
+    executor=load_agent_executor(llm, tools=test_toolkit(), verbose=True),
 ))
 
 
 def test_langchain_plan_and_execute():
-    plan_and_execute_node.request()
+    plan_and_execute_node.receive(
+        Message.request("What is the answer to life, the universe, and everything?")
+    )
 
 
 def test_langchain_babyagi():
-    node = BabyAGINode(chain=BabyAGI.from_llm(llm, vectorstore=FAISS(
+    vectorstore = FAISS(
         embedding_function=OpenAIEmbeddings().embed_query,
-        index=IndexFlatL2(768),
+        index=IndexFlatL2(1536),
         docstore=InMemoryDocstore({}),
         index_to_docstore_id={},
-    )))
-    node.inform()
-    node.request()
+    )
+    node = BabyAGINode(chain=BabyAGI.from_llm(llm, vectorstore=vectorstore))
+    node.receive(Message.inform("The answer is to life, the universe, and everything is 42."))
+    response = node.receive(
+        Message.request("What is the answer to life, the universe, and everything?")
+    )
+    assert "42" in response.body
 
 
 def test_langchain_autogpt():
-    agent_tool = NodeTool(
-        plan_and_execute_node,
-        description="an agent that can plan and execute on a high-level task"
-    )
-
     vectorstore=FAISS(
         embedding_function=OpenAIEmbeddings().embed_query,
-        index=IndexFlatL2(768),
+        index=IndexFlatL2(1536),
         docstore=InMemoryDocstore({}),
         index_to_docstore_id={},
     )
@@ -100,15 +102,21 @@ def test_langchain_autogpt():
     node = AutoGPTNode(chain=AutoGPT.from_llm_and_tools(
         "AutoGPT",
         "Researcher",
-        memory=AutoGPTMemory(retriever=TimeWeightedVectorStoreRetriever(vectorstore)),
-        tools=test_toolkit(include=[agent_tool]),
+        memory=AutoGPTMemory(retriever=SelfQueryRetriever(vectorstore=vectorstore)),
+        tools=test_toolkit(include=[
+            NodeTool(
+                plan_and_execute_node,
+                description="an agent that can plan and execute on a high-level task"
+            )
+        ]),
         llm=llm,
         human_in_the_loop=False,
     ))
-    node.inform()
-    node.request()
 
-    node.inform()
-    node.request()
+    node.receive(Message.inform("The answer is to life, the universe, and everything is 42."))
+    response = node.receive(
+        Message.request("What is the answer to life, the universe, and everything?")
+    )
+    assert "42" in response.body
 
 
