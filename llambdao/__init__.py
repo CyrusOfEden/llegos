@@ -32,20 +32,20 @@ class Message(AbstractObject):
 
     @classmethod
     def inform(cls, body: str, **kwargs):
-        """Create an inform message."""
+        """Create an inform message, for informing a Node without needing a response."""
         metadata = {**kwargs.pop("metadata", {}), "action": "inform"}
         return cls(**kwargs, body=body, metadata=metadata)
 
     @classmethod
-    def request(cls, body: str, **kwargs):
-        """Create a request message."""
-        metadata = {**kwargs.pop("metadata", {}), "action": "request"}
+    def query(cls, body: str, **kwargs):
+        """Create a query message, for querying information."""
+        metadata = {**kwargs.pop("metadata", {}), "action": "query"}
         return cls(**kwargs, body=body, metadata=metadata)
 
     @classmethod
-    def query(cls, body: str, **kwargs):
-        """Create a query message."""
-        metadata = {**kwargs.pop("metadata", {}), "action": "query"}
+    def request(cls, body: str, **kwargs):
+        """Create a request message, for actions."""
+        metadata = {**kwargs.pop("metadata", {}), "action": "request"}
         return cls(**kwargs, body=body, metadata=metadata)
 
     @classmethod
@@ -85,7 +85,11 @@ class Message(AbstractObject):
 
 
 class Node(AbstractObject, ABC):
+    """Nodes can be composed into graphs."""
+
     class Edge(AbstractObject):
+        """Edges point to other nodes."""
+
         node: "Node" = Field()
         metadata: Optional[Metadata] = Field(default=None)
 
@@ -102,6 +106,12 @@ class Node(AbstractObject, ABC):
 
 
 class Router(Node):
+    """
+    Routers are simple nodes that route messages to other nodes.
+
+    This is useful for creating a central point of contact for a graph.
+    """
+
     def receiver(self, message: Message):
         recipient = message.recipient
         if recipient is None:
@@ -117,7 +127,9 @@ class Router(Node):
         return self.receiver(message).receive(message)
 
 
-class Graph(Node):
+class Graph(Router):
+    """A Graph is a Node that links passed nodes."""
+
     def __init__(self, graph: Dict[Node, Set[Node]], **kwargs):
         super().__init__(**kwargs)
         for node, edges in graph.items():
@@ -126,9 +138,13 @@ class Graph(Node):
                 node.link(edge)
 
 
-class Circle(Node):
+class Circle(Router):
+    """A Circle is a Graph that links its set of nodes bidirectionally."""
+
     def __init__(self, nodes: Set[Node], **kwargs):
         super().__init__(**kwargs)
-        for a, b in combinations(nodes, 2):
-            a.link(b)
-            b.link(a)
+        for node in nodes:
+            self.link(node)
+        for node_lhs, node_rhs in combinations(nodes, 2):
+            node_lhs.link(node_rhs)
+            node_rhs.link(node_lhs)
