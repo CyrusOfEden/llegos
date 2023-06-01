@@ -5,7 +5,7 @@ from typing import Optional
 from eventemitter import EventEmitter
 from pydantic import Field
 
-from llambdao import Message, Node
+from llambdao import Message, Node, Router
 
 
 class AsyncNode(Node, EventEmitter, ABC):
@@ -28,4 +28,11 @@ class AsyncNode(Node, EventEmitter, ABC):
         future = getattr(self, f"a{message.action}")(message)
         response = await asyncio.run_coroutine_threadsafe(future, self._loop)
         self.emit("responded", message, response)
+        return response
+
+
+class AsyncRouter(Router, AsyncNode):
+    async def areceive(self, message: Message) -> Optional[Message]:
+        node = self.receiver(message)
+        response = await node.areceive(message)
         return response

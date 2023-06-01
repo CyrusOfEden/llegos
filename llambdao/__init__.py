@@ -1,5 +1,6 @@
 from abc import ABC
-from typing import Any, Dict, Optional
+from itertools import combinations
+from typing import Any, Dict, Optional, Set
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
@@ -9,15 +10,17 @@ class AbstractObject(ABC, BaseModel):
     class Config:
         allow_arbitrary_types = True
 
-    id: str = Field(default_factory=lambda: str(uuid4()), description="unique identifier")
-    name: str = Field(init=False, description="human readable name")
+    id: str = Field(
+        default_factory=lambda: str(uuid4()), description="unique identifier"
+    )
+    name: str = Field(default="", description="human readable name")
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.name = self.name or self.__class__.__name__ + "-" + self.id
 
 
-Metadata = Dict[str, Any]
+Metadata = Dict[Any, Any]
 
 
 class Message(AbstractObject):
@@ -40,8 +43,17 @@ class Message(AbstractObject):
         return cls(**kwargs, body=body, metadata=metadata)
 
     @classmethod
+    def query(cls, body: str, **kwargs):
+        """Create a query message."""
+        metadata = {**kwargs.pop("metadata", {}), "action": "query"}
+        return cls(**kwargs, body=body, metadata=metadata)
+
+    @classmethod
     def reply_to(
-        cls, to_message: "Message", with_body: str, and_metadata: Optional[Metadata] = None
+        cls,
+        to_message: "Message",
+        with_body: str,
+        and_metadata: Optional[Metadata] = None,
     ):
         """Create a reply to a message."""
         if and_metadata is not None:
@@ -77,7 +89,7 @@ class Node(AbstractObject, ABC):
         node: "Node" = Field()
         metadata: Optional[Metadata] = Field(default=None)
 
-    edges: Dict[str, Edge] = Field(default_factory=dict)
+    edges: Dict[Any, Edge] = Field(default_factory=dict)
 
     def link(self, node: "Node", **metadata):
         self.edges[node.name] = self.Edge(node, metadata)
@@ -88,3 +100,35 @@ class Node(AbstractObject, ABC):
     def receive(self, message: Message) -> Optional[Message]:
         return getattr(self, message.action)(message)
 
+
+class Router(Node):
+    def receiver(self, message: Message):
+        recipient = message.recipient
+        if recipient is None:
+            raise ValueError("Message must have a recipient")
+
+        edge = self.edges.get(recipient)
+        if edge is None:
+            raise ValueError(f"Unknown recipient: {recipient}")
+
+        return edge.node
+
+    def receive(self, message: Message) -> Optional[Message]:
+        return self.receiver(message).receive(message)
+
+
+class Graph(Node):
+    def __init__(self, graph: Dict[Node, Set[Node]], **kwargs):
+        super().__init__(**kwargs)
+        for node, edges in graph.items():
+            self.link(node)
+            for edge in edges:
+                node.link(edge)
+
+
+class Circle(Node):
+    def __init__(self, nodes: Set[Node], **kwargs):
+        super().__init__(**kwargs)
+        for a, b in combinations(nodes, 2):
+            a.link(b)
+            b.link(a)
