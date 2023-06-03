@@ -15,7 +15,7 @@ class NodeTool(AbstractObject, BaseTool):
 
     def _run(self, body: str) -> str:
         response = self.node.receive(Message.request(body=body))
-        return response.body
+        return response.content
 
     async def _arun(self, body: str) -> str:
         raise NotImplementedError
@@ -30,8 +30,8 @@ class AsyncNodeTool(AbstractObject, BaseTool):
         raise NotImplementedError
 
     async def _run(self, body: str) -> str:
-        response = await self.node.areceive(Message.request(body=body))
-        return response.body
+        response = await self.node.areceive(Message.draft_request(body=body))
+        return response.content
 
 
 class LangchainNode(Node):
@@ -44,14 +44,11 @@ class LangchainNode(Node):
     chain: Any = Field(description="the chain to use to interpret messages")
 
     def inform(self, message: Message):
-        document = Document(page_content=message.body, metadata=message.metadata)
+        document = Document(page_content=message.content, metadata=message.metadata)
         self.chain.memory.add_documents([document])
 
-    def query(self, message: Message) -> Message:
-        return self.request(message)
-
-    def request(self, message: Message) -> Message:
-        return Message.reply_to(message, with_body=self.chain.run(message.body))
+    def request(self, message: Message):
+        yield self._draft(content=self.chain.run(message.content))
 
 
 class PlanAndExecuteNode(LangchainNode):
@@ -60,29 +57,22 @@ class PlanAndExecuteNode(LangchainNode):
 
 class BabyAGINode(LangchainNode):
     def inform(self, message: Message):
-        document = Document(page_content=message.body, metadata=message.metadata)
+        document = Document(page_content=message.content, metadata=message.metadata)
         # Have to override this method to add documents to chain.vectorstore instead of chain.memory
         self.chain.vectorstore.add_documents([document])
 
     def request(self, message: Message) -> Message:
-        response = self.chain(inputs={"objective": message.body, **message.metadata})
-        import ipdb
-
-        ipdb.set_trace()
-
-        return Message.reply_to(
-            message,
-            with_body=response,
-        )
+        response = self.chain(inputs={"objective": message.content, **message.metadata})
+        yield self._draft(content=response)
 
 
 class AutoGPTNode(LangchainNode):
     def inform(self, message: Message):
-        documents = [Document(page_content=message.body, metadata=message.metadata)]
+        documents = [Document(page_content=message.content, metadata=message.metadata)]
         self.chain.memory.retriever.add_documents(documents)
 
     def request(self, message: Message) -> Message:
         """Can pass in multiple goals, separated by newlines."""
-        goals = message.metadata.get("goals", message.body.split("\n"))
+        goals = message.metadata.get("goals", message.content.split("\n"))
         response = self.chain.run(goals)
-        return Message.reply_to(message, with_body=response)
+        yield self._draft(content=response)

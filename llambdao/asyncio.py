@@ -15,11 +15,11 @@ class AsyncNode(Node, EventEmitter, ABC):
         super(Node, self).__init__(*args, **kwargs)
         super(EventEmitter, self).__init__(loop=self._loop)
 
-    async def alink(self, node: "AsyncNode", **metadata):
+    def link(self, node: "AsyncNode", **metadata):
         super().link(node, **metadata)
         self.emit("linked", node)
 
-    async def aunlink(self, node: "AsyncNode"):
+    def unlink(self, node: "AsyncNode"):
         super().unlink(node)
         self.emit("unlinked", node)
 

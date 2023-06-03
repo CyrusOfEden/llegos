@@ -39,9 +39,7 @@ class ActorNode(Node):
 
     def actor(self, namespace: Optional[str] = None) -> Actor:
         return Actor.options(
-            namespace=namespace,
-            name=self.name,
-            get_if_exists=True
+            namespace=namespace, name=self.id, get_if_exists=True
         ).remote(self)
 
 
