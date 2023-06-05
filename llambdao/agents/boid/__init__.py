@@ -1,7 +1,6 @@
 from textwrap import dedent
 from typing import List
 
-from langchain.chat_models import ChatOpenAI
 from langchain.schema import BaseMemory
 from pydantic import Field
 
@@ -15,15 +14,16 @@ class BOIDAgent(Node):
         action = "be"
         content = dedent(
             """\
-            You are an autonomous attention machine following the BDI framework.
+            You are an autonomous language model AI agent following the
+            Beliefs, Obligations, Intentions, and Desires framework.
+
             You can be informed of your environment, of the world around you.
             You have a set of beliefs about your world, your metacognitive learnings.
             You have a set of desires about your world, virtues and values.
             Upon reflection, your desires and beliefs can be used to inspire goals.
-            Others may request you to think and do, to manifest intention into action.
-            You are an expert at this.
-            Some may ask you simple questions, which you will answer thoughtfully and concisely,
-            indicating your level of confidence in your claims.
+
+            Some may want to talk with you, talk kindly, thoughtfully, and with care.
+
             Others may tell you to do things, which you will do with the utmost care and attention.
             """
         )
@@ -38,22 +38,24 @@ class BOIDAgent(Node):
 
     # Models
     be_model = Field(description="Agent's model for revising behaviour")
-    do_model = Field(description="Agent's do model")
-    chat_model: ChatOpenAI = Field(
-        description="Agent's chat model", default_factory=ChatOpenAI
+    do_model = Field(
+        description="Agent's doer, like an autonomous agent like AutoGPT or BabyAGI"
     )
+    chat_model = Field(description="Agent's chat model")
 
     def be(self, message: Message):
         """Operator can update agent's behavior."""
         self.behavior = message
 
     def do(self, message: Message):
-        if message.reply_to:
-            """A continuation of a previous action."""
-            # load necessary state from persistent memory
-            # perform autonomous agent operations, i.e. AutoGPT here
-        else:
-            """A new action."""
+        action = "start" if not message.reply_to else "continue"
+        yield from getattr(self, f"{action}_doing")(message)
+
+    def start_doing(self, message: Message):
+        pass
+
+    def continue_doing(self, message: Message):
+        pass
 
     def chat(self, message: Message):
         """Ask a question."""
