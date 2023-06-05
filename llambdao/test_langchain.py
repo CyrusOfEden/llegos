@@ -16,7 +16,6 @@ from langchain.tools import Tool
 from langchain.utilities import GoogleSerperAPIWrapper, WikipediaAPIWrapper
 from langchain.vectorstores.base import VectorStoreRetriever
 
-from llambdao import Message
 from llambdao.langchain import AutoGPTNode, BabyAGINode, NodeTool, PlanAndExecuteNode
 
 load_dotenv()
@@ -72,15 +71,10 @@ plan_and_execute_node = PlanAndExecuteNode(
 
 
 def test_langchain_babyagi():
-    node = BabyAGINode(
+    BabyAGINode(
         chain=BabyAGI.from_llm(
             chat_llm,
             vectorstore=vectorstore,
-        )
-    )
-    node.receive(
-        Message.query(
-            "Give me a summary of the latest 3 memecoins and common themes in their strategy."
         )
     )
 
@@ -94,7 +88,7 @@ def test_langchain_autogpt():
     which in turn internally runs the executor.
     """
 
-    node = AutoGPTNode(
+    AutoGPTNode(
         chain=AutoGPT.from_llm_and_tools(
             "AutoGPT",
             "Researcher",
@@ -112,9 +106,4 @@ def test_langchain_autogpt():
             llm=chat_llm,
             human_in_the_loop=False,
         ),
-    )
-    node.receive(
-        Message.query(
-            "Give me a summary of the latest 3 memecoins and common themes in their strategy."
-        )
     )

@@ -43,7 +43,7 @@ class LangchainNode(Node):
 
     chain: Any = Field(description="the chain to use to interpret messages")
 
-    def inform(self, message: Message):
+    def tell(self, message: Message):
         document = Document(page_content=message.content, metadata=message.metadata)
         self.chain.memory.add_documents([document])
 
@@ -56,7 +56,7 @@ class PlanAndExecuteNode(LangchainNode):
 
 
 class BabyAGINode(LangchainNode):
-    def inform(self, message: Message):
+    def tell(self, message: Message):
         document = Document(page_content=message.content, metadata=message.metadata)
         # Have to override this method to add documents to chain.vectorstore instead of chain.memory
         self.chain.vectorstore.add_documents([document])
@@ -67,7 +67,7 @@ class BabyAGINode(LangchainNode):
 
 
 class AutoGPTNode(LangchainNode):
-    def inform(self, message: Message):
+    def tell(self, message: Message):
         documents = [Document(page_content=message.content, metadata=message.metadata)]
         self.chain.memory.retriever.add_documents(documents)
 

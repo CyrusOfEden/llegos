@@ -5,8 +5,9 @@ import openai
 from dotenv import load_dotenv
 from pydantic import Field
 
-from llambdao import Chat, Message, Node
+from llambdao import Message, Node
 from llambdao.console import PrettyConsole
+from llambdao.recipes import Chat
 
 load_dotenv()
 
@@ -21,9 +22,11 @@ class Philosopher(Node):
     class Directive(Message):
         """Subclass standard objects within your classes to remove duplication of prompts"""
 
-        @classmethod
-        def draft(cls, content: str, **kwargs):
-            return cls.draft_system(
+        role = "user"
+        action = "be"
+
+        def __init__(self, content: str, **kwargs):
+            return super().__init__(
                 content=dedent(
                     f"""\
                     You are an AI that is playing the role of a philosopher.
@@ -37,41 +40,13 @@ class Philosopher(Node):
                 **kwargs,
             )
 
-    class Reflection(Message):
-        role = "user"
-
-        @classmethod
-        def draft(cls, content: str, **kwargs):
-            return cls(
-                role="system",
-                action="inform",
-                content=dedent(
-                    f"""\
-                    You have been informed of the following message:
-
-                    {content}
-
-                    Revise your beliefs accordingly.
-                    Return your new set of beliefs, which will be used in your system prompt.
-                    Be thoughtful, and insightful.
-
-                    Say DONE when you are finished.
-
-                    Let's think step by step.
-
-                    Here is how you think:
-                    """
-                ),
-                **kwargs,
-            )
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.memory = [self.Directive.draft(self.beliefs)]
 
-    def inform(self, message):
+    def tell(self, message):
         """
-        Nodes can have multiple methods. This one is called inform.
+        Nodes can have multiple methods. This one is called tell.
 
         Here we have it update the beliefs of the philosopher.
         """
@@ -82,9 +57,9 @@ class Philosopher(Node):
             max_tokens=512,
             stop=["DONE"],
         )
-        self.memory[0] = self.Directive.draft(completion.choices[0].text)
+        self.memory[0] = self.Directive(content=completion.choices[0].text)
 
-    def query(self, message):
+    def ask(self, message):
         """Ask a Philosopher a question"""
         completion = openai.Completion.create(
             engine="gpt-3.5-turbo",
@@ -94,7 +69,9 @@ class Philosopher(Node):
             stop=["\n"],
         )
 
-        response = Message.draft_reply(message, with_body=completion.choices[0].text)
+        response = Message(
+            content=completion.choices[0].text, reply_to=message, action="ask"
+        )
         # Update the local state
         self.memory.append(response)
 
@@ -102,7 +79,9 @@ class Philosopher(Node):
 
 
 def test_philosopher_dinner_party():
-    Chat(
+    human_in_the_loop = PrettyConsole()
+    chat = Chat(
+        human_in_the_loop,
         Philosopher(
             beliefs="I am the Sufi mystic poet Rumi, and I write beautiful prose."
         ),
@@ -115,5 +94,11 @@ def test_philosopher_dinner_party():
         Philosopher(
             beliefs="I am the Buddhist philosopher Rob Burbea, and I speak of sacredness."
         ),
-        PrettyConsole(),
+    )
+    chat.receive(
+        Message(
+            action="ask",
+            content="What is the meaning of life?",
+            sender=human_in_the_loop,
+        )
     )
