@@ -62,4 +62,4 @@ class BOIDAgent(Node):
         result = self.chat_model.generate(
             [chat_messages(message, directive=self.behavior)], stop=["\n"]
         )
-        return Message(content=result, reply_to=message)
+        yield Message(content=result, reply_to=message)
