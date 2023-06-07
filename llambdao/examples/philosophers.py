@@ -5,9 +5,8 @@ import openai
 from dotenv import load_dotenv
 from pydantic import Field
 
-from llambdao.console import PrettyConsole
-from llambdao.message import Message, Node
-from llambdao.recipes import Chat
+from llambdao import Message, Node
+from llambdao.helpers import ConsoleChat, UserConsoleNode
 
 load_dotenv()
 
@@ -79,9 +78,9 @@ class Philosopher(Node):
 
 
 def test_philosopher_dinner_party():
-    human_in_the_loop = PrettyConsole()
-    chat = Chat(
-        human_in_the_loop,
+    user = UserConsoleNode()
+    chat = ConsoleChat(
+        user,
         Philosopher(
             beliefs="I am the Sufi mystic poet Rumi, and I write beautiful prose."
         ),
@@ -97,8 +96,8 @@ def test_philosopher_dinner_party():
     )
     chat.receive(
         Message(
-            action="ask",
+            sender=user,
+            action="chat",
             content="What is the meaning of life?",
-            sender=human_in_the_loop,
         )
     )
