@@ -2,7 +2,8 @@ from typing import Any, Optional
 
 import ray
 
-from llambdao import Message, Node, Router
+from llambdao.abc.actor import ActorNode
+from llambdao.message import Message
 
 
 @ray.remote(max_task_retries=3)
@@ -27,22 +28,3 @@ class Actor:
     def method(self, method: str, *args, **kwargs) -> Any:
         """For calling arbitrary methods on the node"""
         return getattr(self.node, method)(*args, **kwargs)
-
-
-class ActorNode(Node):
-    """
-    Turn a node into a concurrent actor running in its own process.
-    Learn more: https://docs.ray.io/en/latest/actors.html
-
-    Can be mixed in with AsyncNode to create an actor that runs in its own event loop.
-    """
-
-    def actor(self, namespace: Optional[str] = None) -> Actor:
-        return Actor.options(
-            namespace=namespace, name=self.id, get_if_exists=True
-        ).remote(self)
-
-
-class ActorRouter(Router):
-    def receiver(self, message: Message):
-        return super().receiver(message).actor

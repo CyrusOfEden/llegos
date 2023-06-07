@@ -4,8 +4,9 @@ from langchain.schema import Document
 from langchain.tools import BaseTool
 from pydantic import Field
 
-from llambdao import AbstractObject, Message, Node
-from llambdao.asyncio import AsyncNode
+from llambdao.abc import AbstractObject, Node
+from llambdao.abc.asyncio import AsyncNode
+from llambdao.message import Message
 
 
 class NodeTool(AbstractObject, BaseTool):
@@ -18,7 +19,7 @@ class NodeTool(AbstractObject, BaseTool):
         return response.content
 
     async def _arun(self, body: str) -> str:
-        raise NotImplementedError
+        raise NotImplementedError()
 
 
 class AsyncNodeTool(AbstractObject, BaseTool):
@@ -27,7 +28,7 @@ class AsyncNodeTool(AbstractObject, BaseTool):
     node: AsyncNode = Field(init=False)
 
     def _run(self, body: str) -> str:
-        raise NotImplementedError
+        raise NotImplementedError()
 
     async def _run(self, body: str) -> str:
         response = await self.node.areceive(Message.draft_request(body=body))
@@ -43,12 +44,8 @@ class LangchainNode(Node):
 
     chain: Any = Field(description="the chain to use to interpret messages")
 
-    def tell(self, message: Message):
-        document = Document(page_content=message.content, metadata=message.metadata)
-        self.chain.memory.add_documents([document])
-
-    def request(self, message: Message):
-        yield self._draft(content=self.chain.run(message.content))
+    def receive(self, message: Message):
+        yield Message(sender=self, content=self.chain.run(message.content))
 
 
 class PlanAndExecuteNode(LangchainNode):
@@ -63,7 +60,7 @@ class BabyAGINode(LangchainNode):
 
     def request(self, message: Message) -> Message:
         response = self.chain(inputs={"objective": message.content, **message.metadata})
-        yield self._draft(content=response)
+        yield Message(sender=self, content=response)
 
 
 class AutoGPTNode(LangchainNode):

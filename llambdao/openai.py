@@ -1,7 +1,7 @@
 import json
 from textwrap import dedent
 
-from llambdao import Message
+from llambdao.message import Message
 
 
 class OpenAIMessage(Message):

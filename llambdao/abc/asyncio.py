@@ -1,11 +1,11 @@
 import asyncio
-from abc import ABC
-from typing import AsyncIterable, Dict, List, Optional
+from abc import ABC, abstractmethod
+from typing import AsyncIterable, Dict, List
 
 from eventemitter import EventEmitter
 from pydantic import Field
 
-from llambdao import Chat, Graph, MapReduce, Message, Node
+from llambdao.abc import Graph, MapReduce, Message, Node
 
 
 class AsyncNode(Node, EventEmitter, ABC):
@@ -23,12 +23,10 @@ class AsyncNode(Node, EventEmitter, ABC):
         super().unlink(node)
         self.emit("unlinked", node)
 
-    async def areceive(self, message: Message) -> Optional[Message]:
-        self.emit("received", message)
+    async def areceive(self, message: Message):
         future = getattr(self, f"a{message.action}")(message)
         response = await asyncio.run_coroutine_threadsafe(future, self._loop)
-        self.emit("responded", message, response)
-        return response
+        yield response
 
 
 class AsyncGraph(Graph, ABC):
@@ -41,10 +39,6 @@ class AsyncGraph(Graph, ABC):
             for edge in edges:
                 node.link(edge)
                 edge.link(node)
-
-    async def areceive(self, message: Message):
-        """Graphs should implement their own receive method."""
-        raise NotImplementedError()
 
 
 class AsyncMapReduce(MapReduce, AsyncNode, ABC):
@@ -64,25 +58,26 @@ class AsyncMapReduce(MapReduce, AsyncNode, ABC):
             async for response in generator:
                 yield response
 
+    @abstractmethod
     async def _areduce(
         self, message: Message, messages: AsyncIterable[Message]
     ) -> AsyncIterable[Message]:
         raise NotImplementedError()
 
 
-class AsyncChat(Chat, AsyncNode):
-    def __init__(self, *nodes: AsyncNode, **kwargs):
-        super().__init__(*nodes, **kwargs)
+class AsyncChat(Node, ABC):
+    def __init__(self, *nodes: Node, **kwargs):
+        super().__init__(**kwargs)
+        for node in nodes:
+            self.link(node)
+            node.link(self)
 
     async def areceive(self, message: Message):
         messages = [message]
         while message := messages.pop():
-            self.messages.append(message)
-
-            broadcast = Message(**message.dict(), sender=self, action="tell")
             for edge in self.edges.values():
                 if edge.node == message.sender:
                     continue
-                async for response in edge.node.areceive(broadcast):
+                async for response in edge.node.areceive(message):
                     yield response
                     messages.append(response)

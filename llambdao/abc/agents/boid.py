@@ -1,14 +1,14 @@
+from abc import ABC, abstractmethod
 from textwrap import dedent
 from typing import List
 
 from langchain.schema import BaseMemory
 from pydantic import Field
 
-from llambdao import Message, Node
-from llambdao.helpers import chat_messages
+from llambdao.message import Message, Node
 
 
-class BOIDAgent(Node):
+class BOID(Node, ABC):
     class Directive(Message):
         role = "user"  # works better than "system"... for now... with GPTs
         action = "be"
@@ -48,18 +48,17 @@ class BOIDAgent(Node):
         self.behavior = message
 
     def do(self, message: Message):
-        action = "start" if not message.reply_to else "continue"
-        yield from getattr(self, f"{action}_doing")(message)
+        action = self.start_doing if not message.reply_to else self.continue_doing
+        yield from action(message)
 
+    @abstractmethod
     def start_doing(self, message: Message):
-        pass
+        raise NotImplementedError()
 
+    @abstractmethod
     def continue_doing(self, message: Message):
-        pass
+        raise NotImplementedError()
 
+    @abstractmethod
     def chat(self, message: Message):
-        """Ask a question."""
-        result = self.chat_model.generate(
-            [chat_messages(message, directive=self.behavior)], stop=["\n"]
-        )
-        yield Message(content=result, reply_to=message)
+        raise NotImplementedError()

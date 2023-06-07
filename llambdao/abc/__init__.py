@@ -1,10 +1,11 @@
 import itertools
-from abc import ABC
-from datetime import datetime
+from abc import ABC, abstractmethod
 from typing import Any, Dict, Iterable, List, Optional
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
+
+from llambdao.message import Message
 
 Metadata = Dict[Any, Any]
 
@@ -33,29 +34,14 @@ class Node(AbstractObject, ABC):
     role: str = Field(include=["system", "user", "ai"], description="node role")
     edges: Dict[Any, Edge] = Field(default_factory=dict)
 
-    def link(self, node: "Node", **metadata):
-        self.edges[node.id] = self.Edge(node, metadata)
+    def link(self, to_node: "Node", **metadata):
+        self.edges[to_node.id] = self.Edge(to_node, metadata)
 
-    def unlink(self, node: "Node"):
-        del self.edges[node.id]
+    def unlink(self, from_node: "Node"):
+        del self.edges[from_node.id]
 
     def receive(self, message: "Message") -> Iterable["Message"]:
         yield from getattr(self, message.action)(message)
-
-
-class Message(AbstractObject):
-    sender: Node = Field(description="sender identifier")
-    action: Optional[str] = Field(
-        include=["be", "do", "chat"],
-        description="message action",
-    )
-    content: str = Field(description="message contents")
-    reply_to: Optional["Message"] = Field(description="reply to message")
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
-
-    @property
-    def role(self):
-        return self.sender.role
 
 
 class Graph(Node, ABC):
@@ -69,10 +55,6 @@ class Graph(Node, ABC):
                 node.link(edge)
                 edge.link(node)
 
-    def receive(self, message: Message):
-        """Graphs should implement their own receive method."""
-        raise NotImplementedError()
-
 
 class MapReduce(Node, ABC):
     def __init__(self, *nodes: Node, **kwargs):
@@ -82,7 +64,7 @@ class MapReduce(Node, ABC):
             node.link(self)
 
     def receive(self, message: Message) -> Iterable[Message]:
-        return self._reduce(self._map(message))
+        return self._reduce(message, self._map(message))
 
     def _map(self, message: Message) -> Iterable[Message]:
         sender = message.sender
@@ -93,13 +75,14 @@ class MapReduce(Node, ABC):
             if edge.node != sender
         )
 
-    def _reduce(self, messages: Iterable[Message]) -> Iterable[Message]:
+    @abstractmethod
+    def _reduce(
+        self, message: Message, messages: Iterable[Message]
+    ) -> Iterable[Message]:
         raise NotImplementedError()
 
 
-class Chat(Node):
-    messages: List[Message] = Field(default_factory=list)
-
+class Chat(Node, ABC):
     def __init__(self, *nodes: Node, **kwargs):
         super().__init__(**kwargs)
         for node in nodes:
@@ -109,12 +92,9 @@ class Chat(Node):
     def receive(self, message: Message):
         messages = [message]
         while message := messages.pop():
-            self.messages.append(message)
-
-            broadcast = Message(**message.dict(), sender=self, action="tell")
             for edge in self.edges.values():
                 if edge.node == message.sender:
                     continue
-                for response in edge.node.receive(broadcast):
+                for response in edge.node.receive(message):
                     yield response
                     messages.append(response)

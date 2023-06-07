@@ -5,8 +5,8 @@ import openai
 from dotenv import load_dotenv
 from pydantic import Field
 
-from llambdao import Message, Node
 from llambdao.console import PrettyConsole
+from llambdao.message import Message, Node
 from llambdao.recipes import Chat
 
 load_dotenv()
