@@ -1,15 +1,19 @@
 from pprint import pprint
 from typing import Iterable, Optional
 
-from llambdao.abc import Chat, Node
+from llambdao.abc import Node, StableChat
 from llambdao.message import Message
 
 
 def message_sequence(message: Message, limit: Optional[int] = 12) -> Iterable[Message]:
     """Get the sequence of messages that led to this message."""
-    if limit > 1 and message.reply_to is not None:
+    if limit < 1:
+        raise ValueError("limit must be greater than 0")
+    elif limit == 1 or message.reply_to is None:
+        yield message
+    else:
         yield from message_sequence(message.reply_to, limit=limit - 1)
-    yield message
+        yield message
 
 
 class UserConsoleNode(Node):
@@ -21,7 +25,7 @@ class UserConsoleNode(Node):
         yield Message(sender=self, content=response)
 
 
-class ConsoleChat(Chat):
+class ConsoleChat(StableChat):
     role = "system"
 
     def receive(self, message: Message):

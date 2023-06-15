@@ -63,14 +63,13 @@ class MapReduce(Node, ABC):
             self.link(node)
             node.link(self)
 
-    def receive(self, message: Message) -> Iterable[Message]:
+    def request(self, message: Message) -> Iterable[Message]:
         return self._reduce(message, self._map(message))
 
     def _map(self, message: Message) -> Iterable[Message]:
         sender = message.sender
-        broadcast = Message(**message.dict(), sender=self)
         yield from itertools.chain.from_iterable(
-            edge.node.receive(broadcast)
+            edge.node.receive(message)
             for edge in self.edges.values()
             if edge.node != sender
         )
@@ -82,19 +81,13 @@ class MapReduce(Node, ABC):
         raise NotImplementedError()
 
 
-class Chat(Node, ABC):
-    def __init__(self, *nodes: Node, **kwargs):
-        super().__init__(**kwargs)
-        for node in nodes:
-            self.link(node)
-            node.link(self)
-
-    def receive(self, message: Message):
+class StableChat(MapReduce, ABC):
+    def chat(self, message: Message):
         messages = [message]
-        while message := messages.pop():
-            for edge in self.edges.values():
-                if edge.node == message.sender:
-                    continue
-                for response in edge.node.receive(message):
-                    yield response
-                    messages.append(response)
+        while message_i := messages.pop():
+            for message_j in self._map(message):
+                message_j.reply_to = message_i
+                yield message_j
+                messages.append(message_j)
+
+                message_i = message_j

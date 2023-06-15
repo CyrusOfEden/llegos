@@ -5,7 +5,8 @@ import openai
 from dotenv import load_dotenv
 from pydantic import Field
 
-from llambdao import Message, Node
+from llambdao import Message
+from llambdao.abc.asyncio import AsyncNode
 from llambdao.helpers import ConsoleChat, UserConsoleNode
 
 load_dotenv()
@@ -13,56 +14,50 @@ load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 
-class Philosopher(Node):
+class Philosopher(AsyncNode):
     role = "ai"  # can be one of "system", "user", "ai"
-    beliefs: str = Field(description="The beliefs of the philospher")
-    memory: list[Message] = Field(init=False)
+    short_term_memory: list[Message] = Field()
 
     class Directive(Message):
-        """Subclass standard objects within your classes to remove duplication of prompts"""
-
         role = "user"
         action = "be"
 
-        def __init__(self, content: str, **kwargs):
+        def __init__(self, beliefs: str, **kwargs):
             return super().__init__(
                 content=dedent(
                     f"""\
                     You are an AI that is playing the role of a philosopher.
                     You are one of a group of philosophers advising the user.
 
-                    Here is how you think:
-                    {content}
+                    Here are your beliefs:
+                    {beliefs}
 
                     """
                 ),
                 **kwargs,
             )
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.memory = [self.Directive.draft(self.beliefs)]
+    def __init__(self, beliefs: str, **kwargs):
+        short_term_memory = kwargs.pop("short_term_memory", [])
+        if not any(short_term_memory):
+            short_term_memory.append(self.Directive.draft(beliefs=beliefs))
 
-    def tell(self, message):
-        """
-        Nodes can have multiple methods. This one is called tell.
-
-        Here we have it update the beliefs of the philosopher.
-        """
-        completion = openai.Completion.create(
-            engine="gpt-3.5-turbo",
-            messages=[self.memory[0], self.Reflection.draft(message.content)],
-            temperature=0.25,
-            max_tokens=512,
-            stop=["DONE"],
+        super().__init__(
+            **kwargs,
+            short_term_memory=short_term_memory,
         )
-        self.memory[0] = self.Directive(content=completion.choices[0].text)
 
-    def ask(self, message):
+    def be(self, message: Message):
+        self.short_term_memory[0] = message
+
+    def inform(self, message: Message):
+        self.short_term_memory.append(message)
+
+    def chat(self, message: Message):
         """Ask a Philosopher a question"""
         completion = openai.Completion.create(
             engine="gpt-3.5-turbo",
-            messages=[m.json() for m in self.memory],
+            messages=[m.json() for m in self.short_term_memory],
             temperature=0.5,
             max_tokens=512,
             stop=["\n"],
@@ -72,7 +67,7 @@ class Philosopher(Node):
             content=completion.choices[0].text, reply_to=message, action="ask"
         )
         # Update the local state
-        self.memory.append(response)
+        self.short_term_memory.append(response)
 
         return response
 

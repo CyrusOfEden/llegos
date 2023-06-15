@@ -53,22 +53,28 @@ class PlanAndExecuteNode(LangchainNode):
 
 
 class BabyAGINode(LangchainNode):
-    def tell(self, message: Message):
+    def inform(self, message: Message):
         document = Document(page_content=message.content, metadata=message.metadata)
         # Have to override this method to add documents to chain.vectorstore instead of chain.memory
         self.chain.vectorstore.add_documents([document])
 
-    def request(self, message: Message) -> Message:
+    def receive(self, message: Message) -> Message:
+        if message.action == "inform":
+            return self.inform(message)
+
         response = self.chain(inputs={"objective": message.content, **message.metadata})
         yield Message(sender=self, content=response)
 
 
 class AutoGPTNode(LangchainNode):
-    def tell(self, message: Message):
+    def inform(self, message: Message):
         documents = [Document(page_content=message.content, metadata=message.metadata)]
         self.chain.memory.retriever.add_documents(documents)
 
-    def request(self, message: Message) -> Message:
+    def receive(self, message: Message) -> Message:
+        if message.action == "inform":
+            return self.inform(message)
+
         """Can pass in multiple goals, separated by newlines."""
         goals = message.metadata.get("goals", message.content.split("\n"))
         response = self.chain.run(goals)

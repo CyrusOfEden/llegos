@@ -1,5 +1,5 @@
 import asyncio
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import AsyncIterable, Dict, List
 
 from eventemitter import EventEmitter
@@ -41,15 +41,14 @@ class AsyncGraph(Graph, ABC):
                 edge.link(node)
 
 
-class AsyncMapReduce(MapReduce, AsyncNode, ABC):
+class AsyncMapReduce(MapReduce, AsyncNode):
     async def areceive(self, message: Message) -> AsyncIterable[Message]:
         return self._reduce(message, self._map(message))
 
     async def _amap(self, message: Message) -> AsyncIterable[Message]:
         sender = message.sender
-        broadcast = Message(**message.dict(), sender=self)
         tasks = (
-            self._loop.create_task(edge.node.areceive(broadcast))
+            self._loop.create_task(edge.node.areceive(message))
             for edge in self.edges.values()
             if edge.node != sender
         )
@@ -58,26 +57,69 @@ class AsyncMapReduce(MapReduce, AsyncNode, ABC):
             async for response in generator:
                 yield response
 
-    @abstractmethod
     async def _areduce(
         self, message: Message, messages: AsyncIterable[Message]
     ) -> AsyncIterable[Message]:
-        raise NotImplementedError()
+        yield message
+        async for message in messages:
+            yield message
 
 
-class AsyncChat(Node, ABC):
+class AsyncStableChat(Node):
+    """
+    What you'd expect out of a chat system. Every received chat message will be
+    broadcasted to all nodes except the sender. In order, every node will get to
+    response to the received the message.
+
+    This Async variant is useful when you want to increase the performance of your
+    IO-bound multi-agent-system.
+    """
+
     def __init__(self, *nodes: Node, **kwargs):
         super().__init__(**kwargs)
         for node in nodes:
             self.link(node)
             node.link(self)
 
-    async def areceive(self, message: Message):
+    async def achat(self, message: Message):
         messages = [message]
-        while message := messages.pop():
+        while message_i := messages.pop():
             for edge in self.edges.values():
-                if edge.node == message.sender:
+                if edge.node == message_i.sender:
                     continue
-                async for response in edge.node.areceive(message):
-                    yield response
-                    messages.append(response)
+                async for message_j in edge.node.areceive(message_i):
+                    message_j.reply_to = message_i
+                    yield message_j
+                    messages.append(message_j)
+
+                    message_i = message_j
+
+
+class AsyncUnstableChat(Node, ABC):
+    """
+    Useful to have multiple nodes process a received "chat" message in parallel.
+    Every received chat message will be broadcasted to all nodes except the sender.
+    This is useful when you're asyncio-bound, with i.e. web requests.
+    """
+
+    def __init__(self, *nodes: Node, **kwargs):
+        super().__init__(**kwargs)
+        for node in nodes:
+            self.link(node)
+            node.link(self)
+
+    async def achat(self, message: Message):
+        messages = [message]
+        while message_i := messages.pop():
+            futures = [
+                edge.node.areceive(message_i)
+                for edge in self.edges.values()
+                if edge.node != message_i.sender
+            ]
+            for response_messages in asyncio.as_completed(futures):
+                async for message_j in response_messages:
+                    message_j.reply_to = message_i
+                    yield message_j
+                    messages.append(message_j)
+
+                    message_i = message_j

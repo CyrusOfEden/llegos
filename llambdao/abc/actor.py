@@ -1,8 +1,9 @@
-import asyncio
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import Dict, Iterable, List, Optional
 
-from llambdao.abc import Chat, Graph, MapReduce, Message, Node
+import ray
+
+from llambdao.abc import Graph, MapReduce, Message, Node, StableChat
 from llambdao.actor import Actor
 
 
@@ -32,39 +33,54 @@ class ActorGraph(Graph, ABC):
                 edge.link(node)
 
 
-class ActorMapReduce(MapReduce, ActorNode, ABC):
-    async def areceive(self, message: Message) -> Iterable[Message]:
+class ActorMapReduce(MapReduce, ActorNode):
+    def request(self, message: Message) -> Iterable[Message]:
         return self._reduce(message, self._map(message))
 
-    async def _amap(self, message: Message) -> Iterable[Message]:
+    def _map(self, message: Message) -> Iterable[Message]:
         sender = message.sender
-        broadcast = Message(**message.dict(), sender=self)
-        tasks = (
-            self._loop.create_task(edge.node.areceive(broadcast))
+        futures = [
+            edge.node.actor.receive.remote(message)
             for edge in self.edges.values()
             if edge.node != sender
-        )
-        generators = await asyncio.gather(*tasks)
-        for generator in generators:
-            async for response in generator:
-                yield response
+        ]
+        while any(futures):
+            ready, futures = ray.wait(futures, num_returns=1)
+            for response_messages in ready:
+                for message in ray.get(response_messages):
+                    yield message
 
-    @abstractmethod
-    async def _areduce(
+    def _reduce(
         self, message: Message, messages: Iterable[Message]
     ) -> Iterable[Message]:
-        raise NotImplementedError()
+        yield message
+        yield from messages
 
 
-class ActorChat(Chat):
-    def receive(self, message: Message):
-        """TODO: Parallelize using ray.wait"""
+class ActorUnstableChat(StableChat):
+    """
+    Useful to have multiple actors run in different processes simultaneously.
+    Every received chat message will be broadcasted to all nodes except the sender.
+    There's no guarantee that the messages will be processed in order.
 
+    This Unstable Actor variant can be useful to unlock parallelism without having to use asyncio.
+    And there's no point to having a StableActorChat because you can just use StableChat.
+    """
+
+    def chat(self, message: Message):
         messages = [message]
-        while message := messages.pop():
-            for edge in self.edges.values():
-                if edge.node == message.sender:
-                    continue
-                for response in edge.node.receive(message):
-                    yield response
-                    messages.append(response)
+        while message_i := messages.pop():
+            futures = [
+                edge.node.actor.receive.remote(message_i)
+                for edge in self.edges.values()
+                if edge.node != message_i.sender
+            ]
+            while any(futures):
+                ready, futures = ray.wait(futures, num_returns=1)
+                for response_messages in ready:
+                    for message_j in ray.get(response_messages):
+                        message_j.reply_to = message_i
+                        yield message_j
+                        messages.append(message_j)
+
+                        message_i = message_j
