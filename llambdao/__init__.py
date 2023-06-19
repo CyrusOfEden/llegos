@@ -1,28 +1,27 @@
 from message import Message
 
-from llambdao.abc import Graph, MapReduce, Node, StableChat
-from llambdao.abc.asyncio import (
-    AsyncGraph,
-    AsyncMapReduce,
+from llambdao.node import GraphNode, GroupChatNode, MapperNode, Node
+from llambdao.node.asyncio import (
+    AsyncGraphNode,
+    AsyncGroupChatNode,
+    AsyncMapperNode,
     AsyncNode,
-    AsyncStableChat,
-    AsyncUnstableChat,
 )
 
 __all__ = [
     # It all starts with messaging
     "Message",
     # Into different structures
-    "Graph",
-    "MapReduce",
+    "GraphNode",
+    "MapperNode",
     # Modeling agents as nodes
     "Node",
     # And structuring their coordination
-    "StableChat",
+    "GroupChatNode",
     # With asyncio variants
-    "AsyncGraph",
-    "AsyncMapReduce",
+    "AsyncGraphNode",
+    "AsyncMapperNode",
     "AsyncNode",
-    "AsyncStableChat",
-    "AsyncUnstableChat",
+    "AsyncGroupChatNode",
+    "AsyncBroadcastNode",
 ]

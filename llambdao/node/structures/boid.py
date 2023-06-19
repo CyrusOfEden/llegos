@@ -10,7 +10,7 @@ from llambdao.message import Message, Node
 
 class BOID(Node, ABC):
     class Directive(Message):
-        role = "user"  # works better than "system"... for now... with GPTs
+        role = "system"
         action = "be"
         content = dedent(
             """\

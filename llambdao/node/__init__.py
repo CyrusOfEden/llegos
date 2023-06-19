@@ -1,8 +1,10 @@
 import itertools
-from abc import ABC, abstractmethod
+from abc import ABC
+from textwrap import dedent
 from typing import Any, Dict, Iterable, List, Optional
 from uuid import uuid4
 
+import yaml
 from pydantic import BaseModel, Field
 
 from llambdao.message import Message
@@ -34,6 +36,17 @@ class Node(AbstractObject, ABC):
     role: str = Field(include=["system", "user", "ai"], description="node role")
     edges: Dict[Any, Edge] = Field(default_factory=dict)
 
+    def __str__(self):
+        return dedent(
+            f"""\
+            {self.__class__.__name__}
+            id: {self.id}
+            role: {self.role}
+            metadata:
+                {yaml.dumps(self.metadata)}
+            """
+        )
+
     def link(self, to_node: "Node", **metadata):
         self.edges[to_node.id] = self.Edge(to_node, metadata)
 
@@ -44,7 +57,7 @@ class Node(AbstractObject, ABC):
         yield from getattr(self, message.action)(message)
 
 
-class Graph(Node, ABC):
+class GraphNode(Node, ABC):
     def __init__(self, graph: Dict[Node, List[Node]], **kwargs):
         super().__init__(**kwargs)
         for node, edges in graph.items():
@@ -56,17 +69,14 @@ class Graph(Node, ABC):
                 edge.link(node)
 
 
-class MapReduce(Node, ABC):
+class MapperNode(Node):
     def __init__(self, *nodes: Node, **kwargs):
         super().__init__(**kwargs)
         for node in nodes:
             self.link(node)
             node.link(self)
 
-    def request(self, message: Message) -> Iterable[Message]:
-        return self._reduce(message, self._map(message))
-
-    def _map(self, message: Message) -> Iterable[Message]:
+    def do(self, message: Message) -> Iterable[Message]:
         sender = message.sender
         yield from itertools.chain.from_iterable(
             edge.node.receive(message)
@@ -74,20 +84,12 @@ class MapReduce(Node, ABC):
             if edge.node != sender
         )
 
-    @abstractmethod
-    def _reduce(
-        self, message: Message, messages: Iterable[Message]
-    ) -> Iterable[Message]:
-        raise NotImplementedError()
 
-
-class StableChat(MapReduce, ABC):
+class GroupChatNode(MapperNode):
     def chat(self, message: Message):
         messages = [message]
         while message_i := messages.pop():
-            for message_j in self._map(message):
+            for message_j in self.do(message):
                 message_j.reply_to = message_i
                 yield message_j
                 messages.append(message_j)
-
-                message_i = message_j
