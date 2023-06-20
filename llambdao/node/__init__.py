@@ -54,7 +54,7 @@ class Node(AbstractObject, ABC):
         del self.edges[from_node.id]
 
     def receive(self, message: "Message") -> Iterable["Message"]:
-        yield from getattr(self, message.action)(message)
+        yield from getattr(self, message.intent)(message)
 
 
 class GraphNode(Node, ABC):

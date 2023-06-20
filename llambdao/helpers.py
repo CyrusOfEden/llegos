@@ -10,14 +10,14 @@ class ConsoleHumanNode(Node):
     def chat(self, message: Message):
         pprint(message.dict())
         response = input("Enter response: ")
-        yield Message(sender=self, content=response)
+        if response:
+            yield Message(
+                sender=self, content=response, intent="chat", reply_to=message
+            )
 
 
 class ConsoleGroupChatNode(GroupChatNode):
     role = "system"
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(ConsoleHumanNode(), *args, **kwargs)
 
     def chat(self, message: Message):
         pprint(message.dict())

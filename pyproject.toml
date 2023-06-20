@@ -8,7 +8,7 @@ line-length = 100
 [tool.poetry]
 name = "llambdao"
 version = "0.1.0"
-description = "A Python framework for implementing the ideas to be discussed in LLAMBDAO: Large Language Agents Modulating Behaviour in Decentralized Autonomous Organizations"
+description = "A toolkit for implementing the ideas to be discussed in LLAMBDAO: Large Language Agents Modulating Behaviour in Decentralized Autonomous Organizations"
 authors = ["Shaman AI <hello@shaman.ai>"]
 license = "BUSL-1.1"
 readme = "README.md"

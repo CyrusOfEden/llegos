@@ -24,7 +24,7 @@ class AsyncNode(Node, EventEmitter, ABC):
         self.emit("unlinked", node)
 
     async def areceive(self, message: Message):
-        future = getattr(self, f"a{message.action}")(message)
+        future = getattr(self, f"a{message.intent}")(message)
         response = await asyncio.run_coroutine_threadsafe(future, self._loop)
         yield response
 

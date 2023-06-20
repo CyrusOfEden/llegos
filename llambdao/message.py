@@ -12,14 +12,14 @@ class Message(AbstractObject):
     sender: Node = Field()
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     reply_to: Optional["Message"] = Field()
-    action: Optional[str] = Field(
+    intent: Optional[str] = Field(
         description=dedent(
             """\
             By default, nodes will dispatch messages to a method named after the action.
             For example, a message with action "step" will call the "step" method.
             For async nodes, the method name will be prefixed with "a", so "step" becomes "astep".
 
-            A curated set of action names to consider:
+            A curated set of intent names to consider:
             - chat = "chat about this topic", "talk about this topic", etc.
             - request = "request this thing", "ask for this thing", etc.
             - query = "query for information"
@@ -31,7 +31,7 @@ class Message(AbstractObject):
             """
         ),
     )
-    content: str = Field()
+    content: str = Field(default="")
 
     def __str__(self):
         return dedent(
@@ -42,7 +42,7 @@ class Message(AbstractObject):
             reply_to: {self.reply_to.id if self.reply_to else "None"}
             sender: {self.sender.id}
             timestamp: {self.timestamp.isoformat()}
-            action: {self.action}
+            intent: {self.intent}
             content: {self.content}
             metadata:
                 {yaml.dumps(self.metadata)}

@@ -48,6 +48,6 @@ def test_summary_actor_node():
         SummaryActorNode(actor_options=actor_options),
         SummaryActorNode(actor_options=actor_options),
     )
-    do = Message(action="do", content="Do something!")
+    do = Message(intent="do", content="Do something!")
     for summary in ray.get(mapper.receive(do)):
         print(summary)

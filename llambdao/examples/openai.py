@@ -55,3 +55,19 @@ class SummaryNode(Node):
         yield Message(content=summary, sender=self, reply_to=message)
         # Update state
         self.summary = summary
+
+
+def test_summary_node():
+    node = SummaryNode()
+    # Send a message
+    inform = Message(
+        role="user",
+        content="Hello, world!",
+        intent="inform",
+    )
+    # Receive a message
+    node.receive(inform)
+    # Query the summary
+    query = Message(role="user", intent="query")
+    for response in node.receive(query):
+        print(response.content)
