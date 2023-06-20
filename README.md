@@ -25,9 +25,7 @@ But here's a crucial problem that arises when we deal with complex agent archite
 
 DSLs are specialized languages designed with a particular application domain in mind. By presenting the right abstractions, they streamline code writing, making it more readable, less prone to errors, and inherently expressive. LLAMBDAO's journey ventures towards establishing such a DSL for modeling agent architectures, aiming to accelerate innovation by presenting the right abstractions.
 
-The beauty of LLAMBDAO shines in this modularity and interoperability, offering a flexible platform to model diverse autonomous agents. It promotes scalability and robustness, quintessential features needed in an open source community that deals with autonomous agents.
-
-Embark on this journey of LLAMBDAO and witness how the essence of Object Oriented Programming transcends to align with the realm of autonomous agents, offering an enriched perspective for designing sophisticated systems. Get ready for a thrilling exploration of autonomous agents, all through the paradigm-shifting lens of LLAMBDAO!
+The beauty of LLAMBDAO shines in this modularity and interoperability, offering a flexible platform to model diverse autonomous agents.
 
 ## An Open Invitation for Collaboration
 
