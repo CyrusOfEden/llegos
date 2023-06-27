@@ -107,7 +107,7 @@ _SE:_ "Great! Now, let's explore the concept of messages in more depth."
 
 _JE:_ "So we've used messages before, but only in a basic way, right?"
 
-_SE:_ "Correct. The `Message` class has an attribute called `intent`. It dictates what kind of action the receiving node will perform. For example, a message with `intent="chat"` will trigger the `chat` method on the receiving node."
+_SE:_ "Correct. The `Message` class has an attribute called `intent`. It dictates what kind of action the receiving node will perform. For example, a message with `kind="chat"` will trigger the `chat` method on the receiving node."
 
 _JE:_ "That sounds powerful! And that it would lead to clean code!"
 
@@ -118,7 +118,7 @@ class Message(AbstractObject):
     sender: Node = Field()
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     reply_to: Optional["Message"] = Field()
-    intent: Optional[str] = Field(
+    kind: Optional[str] = Field(
         description=dedent(
             """\
             A curated set of intent names to consider:
@@ -164,7 +164,7 @@ _SE:_ "Alright, let's move on to autonomous agents. Take a look at this `Summary
 
 ```python
 class SummaryNode(Node):
-    role = "ai"
+    role = "assistant"
     messages: List[Message] = Field(default_factory=list)
     summary: Optional[Message] = Field(default=None)
 
@@ -280,7 +280,7 @@ class ConsoleHumanNode(Node):
     def chat(self, message: Message):
         pprint(message.dict())
         response = input("Enter response: ")
-        yield Message(sender=self, content=response, intent="chat", reply_to=message)
+        yield Message(sender=self, content=response, kind="chat", reply_to=message)
 
 
 class ConsoleGroupChatNode(GroupChatNode):
@@ -379,7 +379,7 @@ class HumanEmailNode(Node):
         # Wait for the reply
         for new_email in new_emails():
             if new_email["In-Reply-To"] == sent_message_id:
-                yield Message(content=reply.content, sender=self, intent="inform")
+                yield Message(content=reply.content, sender=self, kind="inform")
                 break
 ```
 

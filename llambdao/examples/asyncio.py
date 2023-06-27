@@ -23,7 +23,7 @@ async def test_website_summary_node():
 
     request = Message(
         content="https://openai.com/blog/function-calling-and-other-api-updates",
-        intent="request",
+        kind="request",
     )
     async for snippet in snipper.areceive(request):
         print(snippet.content)

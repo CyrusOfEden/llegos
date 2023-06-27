@@ -3562,6 +3562,17 @@ testing = ["build[virtualenv]", "filelock (>=3.4.0)", "flake8-2020", "ini2toml[l
 testing-integration = ["build[virtualenv]", "filelock (>=3.4.0)", "jaraco.envs (>=2.2)", "jaraco.path (>=3.2.0)", "pytest", "pytest-enabler", "pytest-xdist", "tomli", "virtualenv (>=13.0.0)", "wheel"]
 
 [[package]]
+name = "singleton-decorator"
+version = "1.0.0"
+description = "A testable singleton decorator"
+category = "main"
+optional = false
+python-versions = "*"
+files = [
+    {file = "singleton-decorator-1.0.0.tar.gz", hash = "sha256:1a90ad8a8a738be591c9c167fdd677c5d4a43d1bc6b1c128227be1c5e03bee07"},
+]
+
+[[package]]
 name = "six"
 version = "1.16.0"
 description = "Python 2 and 3 compatibility utilities"
@@ -4315,4 +4326,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10.9"
-content-hash = "0d435ed7fcf3e9bc0d8e6d1c21cbbcb877a46141683ed8545d8336d840b54395"
+content-hash = "7914417e3bd0b29b05158032c7ab6f19ec423eb5b1f1415257ea42e5e18c74c6"

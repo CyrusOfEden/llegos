@@ -5,14 +5,21 @@ from typing import Iterable, List, Optional
 import yaml
 from pydantic import Field
 
-from llambdao.node import AbstractObject, Node
+from llambdao.node.sync import AbstractObject, Node, SystemNode
 
 
 class Message(AbstractObject):
     sender: Node = Field()
+    recipient: Optional[Node] = Field(
+        description=dedent(
+            """\
+            Useful for routing, but optional when sending messages directly to a node.
+            """
+        )
+    )
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     reply_to: Optional["Message"] = Field()
-    intent: Optional[str] = Field(
+    kind: Optional[str] = Field(
         description=dedent(
             """\
             By default, nodes will dispatch messages to a method named after the action.
@@ -34,19 +41,18 @@ class Message(AbstractObject):
     content: str = Field(default="")
 
     def __str__(self):
-        return dedent(
-            f"""\
-            class: {self.__class__.__name__}
-            id: {self.id}
-            role: {self.role}
-            reply_to: {self.reply_to.id if self.reply_to else "None"}
-            sender: {self.sender.id}
-            timestamp: {self.timestamp.isoformat()}
-            intent: {self.intent}
-            content: {self.content}
-            metadata:
-                {yaml.dumps(self.metadata)}
-            """
+        return yaml.dumps(
+            {
+                "class": self.__class__.__name__,
+                "id": self.id,
+                "role": self.role,
+                "reply_to": self.reply_to.id if self.reply_to else "None",
+                "sender": self.sender.id,
+                "timestamp": self.timestamp.isoformat(),
+                "intent": self.intent,
+                "content": self.content,
+                "metadata": self.metadata,
+            }
         )
 
     @property
@@ -54,17 +60,58 @@ class Message(AbstractObject):
         return self.sender.role
 
 
-def message_chain(message: Message, height: Optional[int] = 12) -> Iterable[Message]:
+class SystemMessage(Message):
+    sender = SystemNode
+    action = "be"
+
+
+class ChatMessage(Message):
+    action = "chat"
+
+
+def message_iter(message: Message, height: Optional[int] = 12) -> Iterable[Message]:
     """Get the sequence of messages that led to this message."""
     if height < 1:
         raise ValueError("limit must be greater than 0")
     elif height == 1 or message.reply_to is None:
         yield message
     else:
-        yield from message_chain(message.reply_to, height=height - 1)
+        yield from message_iter(message.reply_to, height=height - 1)
         yield message
+
+
+def test_message_iter():
+    m1 = Message("Hello")
+    m2 = Message("How are you?", reply_to=m1)
+    m3 = Message("I'm good, thanks!", reply_to=m2)
+    m4 = Message("That's great to hear!", reply_to=m3)
+
+    # Test with a limit of 2
+    assert list(message_iter(m4, limit=2)) == [m3, m4]
+    # Test with a limit of 3
+    assert list(message_iter(m4, limit=3)) == [m2, m3, m4]
+    # Test with a limit of 4
+    assert list(message_iter(m4, limit=4)) == [m1, m2, m3, m4]
+    # Test with a limit of 5 (should return the same as limit=4)
+    assert list(message_iter(m4, limit=5)) == [m1, m2, m3, m4]
 
 
 def message_list(message: Message, limit: Optional[int] = 12) -> List[Message]:
     """Get the list of messages that led to this message."""
-    return list(message_chain(message, height=limit))
+    return list(message_iter(message, height=limit))
+
+
+def test_message_list():
+    m1 = Message("Hello")
+    m2 = Message("How are you?", reply_to=m1)
+    m3 = Message("I'm good, thanks!", reply_to=m2)
+    m4 = Message("That's great to hear!", reply_to=m3)
+
+    # Test with a limit of 2
+    assert message_list(m4, limit=2) == [m3, m4]
+    # Test with a limit of 3
+    assert message_list(m4, limit=3) == [m2, m3, m4]
+    # Test with a limit of 4
+    assert message_list(m4, limit=4) == [m1, m2, m3, m4]
+    # Test with a limit of 5 (should return the same as limit=4)
+    assert message_list(m4, limit=5) == [m1, m2, m3, m4]

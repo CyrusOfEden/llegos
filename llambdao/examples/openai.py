@@ -4,12 +4,12 @@ import openai
 from pydantic import Field
 
 from llambdao.message import Message
-from llambdao.node import Node
+from llambdao.node.sync import Node
 from llambdao.openai import to_openai
 
 
 class SummaryNode(Node):
-    role = "ai"
+    role = "assistant"
     messages: List[Message] = Field(default_factory=list)
     summary: Optional[Message] = Field(default=None)
 
@@ -33,7 +33,7 @@ class SummaryNode(Node):
         if self.summary:
             messages += [
                 Message(
-                    role="ai",
+                    role="assistant",
                     content="The next message is a summary of the conversation so far.",
                 ),
                 self.summary,
@@ -63,11 +63,11 @@ def test_summary_node():
     inform = Message(
         role="user",
         content="Hello, world!",
-        intent="inform",
+        kind="inform",
     )
     # Receive a message
     node.receive(inform)
     # Query the summary
-    query = Message(role="user", intent="query")
+    query = Message(role="user", kind="query")
     for response in node.receive(query):
         print(response.content)

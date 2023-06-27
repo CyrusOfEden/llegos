@@ -19,6 +19,7 @@ eventemitter = "^0.2.0"
 pydantic = "^1.10.7"
 python = "^3.10.9"
 httpx = "^0.24.1"
+singleton-decorator = "^1.0.0"
 
 [tool.poetry.group.dev]
 optional = true

@@ -33,7 +33,7 @@ class Node(AbstractObject, ABC):
         node: "Node" = Field()
         metadata: Optional[Metadata] = Field(default=None)
 
-    role: str = Field(include=["system", "user", "ai"], description="node role")
+    role: str = Field(include=["system", "user", "assistant"], description="node role")
     edges: Dict[Any, Edge] = Field(default_factory=dict)
 
     def __str__(self):
@@ -54,7 +54,43 @@ class Node(AbstractObject, ABC):
         del self.edges[from_node.id]
 
     def receive(self, message: "Message") -> Iterable["Message"]:
-        yield from getattr(self, message.intent)(message)
+        method = getattr(self, message.intent, None)
+        if not method:
+            raise AttributeError(
+                f"{self.__class__.__name__} does not have a method named {message.intent}"
+            )
+
+        if not message.recipient:
+            message.recipient = self
+
+        yield from method(message)
+
+
+class SystemNode(Node):
+    role = "system"
+
+    def receive(self, message: Message) -> Iterable[Message]:
+        yield from self.edges[message.recipient.id].node.receive(message)
+
+
+class AssistantNode(Node):
+    role = "assistant"
+    system: SystemNode = Field()
+
+    def _send(self, message: Message) -> Iterable[Message]:
+        if not message.sender:
+            message.sender = self
+        yield from self.system.receive(message)
+
+
+class UserNode(Node, ABC):
+    role = "user"
+    system: SystemNode = Field()
+
+    def _send(self, message: Message) -> Iterable[Message]:
+        if not message.sender:
+            message.sender = self
+        yield from self.system.receive(message)
 
 
 class GraphNode(Node, ABC):
@@ -70,7 +106,7 @@ class GraphNode(Node, ABC):
 
 
 class MapperNode(Node):
-    def __init__(self, *nodes: Node, **kwargs):
+    def __init__(self, nodes: List[Node], **kwargs):
         super().__init__(**kwargs)
         for node in nodes:
             self.link(node)

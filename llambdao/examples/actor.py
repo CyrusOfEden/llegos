@@ -16,7 +16,7 @@ class SummaryActorNode(ActorNode):
     This can be useful for distributing local computation across multiple hosts.
     """
 
-    role = "ai"
+    role = "assistant"
     messages: List[Message] = Field(default_factory=list)
     actor_options = dict(num_cpus=1)  # passed through to Actor.options(**actor_options)
 
@@ -48,6 +48,6 @@ def test_summary_actor_node():
         SummaryActorNode(actor_options=actor_options),
         SummaryActorNode(actor_options=actor_options),
     )
-    do = Message(intent="do", content="Do something!")
+    do = Message(kind="do", content="Do something!")
     for summary in ray.get(mapper.receive(do)):
         print(summary)

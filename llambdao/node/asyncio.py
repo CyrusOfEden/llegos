@@ -5,7 +5,7 @@ from typing import AsyncIterable, Dict, List
 from eventemitter import EventEmitter
 from pydantic import Field
 
-from llambdao.node import GraphNode, Message, Node
+from llambdao.node.sync import GraphNode, Message, Node
 
 
 class AsyncNode(Node, EventEmitter, ABC):
@@ -67,8 +67,8 @@ class AsyncGroupChatNode(AsyncMapperNode):
     broadcasted to all nodes except the sender. In order, every node will get to
     response to the received the message.
 
-    This Async variant is useful when you want to increase the performance of your
-    IO-bound multi-agent-system.
+    This Async variant is useful when you want to increase the performance of
+    running multiple IO-bound multi-agent-systems.
     """
 
     async def achat(self, message: Message):

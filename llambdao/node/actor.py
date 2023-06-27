@@ -5,7 +5,7 @@ import ray
 from pydantic import Field
 
 from llambdao.actor import Actor
-from llambdao.node import GraphNode, MapperNode, Message, Node
+from llambdao.node.sync import GraphNode, MapperNode, Message, Node
 
 
 class ActorNode(Node, ABC):

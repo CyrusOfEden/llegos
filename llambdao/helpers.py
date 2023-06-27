@@ -1,7 +1,7 @@
 from pprint import pprint
 
 from llambdao.message import Message
-from llambdao.node import GroupChatNode, Node
+from llambdao.node.sync import GroupChatNode, Node
 
 
 class ConsoleHumanNode(Node):
@@ -11,9 +11,7 @@ class ConsoleHumanNode(Node):
         pprint(message.dict())
         response = input("Enter response: ")
         if response:
-            yield Message(
-                sender=self, content=response, intent="chat", reply_to=message
-            )
+            yield Message(sender=self, content=response, kind="chat", reply_to=message)
 
 
 class ConsoleGroupChatNode(GroupChatNode):

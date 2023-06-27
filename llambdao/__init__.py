@@ -1,12 +1,12 @@
 from message import Message
 
-from llambdao.node import GraphNode, GroupChatNode, MapperNode, Node
 from llambdao.node.asyncio import (
     AsyncGraphNode,
     AsyncGroupChatNode,
     AsyncMapperNode,
     AsyncNode,
 )
+from llambdao.node.sync import GraphNode, GroupChatNode, MapperNode, Node
 
 __all__ = [
     # It all starts with messaging
