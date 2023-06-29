@@ -15,11 +15,11 @@ readme = "README.md"
 packages = [{ include = "llambdao" }]
 
 [tool.poetry.dependencies]
-eventemitter = "^0.2.0"
 pydantic = "^1.10.7"
 python = "^3.10.9"
 httpx = "^0.24.1"
 singleton-decorator = "^1.0.0"
+trio = "^0.22.0"
 
 [tool.poetry.group.dev]
 optional = true
@@ -40,6 +40,8 @@ types-pyyaml = "^6.0.12.9"
 openai = "^0.27.7"
 wikipedia = "^1.4.0"
 tiktoken = "^0.4.0"
+pytest-asyncio = "^0.21.0"
+pyee = "^11.0.0"
 
 [tool.poetry.group.ray]
 optional = true

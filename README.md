@@ -4,7 +4,7 @@
   - [An Introduction to LLAMBDAO](#an-introduction-to-llambdao)
     - [Everything is Connected](#everything-is-connected)
     - [Generating Responses](#generating-responses)
-    - [Communicating Intents](#communicating-intents)
+    - [Communicating Kinds](#communicating-kinds)
     - [Autonomous Agents](#autonomous-agents)
     - [Nodes as Networks](#nodes-as-networks)
     - [Extending LLAMBDAO](#extending-llambdao)
@@ -101,13 +101,13 @@ _JE:_ "I see. So it's not just about returning a result, but managing an ongoing
 
 _SE:_ "Indeed, it does. And that's what LLAMBDAO is all about: flexibility, modularity, and scalability. By making our nodes iterable, we're making our system more adaptable and capable of handling a wide variety of use-cases."
 
-### Communicating Intents
+### Communicating Kinds
 
 _SE:_ "Great! Now, let's explore the concept of messages in more depth."
 
 _JE:_ "So we've used messages before, but only in a basic way, right?"
 
-_SE:_ "Correct. The `Message` class has an attribute called `intent`. It dictates what kind of action the receiving node will perform. For example, a message with `kind="chat"` will trigger the `chat` method on the receiving node."
+_SE:_ "Correct. The `Message` class has an attribute called `kind`. It dictates what kind of action the receiving node will perform. For example, a message with `type="chat"` will trigger the `chat` method on the receiving node."
 
 _JE:_ "That sounds powerful! And that it would lead to clean code!"
 
@@ -118,10 +118,10 @@ class Message(AbstractObject):
     sender: Node = Field()
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     reply_to: Optional["Message"] = Field()
-    kind: Optional[str] = Field(
+    type: Optional[str] = Field(
         description=dedent(
             """\
-            A curated set of intent names to consider:
+            A curated set of kind names to consider:
             - chat = "chat about this topic", "talk about this topic", etc.
             - request = "request this thing", "ask for this thing", etc.
             - query = "query for information"
@@ -136,27 +136,27 @@ class Message(AbstractObject):
     content: str = Field()
 ```
 
-_JE:_ "This means we can use the same message class to communicate different intents based on the `intent` attribute!"
+_JE:_ "This means we can use the same message class to communicate different kinds based on the `kind` attribute!"
 
-_SE:_ "Exactly! It's a very flexible system. Remember the `receive` method in our nodes? It takes a `Message` as input and uses the `intent` attribute to determine what to do. Here, have a look:"
+_SE:_ "Exactly! It's a very flexible system. Remember the `receive` method in our nodes? It takes a `Message` as input and uses the `kind` attribute to determine what to do. Here, have a look:"
 
 ```python
 class Node(AbstractObject, ABC):
     """Nodes can be composed into graphs."""
     ...
     def receive(self, message: "Message") -> Iterable["Message"]:
-        yield from getattr(self, message.intent)(message)
+        yield from getattr(self, message.kind)(message)
 ```
 
-_JE:_ "Ah, I see! So the `receive` method uses the `intent` attribute of the message to call the corresponding method on the `Node`. And these methods then generate new `Message`s."
+_JE:_ "Ah, I see! So the `receive` method uses the `kind` attribute of the message to call the corresponding method on the `Node`. And these methods then generate new `Message`s."
 
-_SE:_ "Exactly! It's like an ongoing conversation between nodes. Nodes are sending, receiving, and reacting to messages. They handle intents based on the `Message`s they receive, and these intents can lead to new `Message`s being sent. It's a cycle."
+_SE:_ "Exactly! It's like an ongoing conversation between nodes. Nodes are sending, receiving, and reacting to messages. They handle kinds based on the `Message`s they receive, and these kinds can lead to new `Message`s being sent. It's a cycle."
 
 _JE:_ "That's amazing. It's like the nodes are talking to each other!"
 
 _SE:_ "Yes, that's a great way to put it! And it's all thanks to the flexibility and power of our `Message` class. This forms the backbone of our system."
 
-And there you have it! The concept of messages is central to how **LLAMBDAO** functions. The `intent` attribute of a `Message` directs the behavior of a `Node`, allowing for complex and flexible interactions between nodes. Now, how about you try crafting your own message and sending it to a node?
+And there you have it! The concept of messages is central to how **LLAMBDAO** functions. The `kind` attribute of a `Message` directs the behavior of a `Node`, allowing for complex and flexible interactions between nodes. Now, how about you try crafting your own message and sending it to a node?
 
 ### Autonomous Agents
 
@@ -280,7 +280,7 @@ class ConsoleHumanNode(Node):
     def chat(self, message: Message):
         pprint(message.dict())
         response = input("Enter response: ")
-        yield Message(sender=self, content=response, kind="chat", reply_to=message)
+        yield Message(sender=self, content=response, type="chat", reply_to=message)
 
 
 class ConsoleGroupChatNode(GroupChatNode):
@@ -379,7 +379,7 @@ class HumanEmailNode(Node):
         # Wait for the reply
         for new_email in new_emails():
             if new_email["In-Reply-To"] == sent_message_id:
-                yield Message(content=reply.content, sender=self, kind="inform")
+                yield Message(content=reply.content, sender=self, type="inform")
                 break
 ```
 

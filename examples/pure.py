@@ -1,4 +1,4 @@
-from llambdao import Message, Node
+from llambdao.starter import Message, Node
 
 
 class FibonacciNode(Node):
@@ -7,5 +7,5 @@ class FibonacciNode(Node):
     def receive(self, message):
         a, b = 0, 1
         for _ in range(int(message.content)):
-            yield Message(content=str(a), sender=self)
+            yield Message(content=str(a), sender_id=self)
             a, b = b, a + b

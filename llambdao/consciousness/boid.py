@@ -16,7 +16,7 @@ class BOID(Node, ABC):
             content=dedent(
                 """\
                 You are an autonomous language model AI agent following the
-                Beliefs, Obligations, Intentions, and Desires framework.
+                Beliefs, Obligations, Kindions, and Desires framework.
 
                 You can be informed of your environment, of the world around you.
                 You have a set of beliefs about your world, your metacognitive learnings.
@@ -58,12 +58,12 @@ class BOID(Node, ABC):
             """
         ),
     )
-    intentions: List[str] = Field(
+    kindions: List[str] = Field(
         default_factory=list,
         description=dedent(
             """\
-            Intentions represent the current plan of the agent.
-            Intentions are desires to which the agent has to some extent committed.
+            Kindions represent the current plan of the agent.
+            Kindions are desires to which the agent has to some extent committed.
             """
         ),
     )

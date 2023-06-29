@@ -4,8 +4,8 @@ import openai
 from pydantic import Field
 
 from llambdao.message import Message
-from llambdao.node.sync import Node
 from llambdao.openai import to_openai
+from llambdao.sync import Node
 
 
 class SummaryNode(Node):
@@ -52,7 +52,7 @@ class SummaryNode(Node):
             engine="chatgpt-3.5",
         )
         # Yield message
-        yield Message(content=summary, sender=self, reply_to=message)
+        yield Message(content=summary, sender_id=self, parent_id=message)
         # Update state
         self.summary = summary
 
@@ -63,11 +63,11 @@ def test_summary_node():
     inform = Message(
         role="user",
         content="Hello, world!",
-        kind="inform",
+        type="inform",
     )
     # Receive a message
     node.receive(inform)
     # Query the summary
-    query = Message(role="user", kind="query")
+    query = Message(role="user", type="query")
     for response in node.receive(query):
         print(response.content)

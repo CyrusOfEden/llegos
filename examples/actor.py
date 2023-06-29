@@ -5,8 +5,8 @@ from pydantic import Field
 from ray.util.placement_group import placement_group
 from ray.util.scheduling_strategies import PlacementGroupSchedulingStrategy
 
+from llambdao.actor import ActorMapperNode, ActorNode
 from llambdao.message import Message
-from llambdao.node.actor import ActorMapperNode, ActorNode
 
 
 class SummaryActorNode(ActorNode):
@@ -25,7 +25,7 @@ class SummaryActorNode(ActorNode):
 
     def query(self, message: Message):
         summary = ""  # summarize the messages using a local LLM
-        yield Message(content=summary, sender=self, reply_to=message)
+        yield Message(content=summary, sender_id=self, parent_id=message)
 
 
 def test_summary_actor_node():
@@ -48,6 +48,6 @@ def test_summary_actor_node():
         SummaryActorNode(actor_options=actor_options),
         SummaryActorNode(actor_options=actor_options),
     )
-    do = Message(kind="do", content="Do something!")
+    do = Message(type="do", content="Do something!")
     for summary in ray.get(mapper.receive(do)):
         print(summary)

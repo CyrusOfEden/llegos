@@ -2,8 +2,8 @@ import asyncio
 
 import httpx
 
+from llambdao.asyncio import AsyncNode
 from llambdao.message import Message
-from llambdao.node.asyncio import AsyncNode
 
 
 class AsyncWebsiteSnippetNode(AsyncNode):
@@ -15,7 +15,7 @@ class AsyncWebsiteSnippetNode(AsyncNode):
             futures = [client.get(url) for url in urls]
             async for text in asyncio.gather(*futures):
                 snippet = text[:280]
-                yield Message(sender=self, content=snippet, reply_to=message)
+                yield Message(sender_id=self, content=snippet, parent_id=message)
 
 
 async def test_website_summary_node():
@@ -23,7 +23,7 @@ async def test_website_summary_node():
 
     request = Message(
         content="https://openai.com/blog/function-calling-and-other-api-updates",
-        kind="request",
+        type="request",
     )
     async for snippet in snipper.areceive(request):
         print(snippet.content)
