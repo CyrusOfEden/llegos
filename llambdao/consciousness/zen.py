@@ -1,11 +1,8 @@
-from abc import ABC
-from typing import Iterator
-
-from llambdao.message import Message, Node
+from llambdao.base import AssistantNode, Message
 
 
-class Zen(Node, ABC):
-    def receive(self, message: Message) -> Iterator[Message]:
+class Zen(AssistantNode):
+    def receive(self, message: Message):
         for shonen in self.shonen(message):
             yield shonen
 
@@ -15,7 +12,7 @@ class Zen(Node, ABC):
                 for honen in self.honen(junen):
                     yield honen
 
-    def shonen(self, message: Message) -> Iterator[Message]:
+    def shonen(self, message: Message):
         """
         Shonen corresponds to the first unit of thought,
         the immediate perception of an object or event.
@@ -31,7 +28,7 @@ class Zen(Node, ABC):
         """
         pass
 
-    def junen(self, message: Message) -> Iterator[Message]:
+    def junen(self, message: Message):
         """
         Junen corresponds to the second unit of thought,
         reflection or consideration of the object or event perceived in the shonen.
@@ -47,7 +44,7 @@ class Zen(Node, ABC):
         """
         pass
 
-    def honen(self, message: Message) -> Iterator[Message]:
+    def honen(self, message: Message):
         """
         Honen corresponds to the third unit of thought,
         involving the further development of thoughts arising from the junen.

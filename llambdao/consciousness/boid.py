@@ -1,22 +1,17 @@
-from abc import ABC, abstractmethod
 from textwrap import dedent
 from typing import List
 
-from langchain.schema import BaseMemory
-from pydantic import Field
-
-from llambdao.message import Message, Node, SystemMessage
+from llambdao.base import AssistantNode, Field
+from llambdao.message import SystemMessage
 
 
-class BOID(Node, ABC):
-    # State
-    memory: BaseMemory = Field(description="Agent's persistent memory")
-    directive: Message = Field(
+class BOID(AssistantNode):
+    directive: SystemMessage = Field(
         default=SystemMessage(
             content=dedent(
                 """\
                 You are an autonomous language model AI agent following the
-                Beliefs, Obligations, Kindions, and Desires framework.
+                Beliefs, Obligations, Intentions, and Desires framework.
 
                 You can be informed of your environment, of the world around you.
                 You have a set of beliefs about your world, your metacognitive learnings.
@@ -58,23 +53,7 @@ class BOID(Node, ABC):
             """
         ),
     )
-    kindions: List[str] = Field(
+    intentions: List[str] = Field(
         default_factory=list,
-        description=dedent(
-            """\
-            Kindions represent the current plan of the agent.
-            Kindions are desires to which the agent has to some extent committed.
-            """
-        ),
+        description="Intentions represent the current plan of the agent.",
     )
-
-    def be(self, message: Message):
-        self.directive = message
-
-    @abstractmethod
-    def do(self, message: Message):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def chat(self, message: Message):
-        raise NotImplementedError()

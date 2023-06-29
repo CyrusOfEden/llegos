@@ -1,12 +1,10 @@
 from pprint import pprint
 
+from llambdao.base import GroupChatNode, UserNode
 from llambdao.message import Message
-from llambdao.sync import GroupChatNode, Node
 
 
-class ConsoleHumanNode(Node):
-    role = "user"
-
+class ConsoleHumanNode(UserNode):
     def chat(self, message: Message):
         pprint(message.dict())
         response = input("Enter response: ")
@@ -17,8 +15,6 @@ class ConsoleHumanNode(Node):
 
 
 class ConsoleGroupChatNode(GroupChatNode):
-    role = "system"
-
     def chat(self, message: Message):
         pprint(message.dict())
         for response in super().chat(message):

@@ -2,7 +2,7 @@ from typing import AsyncIterable, List
 
 from pyee.asyncio import AsyncIOEventEmitter
 
-from llambdao.sync import Field, GraphNode, Message, Node, SystemNode
+from llambdao.base import Field, GraphNode, Message, Node, SystemNode
 
 
 class AsyncNode(Node):

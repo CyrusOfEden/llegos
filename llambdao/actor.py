@@ -4,8 +4,8 @@ from typing import Any, Dict, Iterable, List, Optional
 import ray
 from pydantic import Field
 
+from llambdao.base import GraphNode, Node, SwarmNode
 from llambdao.message import Message
-from llambdao.sync import GraphNode, Node, SwarmNode
 
 
 @ray.remote(max_task_retries=3, num_cpus=1)

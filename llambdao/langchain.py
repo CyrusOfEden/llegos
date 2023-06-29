@@ -2,11 +2,11 @@ from langchain import LLMChain
 from pydantic import Field
 
 from llambdao.asyncio import AsyncNode
+from llambdao.base import AssistantNode
 from llambdao.message import Message
-from llambdao.sync import Node
 
 
-class LangchainNode(Node):
+class LangchainNode(AssistantNode):
     """
     By default, a LangchainNode will use the chain's run method to interpret messages.
 
@@ -17,9 +17,11 @@ class LangchainNode(Node):
     chain: LLMChain = Field()
 
     def receive(self, message: Message):
-        yield Message(sender_id=self, content=self.chain.run(message.content))
+        content = self.chain.run(message.content)
+        yield self.reply_to(message, content)
 
 
 class AsyncLangchainNode(LangchainNode, AsyncNode):
     async def areceive(self, message: Message):
-        yield Message(sender_id=self, content=self.chain.arun(message.content))
+        content = await self.chain.arun(message.content)
+        yield self.reply_to(message, content)

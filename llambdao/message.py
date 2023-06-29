@@ -1,6 +1,6 @@
 from datetime import datetime
 from textwrap import dedent
-from typing import Iterable, List, Literal, Optional, Union
+from typing import Literal, Optional, Union
 
 import yaml
 from pydantic import Field
@@ -49,19 +49,7 @@ class Message(AbstractObject):
     sender_id: str = Field(title="sender node id")
 
     def __str__(self):
-        return yaml.dumps(
-            {
-                "class": self.__class__.__name__,
-                "id": self.id,
-                "kind": self.type,
-                "role": self.role,
-                "content": self.content,
-                "created_at": self.created_at.isoformat(),
-                "parent_id": self.parent_id,
-                "sender_id": self.sender_id,
-                "metadata": self.metadata,
-            }
-        )
+        return yaml.dump(self.dict(), sort_keys=False)
 
 
 class SystemMessage(Message):
@@ -69,7 +57,7 @@ class SystemMessage(Message):
     type: MessageType = Field(default="be")
 
 
-class HumanMessage(Message):
+class UserMessage(Message):
     role: Role = Field(default="user")
 
 
@@ -79,33 +67,3 @@ class AssistantMessage(Message):
 
 class ChatMessage(Message):
     type: MessageType = Field(default="chat")
-
-
-def message_iter(message: Message, height: int) -> Iterable[Message]:
-    """Get the sequence of messages that led to this message."""
-    if message is None or height == 1:
-        yield message
-    else:
-        yield from message_iter(message.parent_id, height=height - 1)
-        yield message
-
-
-def message_list(message: Message, height: int) -> List[Message]:
-    """Get the list of messages that led to this message."""
-    return list(message_iter(message, height=height))
-
-
-def test_message_list():
-    m1 = Message(content="Hello")
-    m2 = Message(content="How are you?", parent_id=m1.id)
-    m3 = Message(content="I'm good, thanks!", parent_id=m2.id)
-    m4 = Message(content="That's great to hear!", parent_id=m3.id)
-
-    # Test with a limit of 2
-    assert message_list(m4, height=2) == [m3, m4]
-    # Test with a limit of 3
-    assert message_list(m4, height=3) == [m2, m3, m4]
-    # Test with a limit of 4
-    assert message_list(m4, height=4) == [m1, m2, m3, m4]
-    # Test with a limit of 5 (should return the same as limit=4)
-    assert message_list(m4, height=5) == [m1, m2, m3, m4]

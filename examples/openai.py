@@ -3,9 +3,9 @@ from typing import List, Optional
 import openai
 from pydantic import Field
 
+from llambdao.base import Node
 from llambdao.message import Message
 from llambdao.openai import to_openai
-from llambdao.sync import Node
 
 
 class SummaryNode(Node):

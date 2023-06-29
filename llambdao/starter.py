@@ -1,5 +1,5 @@
+from llambdao.base import GraphNode, GroupChatNode, Node, SwarmNode
 from llambdao.message import Message
-from llambdao.sync import GraphNode, GroupChatNode, Node, SwarmNode
 
 __all__ = [
     # It all starts with messaging

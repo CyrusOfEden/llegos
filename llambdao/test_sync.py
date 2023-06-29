@@ -1,4 +1,4 @@
-from llambdao.sync import GroupChatNode, Message, Node, SwarmNode
+from llambdao.base import GroupChatNode, Message, Node, SwarmNode
 
 
 class TestNode(Node):
