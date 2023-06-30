@@ -1,6 +1,30 @@
+import httpx
 import pytest
 
-from llambdao.asyncio import AsyncGroupChatNode, AsyncNode, AsyncSwarmNode, Message
+from llambdao.asyncio import AsyncApplicatorNode, AsyncGroupChatNode, AsyncNode, Message
+
+
+class AsyncWebsiteSnippetNode(AsyncNode):
+    role = "system"
+
+    async def arequest(self, message: Message):
+        async with httpx.AsyncClient() as client:
+            response = await client.get(message.content)
+            yield self.reply_to(message, response.text[:280])
+
+
+@pytest.mark.asyncio
+async def test_website_summary_node():
+    snipper = AsyncWebsiteSnippetNode()
+
+    request = Message(
+        type="request",
+        content="https://openai.com/blog/function-calling-and-other-api-updates",
+        sender_id="pytest",
+        role="user",
+    )
+    async for snippet in snipper.areceive(request):
+        assert snippet.content.startswith("<!DOCTYPE html>")
 
 
 class AsyncTestNode(AsyncNode):
@@ -16,7 +40,7 @@ async def test_mapper_node():
     a = AsyncTestNode()
     b = AsyncTestNode()
     c = AsyncTestNode()
-    swarm = AsyncSwarmNode([a, b, c])
+    swarm = AsyncApplicatorNode([a, b, c])
 
     messages = []
     async for m in swarm.areceive(

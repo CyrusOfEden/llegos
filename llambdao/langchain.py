@@ -2,8 +2,7 @@ from langchain import LLMChain
 from pydantic import Field
 
 from llambdao.asyncio import AsyncNode
-from llambdao.base import AssistantNode
-from llambdao.message import Message
+from llambdao.base import AssistantNode, Message
 
 
 class LangchainNode(AssistantNode):

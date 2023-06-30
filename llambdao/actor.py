@@ -1,19 +1,13 @@
 from abc import ABC
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, Optional
 
 import ray
-from pydantic import Field
 
-from llambdao.base import GraphNode, Node, SwarmNode
-from llambdao.message import Message
+from llambdao.base import ApplicatorNode, Field, Message, Node, SystemNode
 
 
-@ray.remote(max_task_retries=3, num_cpus=1)
+@ray.remote(max_restarts=3, max_task_retries=3, num_cpus=1)
 class Actor:
-    """
-    An internal class for wrapping a Node
-    """
-
     node: "ActorNode"
 
     def __init__(self, node: "ActorNode"):
@@ -49,19 +43,7 @@ class ActorNode(Node, ABC):
         ).remote(self)
 
 
-class ActorGraph(GraphNode, ABC):
-    def __init__(self, graph: Dict[ActorNode, List[ActorNode]], **kwargs):
-        super().__init__(**kwargs)
-        for node, edges in graph.items():
-            self.link(node)
-            node.link(self)
-
-            for edge in edges:
-                node.link(edge)
-                edge.link(node)
-
-
-class ActorMapperNode(SwarmNode, ActorNode):
+class ActorApplicatorNode(ApplicatorNode, ActorNode):
     def do(self, message: Message) -> Iterable[Message]:
         sender = message.sender
         futures = [
@@ -76,19 +58,33 @@ class ActorMapperNode(SwarmNode, ActorNode):
                     yield message
 
 
-class ActorGroupChatNode(ActorMapperNode):
+class ActorGroupChatNode(SystemNode):
     """
     Useful to have multiple actors run in different processes simultaneously.
     Every received chat message will be broadcasted to all nodes except the sender.
-    There's no guarantee that the messages will be processed in order.
+    There's no guarantee that the messages will be returned or processed in order.
 
     This Actor variant can be useful to unlock parallelism without having to use asyncio.
     """
 
     def chat(self, message: Message):
         messages = [message]
-        while message_i := messages.pop():
-            for message_j in self.do(message_i):
-                message_j.reply_to = message_i
-                yield message_j
-                messages.append(message_j)
+        cursor = 0
+        while cursor < len(messages):
+            message_i = messages[cursor]
+            futures = [
+                edge.node.actor.receive.remote(message_i)
+                for edge in self.edges.values()
+                if edge.node.id != message_i.sender_id
+            ]
+
+            while True:
+                ready, in_progress = ray.wait(futures)
+                if ready:
+                    for message_j in ready:
+                        yield message_j
+                        messages.append(message_j)
+                if not in_progress:
+                    break
+
+            cursor += 1

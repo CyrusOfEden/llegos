@@ -1,6 +1,7 @@
 - [LLAMBDAO](#llambdao)
   - [The Right Abstractions](#the-right-abstractions)
   - [An Open Invitation for Collaboration](#an-open-invitation-for-collaboration)
+  - [Quickstart for Cognitive Architects](#quickstart-for-cognitive-architects)
   - [An Introduction to LLAMBDAO](#an-introduction-to-llambdao)
     - [Everything is Connected](#everything-is-connected)
     - [Generating Responses](#generating-responses)
@@ -31,13 +32,15 @@ The beauty of LLAMBDAO shines in this modularity and interoperability, offering 
 
 This README and the corresponding code repository are framed as an exploration, a launchpad for a journey into the vibrant landscape of autonomous agents. In the spirit of open-source and the collective advancement of knowledge, we present LLAMBDAO as a work-in-progress, rather than a final product. We invite you to join us in this exciting exploration, to push boundaries, question assumptions, and shape the future of autonomous agent architectures.
 
-We would like to underline that the code provided here is not complete. It serves as a starting point, a conceptual framework for implementing and experimenting with the design of Large Language Agents Modulating Behaviour in Decentralized Autonomous Organizations. It's a representation of the current state of our explorations and ideas, and we fully anticipate that it will evolve and transform over time as new insights and approaches are brought to the table.
+We would like to underline that the code provided here is not complete. It serves as a starting point, a conceptual framework for implementing and experimenting with the design space of LLM agents modulating their collective behaviour Behaviour in decentralized,  autonomous, organizations. It's a representation of the current state of our explorations and ideas, and we fully anticipate that it will evolve and transform over time as new insights and approaches are brought to the table.
 
 We deeply believe in the power of collaboration and the synergetic fusion of diverse perspectives. As such, we highly encourage discussions, constructive criticism, and contributions to the project. Whether you're a seasoned AI researcher, a software engineer interested in agent-oriented programming, or a passionate enthusiast eager to learn and contribute, your insights are invaluable.
 
-In recognition of major contributions to the project, we are offering collaborator titles to those who contribute significantly to the development and expansion of LLAMBDAO. Your innovative ideas, improvements, and implementations could earn you an authorship on the future paper, acknowledging your valuable contribution to the project. This is not just an opportunity to contribute to an open-source project, but also a chance to help shape a cutting-edge field and be recognized for it.
-
 We look forward to your participation in this journey, and can't wait to see where our collective effort and passion will take us. The future of autonomous agents awaits, and it looks brighter with every new idea and contribution. Welcome to the LLAMBDAO project!
+
+## Quickstart for Cognitive Architects
+
+Check out the classes mentioned in `llambdao/starter.py` and also the `llambdao/test_*.py` files.
 
 ## An Introduction to LLAMBDAO
 

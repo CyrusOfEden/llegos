@@ -29,7 +29,7 @@ class AsyncGraphNode(GraphNode, AsyncNode):
     pass
 
 
-class AsyncSwarmNode(SystemNode, AsyncNode):
+class AsyncApplicatorNode(SystemNode, AsyncNode):
     def __init__(self, nodes: List[Node], **kwargs):
         super().__init__(**kwargs)
         for node in nodes:

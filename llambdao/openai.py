@@ -1,8 +1,7 @@
 import json
 from typing import Iterable, List, Union
 
-from llambdao.base import Node
-from llambdao.message import Message
+from llambdao.base import Message, Node
 
 
 def fn_build_message(message: Union[type[Message], Message]):
