@@ -20,7 +20,7 @@ async def test_website_summary_node():
     request = Message(
         type="request",
         content="https://openai.com/blog/function-calling-and-other-api-updates",
-        sender_id="pytest",
+        from_id="pytest",
         role="user",
     )
     async for snippet in snipper.areceive(request):
@@ -44,7 +44,7 @@ async def test_mapper_node():
 
     messages = []
     async for m in swarm.areceive(
-        Message(type="do", content="test", sender_id="pytest", role="user")
+        Message(type="do", content="test", from_id="pytest", role="user")
     ):
         messages.append(m)
 
@@ -69,7 +69,7 @@ async def test_group_chat_node():
 
     messages = []
     async for m in group.areceive(
-        Message(content="test", sender_id=b.id, role="user", type="chat")
+        Message(content="test", from_id=b.id, role="user", type="chat")
     ):
         messages.append(m)
 

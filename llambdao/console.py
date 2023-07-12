@@ -22,5 +22,6 @@ class ConsoleGroupChatNode(GroupChatNode):
 
     def chat(self, message: Message):
         for response in super().chat(message):
-            pprint(response.dict())
+            if response.type == "chat":
+                pprint(response.dict())
             yield response

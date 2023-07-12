@@ -1,6 +1,7 @@
 from abc import ABC
 from uuid import uuid4
 
+import yaml
 from pydantic import BaseModel, Field
 
 from llambdao.types import Metadata
@@ -15,4 +16,8 @@ class AbstractObject(ABC, BaseModel):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.id = self.id or self.__class__.__name__ + ":" + str(uuid4())
+        if not self.id:
+            self.id = self.__class__.__name__ + ":" + str(uuid4())
+
+    def __str__(self):
+        return yaml.dump(self.dict(), sort_keys=False)

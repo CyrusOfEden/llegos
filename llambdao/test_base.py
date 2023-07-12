@@ -35,18 +35,18 @@ def test_applicator_node():
     b = Responder()
     c = Responder()
     applicator = ApplicatorNode([a, b, c])
-    m = Message(content="test", role="user", sender_id=a.id, type="do")
+    m = Message(content="test", role="user", from_id=a.id, type="do")
 
     messages = list(applicator.receive(m))
     assert len(messages) == 3
 
     # (a, b, c) all respond to a message sent by a, or any other node
     assert messages[0].content == "test!"
-    assert messages[0].sender_id == a.id
+    assert messages[0].from_id == a.id
     assert messages[1].content == "test!"
-    assert messages[1].sender_id == b.id
+    assert messages[1].from_id == b.id
     assert messages[2].content == "test!"
-    assert messages[2].sender_id == c.id
+    assert messages[2].from_id == c.id
 
 
 def test_group_chat_node():
@@ -60,26 +60,26 @@ def test_group_chat_node():
     b = Responder()
     c = Responder()
     group = GroupChatNode([a, b, c])
-    m = Message(content="test", role="user", sender_id=b.id, type="chat")
+    m = Message(content="test", role="user", from_id=b.id, type="chat")
 
     messages = list(group.receive(m))
     assert len(messages) == 6
 
     # first, (a, c) respond to a message sent by b
     assert messages[0].content == "test!"
-    assert messages[0].sender_id == a.id
+    assert messages[0].from_id == a.id
     assert messages[1].content == "test!"
-    assert messages[1].sender_id == c.id
+    assert messages[1].from_id == c.id
 
     # then, (b, c) respond to messages[0] sent by a
     assert messages[2].content == "test!!"
-    assert messages[2].sender_id == b.id
+    assert messages[2].from_id == b.id
     assert messages[3].content == "test!!"
-    assert messages[3].sender_id == c.id
+    assert messages[3].from_id == c.id
 
     # finally, (a, b) respond to messages[1] sent by c
     assert messages[4].content == "test!!"
-    assert messages[4].sender_id == a.id
+    assert messages[4].from_id == a.id
     assert messages[5].content == "test!!"
-    assert messages[5].sender_id == b.id
-    assert messages[5].sender_id == b.id
+    assert messages[5].from_id == b.id
+    assert messages[5].from_id == b.id

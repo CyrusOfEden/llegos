@@ -20,6 +20,7 @@ python = "^3.10.9"
 httpx = "^0.24.1"
 singleton-decorator = "^1.0.0"
 trio = "^0.22.0"
+sorcery = "^0.2.2"
 
 [tool.poetry.group.dev]
 optional = true

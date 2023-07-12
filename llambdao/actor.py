@@ -48,7 +48,7 @@ class ActorApplicatorNode(ApplicatorNode, ActorNode):
         sender = message.sender
         futures = [
             edge.node.actor.receive.remote(message)
-            for edge in self.edges.values()
+            for edge in self.links.values()
             if edge.node != sender
         ]
         while any(futures):
@@ -74,8 +74,8 @@ class ActorGroupChatNode(SystemNode):
             message_i = messages[cursor]
             futures = [
                 edge.node.actor.receive.remote(message_i)
-                for edge in self.edges.values()
-                if edge.node.id != message_i.sender_id
+                for edge in self.links.values()
+                if edge.node.id != message_i.from_id
             ]
 
             while True:
@@ -88,3 +88,13 @@ class ActorGroupChatNode(SystemNode):
                     break
 
             cursor += 1
+
+
+class ActorAgencyNode(SystemNode):
+    def receive(self, message: Message) -> Iterable[Message]:
+        for response in super().receive(message):
+            yield response
+            if response.to_id == self.id:
+                yield from self.actor.receive(response)
+            elif response.to_id in self.links:
+                yield from self.links[response.to_id].actor.receive(response)

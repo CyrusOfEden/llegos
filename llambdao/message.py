@@ -2,7 +2,6 @@ from datetime import datetime
 from textwrap import dedent
 from typing import Literal, Optional, Union
 
-import yaml
 from pydantic import Field
 
 from llambdao.abstract import AbstractObject
@@ -46,10 +45,8 @@ class Message(AbstractObject):
     content: str = Field()
     created_at: datetime = Field(default_factory=datetime.utcnow)
     parent_id: Optional[str] = Field(title="parent message id")
-    sender_id: str = Field(title="sender node id")
-
-    def __str__(self):
-        return yaml.dump(self.dict(), sort_keys=False)
+    from_id: Optional[str] = Field(default=None, title="sender node id")
+    to_id: Optional[str] = Field(default=None, title="receiver node id")
 
 
 class SystemMessage(Message):

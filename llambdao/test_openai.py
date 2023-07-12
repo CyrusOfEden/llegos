@@ -26,14 +26,14 @@ def test_fn_node_call():
 
 
 def test_chat_message():
-    message = UserMessage(content="hello", sender_id="pytest", type="chat")
+    message = UserMessage(content="hello", from_id="pytest", type="chat")
     assert chat_message(message) == {"role": "user", "content": "hello"}
 
 
 def test_chat_messages():
     messages = [
-        UserMessage(content="hello", sender_id="user", type="chat"),
-        AssistantMessage(content="hi", sender_id="assistant", type="chat"),
+        UserMessage(content="hello", from_id="user", type="chat"),
+        AssistantMessage(content="hi", from_id="assistant", type="chat"),
     ]
 
     assert list(chat_messages(messages)) == [
