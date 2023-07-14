@@ -6,21 +6,20 @@ build-backend = "poetry.core.masonry.api"
 line-length = 100
 
 [tool.poetry]
-name = "llambdao"
+name = "gpt-net"
 version = "0.1.0"
-description = "A toolkit for implementing the ideas to be discussed in LLAMBDAO: Large Language Agents Modulating Behaviour in Decentralized Autonomous Organizations"
+description = "..."
 authors = ["Shaman AI <hello@shaman.ai>"]
-license = "BUSL-1.1"
+license = "MIT"
 readme = "README.md"
-packages = [{ include = "llambdao" }]
+packages = [{ include = "gpt_net" }]
 
 [tool.poetry.dependencies]
-pydantic = ">=1.9"
-python = "^3.9"
-httpx = "^0.24.1"
-singleton-decorator = "^1.0.0"
-trio = "^0.22.0"
+python = ">=3.9,<3.9.7 || >3.9.7,<4.0"
+pydantic = ">=1,<3"
 sorcery = "^0.2.2"
+llama_index = "^0.7"
+networkx = "^3.1"
 
 [tool.poetry.group.dev]
 optional = true
@@ -36,7 +35,7 @@ pytest = "^7.3.1"
 python-dotenv = "^1.0.0"
 ruff = "^0.0.261"
 setuptools = "^67.6.1"
-streamlit = "^1.21.0"
+streamlit = "^1.24"
 types-pyyaml = "^6.0.12.9"
 openai = "^0.27.7"
 wikipedia = "^1.4.0"
@@ -50,8 +49,9 @@ optional = true
 [tool.poetry.group.ray.dependencies]
 ray = "^2.4.0"
 
-[tool.poetry.group.langchain]
+[tool.poetry.group.async]
 optional = true
 
-[tool.poetry.group.langchain.dependencies]
-langchain = { git = "https://github.com/hwchase17/langchain.git" }
+[tool.poetry.group.async.dependencies]
+httpx = "^0.24.1"
+trio = "^0.22.0"

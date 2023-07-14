@@ -1,8 +1,8 @@
 from typing import Iterable
 
-from llambdao.base import Field, Node
-from llambdao.message import AssistantMessage, Message, UserMessage
-from llambdao.openai import chat_message, chat_messages, fn_node_call
+from gpt_net.message import AssistantMessage, Message, UserMessage
+from gpt_net.node import Field, Node
+from gpt_net.openai import chat_message, chat_messages, node_fn
 
 
 def test_fn_node_call():
@@ -15,7 +15,7 @@ def test_fn_node_call():
             for _ in range(self.times):
                 yield message
 
-    assert fn_node_call(Repeater, [Message]) == {
+    assert node_fn(Repeater, [Message]) == {
         "name": "Repeater",
         "description": "A node that repeats messages.",
         "parameters": {

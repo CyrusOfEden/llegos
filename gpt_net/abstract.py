@@ -4,7 +4,7 @@ from uuid import uuid4
 import yaml
 from pydantic import BaseModel, Field
 
-from llambdao.types import Metadata
+from gpt_net.types import Metadata
 
 
 class AbstractObject(ABC, BaseModel):
@@ -21,3 +21,6 @@ class AbstractObject(ABC, BaseModel):
 
     def __str__(self):
         return yaml.dump(self.dict(), sort_keys=False)
+
+    def __hash__(self):
+        return hash(self.id)

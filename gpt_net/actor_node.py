@@ -3,7 +3,7 @@ from typing import Any, Dict, Iterable, Optional
 
 import ray
 
-from llambdao.base import ApplicatorNode, Field, Message, Node, SystemNode
+from gpt_net.node import Broadcaster, Field, Message, Node, SystemNode
 
 
 @ray.remote(max_restarts=3, max_task_retries=3, num_cpus=1)
@@ -43,8 +43,8 @@ class ActorNode(Node, ABC):
         ).remote(self)
 
 
-class ActorApplicatorNode(ApplicatorNode, ActorNode):
-    def do(self, message: Message) -> Iterable[Message]:
+class ActorBroadcaster(Broadcaster, ActorNode):
+    def receive(self, message: Message) -> Iterable[Message]:
         sender = message.sender
         futures = [
             edge.node.actor.receive.remote(message)
@@ -58,7 +58,7 @@ class ActorApplicatorNode(ApplicatorNode, ActorNode):
                     yield message
 
 
-class ActorGroupChatNode(SystemNode):
+class ActorGroupChat(SystemNode):
     """
     Useful to have multiple actors run in different processes simultaneously.
     Every received chat message will be broadcasted to all nodes except the sender.
@@ -88,13 +88,3 @@ class ActorGroupChatNode(SystemNode):
                     break
 
             cursor += 1
-
-
-class ActorAgencyNode(SystemNode):
-    def receive(self, message: Message) -> Iterable[Message]:
-        for response in super().receive(message):
-            yield response
-            if response.to_id == self.id:
-                yield from self.actor.receive(response)
-            elif response.to_id in self.links:
-                yield from self.links[response.to_id].actor.receive(response)

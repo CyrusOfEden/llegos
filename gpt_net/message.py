@@ -1,18 +1,12 @@
 from datetime import datetime
 from textwrap import dedent
-from typing import Literal, Optional, Union
+from typing import AsyncIterable, Dict, Iterable, Optional, Union
 
+from networkx import DiGraph
 from pydantic import Field
 
-from llambdao.abstract import AbstractObject
-from llambdao.types import Role
-
-MessageType = Union[
-    str,
-    Literal[
-        "chat", "request", "response", "query", "inform", "proxy", "step", "be", "do"
-    ],
-]
+from gpt_net.abstract import AbstractObject
+from gpt_net.types import MessageTypes, Role
 
 
 class Message(AbstractObject):
@@ -20,7 +14,7 @@ class Message(AbstractObject):
     Messages are used to send messages between nodes.
     """
 
-    type: Optional[MessageType] = Field(
+    type: Union[str, MessageTypes] = Field(
         description=dedent(
             """\
             By default, nodes will dispatch messages to a method named after the action.
@@ -44,23 +38,43 @@ class Message(AbstractObject):
     role: Role = Field()
     content: str = Field()
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    parent_id: Optional[str] = Field(title="parent message id")
+    reply_to_id: Optional[str] = Field(default=None, title="parent message id")
     from_id: Optional[str] = Field(default=None, title="sender node id")
     to_id: Optional[str] = Field(default=None, title="receiver node id")
 
 
 class SystemMessage(Message):
-    role: Role = Field(default="system")
-    type: MessageType = Field(default="be")
+    role: Role = "system"
+    type: MessageTypes = "system"
 
 
 class UserMessage(Message):
-    role: Role = Field(default="user")
+    role: Role = "user"
 
 
 class AssistantMessage(Message):
-    role: Role = Field(default="assistant")
+    role: Role = "assistant"
 
 
 class ChatMessage(Message):
-    type: MessageType = Field(default="chat")
+    type: MessageTypes = "chat"
+
+
+def compose_graph(messages: Iterable[Message]) -> DiGraph:
+    g = DiGraph()
+    lookup: Dict[str, Message] = {}
+    for message in messages:
+        lookup[message.id] = message
+        if message.reply_to_id in lookup:
+            g.add_edge(lookup[message.reply_to_id], message)
+    return g
+
+
+async def acompose_graph(messages: AsyncIterable[Message]) -> DiGraph:
+    g = DiGraph()
+    lookup: Dict[str, Message] = {}
+    async for message in messages:
+        lookup[message.id] = message
+        if message.reply_to_id in lookup:
+            g.add_edge(lookup[message.reply_to_id], message)
+    return g
