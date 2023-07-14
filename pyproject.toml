@@ -15,7 +15,7 @@ readme = "README.md"
 packages = [{ include = "llambdao" }]
 
 [tool.poetry.dependencies]
-pydantic = "^1.10.7"
+pydantic = "^2.0"
 python = "^3.9"
 httpx = "^0.24.1"
 singleton-decorator = "^1.0.0"
