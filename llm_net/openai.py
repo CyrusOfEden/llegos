@@ -70,8 +70,7 @@ async def acall_agent_fn(
     completion, node: GenAsyncAgent, throw_error=True
 ) -> AsyncIterable[Message]:
     kwargs = parse_completion_fn_call(completion, node.__name__, throw_error)
-    async for message in node.areceive(**kwargs):
-        yield message
+    return node.areceive(**kwargs):
 
 
 def chat_message(message: Message) -> Message:
