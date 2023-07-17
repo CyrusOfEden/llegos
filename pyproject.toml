@@ -6,16 +6,16 @@ build-backend = "poetry.core.masonry.api"
 line-length = 100
 
 [tool.poetry]
-name = "gpt-net"
+name = "llm-net"
 version = "0.1.0"
 description = "..."
 authors = ["Shaman AI <hello@shaman.ai>"]
 license = "MIT"
 readme = "README.md"
-packages = [{ include = "gpt_net" }]
+packages = [{ include = "llm_net" }]
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.9.7 || >3.9.7,<4.0"
+python = ">=3.10"
 pydantic = ">=1,<3"
 sorcery = "^0.2.2"
 llama_index = "^0.7"
@@ -42,6 +42,7 @@ wikipedia = "^1.4.0"
 tiktoken = "^0.4.0"
 pytest-asyncio = "^0.21.0"
 pyee = "^11.0.0"
+agent_actors = { git = "https://github.com/shaman-ai/agent-actors.git", branch = "main" }
 
 [tool.poetry.group.ray]
 optional = true

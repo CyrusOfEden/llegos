@@ -4,7 +4,7 @@ from uuid import uuid4
 import yaml
 from pydantic import BaseModel, Field
 
-from gpt_net.types import Metadata
+from llm_net.types import Metadata
 
 
 class AbstractObject(ABC, BaseModel):

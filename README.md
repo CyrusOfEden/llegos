@@ -108,7 +108,7 @@ _SE:_ "Great! Now, let's explore the concept of messages in more depth."
 
 _JE:_ "So we've used messages before, but only in a basic way, right?"
 
-_SE:_ "Correct. The `Message` class has an attribute called `kind`. It dictates what kind of action the receiving node will perform. For example, a message with `type="chat"` will trigger the `chat` method on the receiving node."
+_SE:_ "Correct. The `Message` class has an attribute called `kind`. It dictates what kind of action the receiving node will perform. For example, a message with `method="chat"` will trigger the `chat` method on the receiving node."
 
 _JE:_ "That sounds powerful! And that it would lead to clean code!"
 
@@ -119,7 +119,7 @@ class Message(AbstractObject):
     sender: Node = Field()
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     reply_to: Optional["Message"] = Field()
-    type: Optional[str] = Field(
+    method: Optional[str] = Field(
         description=dedent(
             """\
             A curated set of kind names to consider:
@@ -281,7 +281,7 @@ class ConsoleHumanNode(Node):
     def chat(self, message: Message):
         pprint(message.dict())
         response = input("Enter response: ")
-        yield Message(sender=self, content=response, type="chat", reply_to=message)
+        yield Message(sender=self, content=response, method="chat", reply_to=message)
 
 
 class ConsoleGroupChatNode(GroupChatNode):
@@ -380,7 +380,7 @@ class HumanEmailNode(Node):
         # Wait for the reply
         for new_email in new_emails():
             if new_email["In-Reply-To"] == sent_message_id:
-                yield Message(content=reply.content, sender=self, type="inform")
+                yield Message(content=reply.content, sender=self, method="inform")
                 break
 ```
 

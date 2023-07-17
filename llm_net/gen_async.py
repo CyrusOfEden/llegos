@@ -1,9 +1,11 @@
+from pydantic import Field
 from pyee.asyncio import AsyncIOEventEmitter
 
-from gpt_net.node import Field, Message, Node
+from llm_net.gen import GenAgent, GenAgentNet
+from llm_net.message import Message
 
 
-class AsyncNode(Node):
+class GenAsyncAgent(GenAgent):
     event_emitter: AsyncIOEventEmitter = Field(
         default_factory=AsyncIOEventEmitter, init=False
     )
@@ -13,7 +15,7 @@ class AsyncNode(Node):
         self.event_emitter = AsyncIOEventEmitter()
 
     async def areceive(self, message: Message):
-        if message.from_id == self.id:
+        if message.sender == self.id:
             return
 
         method = getattr(self, message.type, None)
@@ -29,3 +31,7 @@ class AsyncNode(Node):
                 async for link_response in node.areceive(self_response):
                     if (yield link_response) == StopAsyncIteration:
                         break
+
+
+class GenAsyncAgentNet(GenAgentNet):
+    pass
