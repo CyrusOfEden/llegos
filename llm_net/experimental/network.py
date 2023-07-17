@@ -52,13 +52,10 @@ class GenNetwork(SystemAgent):
         elif v_of_edge is None:
             self.graph.add_edge(self, u_of_edge, **attr)
             self.directory[u_of_edge.id] = u_of_edge
-            u_of_edge.net = self
         else:
             self.graph.add_edge(u_of_edge, v_of_edge, **attr)
             self.directory[u_of_edge.id] = u_of_edge
-            u_of_edge.net = self
             self.directory[v_of_edge.id] = v_of_edge
-            v_of_edge.net = self
 
     def disconnect(
         self, u_of_edge: Union["GenNetwork", Any], v_of_edge: Optional[Any] = None
@@ -71,19 +68,18 @@ class GenNetwork(SystemAgent):
             self.graph.remove_edge(self, u_of_edge)
             if u_of_edge not in self.graph.nodes:
                 del self.directory[u_of_edge.id]
-                del u_of_edge.net
         else:
             self.graph.remove_edge(u_of_edge, v_of_edge)
             if u_of_edge not in self.graph.nodes:
                 del self.directory[u_of_edge.id]
-                del u_of_edge.net
             if v_of_edge not in self.graph.nodes:
                 del self.directory[v_of_edge.id]
-                del v_of_edge.net
 
     def receive(self, message: Message) -> Iterable[Message]:
-        assert message.receiver in self.graph
-        for response in message.receiver.receive(message):
+        agent: GenAgent = message.receiver
+        assert agent in self.graph
+
+        for response in agent.receive(message):
             if (yield response) == StopIteration:
                 break
             yield from self.receive(response)
@@ -96,5 +92,4 @@ class GenNetwork(SystemAgent):
                     yield from self.receive(response)
 
 
-GenAgent.update_forward_refs()
-GenAgent.update_forward_refs()
+GenNetwork.update_forward_refs()

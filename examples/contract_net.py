@@ -42,18 +42,21 @@ class Manager(GenAgent):
 
         for r in responses:
             reply = self.receive(r)
-
-        proposals = [r for r in responses if r.method == "propose"]
+            agent: GenAgent = r.sender
+            agent.receive(reply)
 
         # Set winning contractor to the first one
-        winner: GenAgent = proposals[0].sender
-        for p in proposals[1:]:
-            agent: GenAgent = p.sender
+        winning_proposal = next(r for r in responses if r.method == "propose")
+        winner: GenAgent = winning_proposal.sender
+        for r in responses:
+            agent: GenAgent = r.sender
             if agent is not winner:
-                agent.receive(Message.reply(p, "No", method="reject"))
+                agent.receive(Message.reply(r, "No", method="reject"))
 
-        reply = self.reply_to(p, "Your proposal has been accepted.", method="accept")
-        result = winner.receive(reply)
+        reply = Message.reply(
+            winning_proposal, "Your proposal has been accepted.", method="accept"
+        )
+        result = winning_proposal.receive(reply)
         self.receive(result)
 
     def reject(self, message: Message):
