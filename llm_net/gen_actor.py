@@ -1,89 +1,21 @@
-from typing import Any, Dict, Optional
+from typing import Any, Iterable
 
 import ray
 
-from llm_net.gen import Field, GenAgent, Message
+from llm_net.gen import GenAgent, Message
 
 
 @ray.remote(max_restarts=3, max_task_retries=3, num_cpus=1)
 class GenActor:
-    node: "GenActorAgent"
+    node: GenAgent
 
-    def __init__(self, node: "GenActorAgent"):
+    def __init__(self, node: GenAgent):
         self.node = node
 
-    def receive(self, message: Message) -> Optional[Message]:
+    def receive(self, message: Message) -> Iterable[Message]:
         """For receiving messages"""
         return self.node.receive(message)
 
     def property(self, prop: str) -> Any:
         """For getting arbitrary properties on the node"""
         return getattr(self.node, prop)
-
-
-class GenActorAgent(GenAgent):
-    """
-    Turn a node into a concurrent actor running in its own process.
-    Learn more: https://docs.ray.io/en/latest/actors.html
-
-    Can be mixed in with ActorNode to create an actor that runs in its own event loop.
-    """
-
-    namespace: Optional[str] = None
-    actor_options: Dict = Field(default_factory=dict)
-
-    @property
-    def actor(self) -> GenActor:
-        return GenActor.options(
-            namespace=self.namespace,
-            name=self.id,
-            get_if_exists=True,
-            **self.actor_options,
-        ).remote(self)
-
-
-# class ActorBroadcaster(Broadcaster, GenActorAgent):
-#     def receive(self, message: Message) -> Iterable[Message]:
-#         sender = message.sender
-#         futures = [
-#             edge.node.actor.receive.remote(message)
-#             for edge in self.links.values()
-#             if edge.node != sender
-#         ]
-#         while any(futures):
-#             ready, futures = ray.wait(futures, num_returns=1)
-#             for response_messages in ready:
-#                 for message in ray.get(response_messages):
-#                     yield message
-
-
-# class ActorGroupChat(SystemAgent):
-#     """
-#     Useful to have multiple actors run in different processes simultaneously.
-#     Every received chat message will be broadcasted to all nodes except the sender.
-#     There's no guarantee that the messages will be returned or processed in order.
-
-#     This Actor variant can be useful to unlock parallelism without having to use asyncio.
-#     """
-
-#     def chat(self, message: Message):
-#         messages = [message]
-#         cursor = 0
-#         while cursor < len(messages):
-#             message_i = messages[cursor]
-#             futures = [
-#                 edge.node.actor.receive.remote(message_i)
-#                 for edge in self.links.values()
-#                 if edge.node.id != message_i.sender
-#             ]
-
-#             while True:
-#                 ready, in_progress = ray.wait(futures)
-#                 if ready:
-#                     for message_j in ready:
-#                         yield message_j
-#                         messages.append(message_j)
-#                 if not in_progress:
-#                     break
-
-#             cursor += 1

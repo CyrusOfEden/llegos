@@ -86,7 +86,7 @@ class TechnicalWriter(Assistant):
 
     def request(self, req):
         # Can emit messages that others can listen to
-        self.emit("debug", Message.reply_to(req, content=str(self)))
+        self.emit("debug", Message.reply(req, content=str(self)))
 
         # model_fn(type[BaseModel]) converts a Pydantic model to a JSON schema
         functions = model_fn(Message)
@@ -103,7 +103,7 @@ class TechnicalWriter(Assistant):
         # _model is "Message" here
         _model, kwargs = parse_completion_fn_call(completion)
 
-        yield Message.reply_to(req, **kwargs, method="response")
+        yield Message.reply(req, **kwargs, method="response")
 
 
 class TweetWriter(Assistant):
@@ -139,7 +139,7 @@ class TweetWriter(Assistant):
         # In practice, you can yield anything. It's just a generator.
         # Chunks of responses, intermediate results, etc.
         for tweet in thread.tweets:
-            yield Message.reply_to(req, content=tweet.content, type="response")
+            yield Message.reply(req, content=tweet.content, type="response")
 
 
 def test_example_assistant():
@@ -175,7 +175,7 @@ class HumanConsole(GenAgent):
     def ask(self, message):
         print(message)
         response = input("ASK RESPONSE: ")
-        yield Message.reply_to(message, content=response)
+        yield Message.reply(message, content=response)
 
 
 def test_human_in_the_loop():

@@ -53,7 +53,7 @@ class Message(AbstractObject):
     receiver: Optional[AbstractObject] = Field(default=None, title="receiver node")
 
     @classmethod
-    def reply_to(cls, message: "Message", **kwargs) -> "Message":
+    def reply(cls, message: "Message", **kwargs) -> "Message":
         sender = message.receiver
         receiver = message.sender
         return cls(
@@ -67,8 +67,8 @@ class Message(AbstractObject):
 
 
 def messages_iter(message: Message) -> Iterable[Message]:
-    if message.reply_to:
-        yield from messages_iter(message.reply_to)
+    if message.reply:
+        yield from messages_iter(message.reply)
     yield message
 
 
@@ -79,14 +79,14 @@ def messages_list(message: Message) -> Iterable[Message]:
 def messages_to_graph(messages: Iterable[Message]) -> DiGraph:
     g = DiGraph()
     for message in messages:
-        if message.reply_to:
-            g.add_edge(message.reply_to, message)
+        if message.reply:
+            g.add_edge(message.reply, message)
     return g
 
 
 async def amessages_to_graph(messages: AsyncIterable[Message]) -> DiGraph:
     g = DiGraph()
     async for message in messages:
-        if message.reply_to:
-            g.add_edge(message.reply_to, message)
+        if message.reply:
+            g.add_edge(message.reply, message)
     return g

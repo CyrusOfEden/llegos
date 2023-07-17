@@ -1,19 +1,18 @@
 import json
-from typing import AsyncIterable, Iterable, List, Optional, Tuple
+from typing import AsyncIterable, Iterable, Optional, Tuple, TypeVar
 
 from openai import ChatCompletion
-from pydantic import Field
+from pydantic import BaseModel, Field
 
-from llm_net.abstract import AbstractObject
-from llm_net.gen import AssistantAgent, GenAgent, Message
+from llm_net.gen import GenAgent, Message
 from llm_net.gen_async import GenAsyncAgent
 
 
-class OpenAIAgent(GenAsyncAgent, AssistantAgent):
-    completion: ChatCompletion = Field(default_factory=ChatCompletion)
+class OpenAIAgent(GenAgent):
+    completion: ChatCompletion = Field()
 
 
-def model_fn(model: type[AbstractObject]):
+def model_fn(model: type[BaseModel]):
     return {
         "name": model.__name__,
         "description": model.__doc__,
@@ -24,32 +23,26 @@ def model_fn(model: type[AbstractObject]):
 message_fn = model_fn(Message)
 
 
-def method_fns(methods: Iterable[str]) -> List[dict]:
-    pass
-
-
-response_fn = method_fns(["response"])[0]
-
-
 def agent_fn(agent: GenAgent):
     return {
         "name": agent.id,
         "description": agent.description,
         "parameters": {
             "type": "object",
-            "oneOf": [message_type.schema() for message_type in agent.methods],
+            "oneOf": [message_class.schema() for message_class in agent.methods],
         },
     }
 
 
-def get_completion_message(completion) -> Message:
-    return completion.choices[0].message
+def parse_completion_kwargs(completion) -> dict:
+    message = completion.choices[0].message
+    return json.loads(message["function_call"]["arguments"])
 
 
 def parse_completion_fn_call(
     completion, fn_name: Optional[str] = None, throw_error=True
 ) -> Tuple[str, dict]:
-    message = get_completion_message(completion)
+    message = completion.choices[0].message
 
     if throw_error:
         assert "function_call" in message
@@ -57,9 +50,15 @@ def parse_completion_fn_call(
             assert message["function_call"]["name"] == fn_name
 
     name = message["function_call"]["name"]
-    params = json.loads(message["function_call"]["arguments"])
 
-    return (name, params)
+    return (name, parse_completion_kwargs(completion))
+
+
+T = TypeVar("T")
+
+
+def parse_model(model: type[T], completion) -> T:
+    return model(**parse_completion_kwargs(completion))
 
 
 def call_agent_fn(completion, node: GenAgent, throw_error=True) -> Iterable[Message]:
