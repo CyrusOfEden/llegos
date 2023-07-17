@@ -42,10 +42,14 @@ def agent_fn(agent: GenAgent):
     }
 
 
+def get_completion_message(completion) -> Message:
+    return completion.choices[0].message
+
+
 def parse_completion_fn_call(
     completion, fn_name: Optional[str] = None, throw_error=True
 ) -> Tuple[str, dict]:
-    message = completion.choices[0].message
+    message = get_completion_message(completion)
 
     if throw_error:
         assert "function_call" in message
