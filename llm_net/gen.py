@@ -77,8 +77,9 @@ class GenAgentNet(SystemAgent):
 
     @classmethod
     def from_agents(cls, agents: List[Any], **kwargs):
-        kwargs["graph"] = DiGraph([cls, *agents])
-        return cls(**kwargs)
+        instance = cls(**kwargs)
+        instance.graph.add_edges_from([(instance, agents)])
+        return instance
 
     @classmethod
     def from_graph(cls, graph: DiGraph, **kwargs):
@@ -149,6 +150,11 @@ class GenAgentNet(SystemAgent):
             if (yield response) == StopIteration:
                 break
             yield from self.receive(response)
+
+    def broadcast(self, message: Message) -> Iterable[Message]:
+        for node in self.graph.nodes:
+            if node is not message.sender:
+                yield from node.receive(message)
 
 
 GenAgent.update_forward_refs()

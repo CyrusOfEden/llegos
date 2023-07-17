@@ -1,6 +1,6 @@
 from datetime import datetime
 from textwrap import dedent
-from typing import AsyncIterable, Iterable, Optional, Union
+from typing import Any, AsyncIterable, Iterable, Optional, Union
 
 from networkx import DiGraph
 from pydantic import Field
@@ -46,7 +46,7 @@ class Message(AbstractObject):
         ),
     )
     role: Role = Field()
-    content: str = Field()
+    body: Any = Field()
     created_at: datetime = Field(default_factory=datetime.utcnow)
     reply_to: Optional[AbstractObject] = Field(default=None, title="reply to message")
     sender: Optional[AbstractObject] = Field(default=None, title="sender node")
