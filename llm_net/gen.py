@@ -10,7 +10,7 @@ from llm_net.types import Role
 
 class GenAgent(AbstractObject):
     role: Role = Field(description="used to set the role for messages from this node")
-    methods: set[type[Message]] = Field(
+    messages: set[type[Message]] = Field(
         default_factory=set,
         description="set of message types that this node can receive",
     )
