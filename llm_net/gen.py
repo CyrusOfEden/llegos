@@ -10,10 +10,6 @@ from llm_net.types import Role
 
 class GenAgent(AbstractObject):
     role: Role = Field(description="used to set the role for messages from this node")
-    messages: set[type[Message]] = Field(
-        default_factory=set,
-        description="set of message types that this node can receive",
-    )
     description: Optional[str] = Field(default=None)
     event_emitter: EventEmitter = Field(default_factory=EventEmitter, exclude=False)
     (
@@ -33,11 +29,10 @@ class GenAgent(AbstractObject):
         if not self.description and self.__class__.__doc__:
             self.description = self.__class__.__doc__
 
-    def new_message(self, content: str, method: str, **kwargs) -> Message:
-        """Helper method for creating a message with the node's role and id."""
-        return Message(
-            sender=self, role=self.role, method=method, content=content, **kwargs
-        )
+    receivable_messages: set[type[Message]] = Field(
+        default_factory=set,
+        description="set of message types that this node can receive",
+    )
 
     def receive(
         self, message: Optional[Message] = None
@@ -49,6 +44,12 @@ class GenAgent(AbstractObject):
 
         method = getattr(self, message.type) if message.type else self.call
         return method(message)
+
+    def draft_message(self, content: str, method: str, **kwargs) -> Message:
+        """Helper method for creating a message with the node's role and id."""
+        return Message(
+            sender=self, role=self.role, method=method, content=content, **kwargs
+        )
 
 
 class SystemAgent(GenAgent):

@@ -29,7 +29,7 @@ def agent_fn(agent: GenAgent):
         "description": agent.description,
         "parameters": {
             "type": "object",
-            "oneOf": [message_class.schema() for message_class in agent.messages],
+            "oneOf": [message_class.schema() for message_class in agent.receivable_messages],
         },
     }
 

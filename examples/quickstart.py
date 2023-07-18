@@ -48,7 +48,6 @@ from pydantic import BaseModel, Field
 
 from llm_net.gen import GenAgent, Message
 from llm_net.openai import chat_messages, model_fn, parse_completion_fn_call
-from llm_net.types import Method
 
 """
 The gateway to llm-net is the GenAgent class for agents that can send and receive messages.
@@ -159,24 +158,3 @@ def test_example_assistant():
         print(f"TECHNICAL WRITER =========================\n{writing} ")
         for tweet in tweeter.request(writing):
             print(f"TWEET WRITER =========================\n{tweet} ")
-
-
-class HumanConsole(GenAgent):
-    """
-    This human agent can be used to ask for clarification or inform of updates.
-    """
-
-    role = "user"
-    methods: List[Method] = ["inform", "ask"]
-
-    def inform(self, message):
-        print(message)
-
-    def ask(self, message):
-        print(message)
-        response = input("ASK RESPONSE: ")
-        yield Message.reply(message, content=response)
-
-
-def test_human_in_the_loop():
-    pass

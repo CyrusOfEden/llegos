@@ -57,4 +57,4 @@ class ExecutiveAgent(OpenAIAgent):
                 SerperAgent.QueryMessage.reply(message, **kwargs)
             )
         elif fn == "ChatMessage":
-            yield self.new_message(**kwargs, method="chat")
+            yield self.draft_message(**kwargs, method="chat")
