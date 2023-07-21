@@ -1,6 +1,5 @@
-from typing import Any, Dict, Literal, Union
+from typing import Literal, Union
 
-Metadata = Dict[Any, Any]
 Role = Union[str, Literal["system", "user", "assistant"]]
 Method = Literal[
     "ask",

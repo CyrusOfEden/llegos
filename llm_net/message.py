@@ -1,9 +1,10 @@
 from datetime import datetime
 from textwrap import dedent
-from typing import Any, AsyncIterable, Iterable, Optional, Union
+from typing import AsyncIterable, Iterable, Optional, Union
 
 from networkx import DiGraph
 from pydantic import Field
+from sorcery import dict_of
 
 from llm_net.abstract import AbstractObject
 from llm_net.types import Method, Role
@@ -15,6 +16,7 @@ class Message(AbstractObject):
     """
 
     class Config(AbstractObject.Config):
+        arbitrary_types_allowed = True
         json_encoders = {
             datetime: lambda dt: dt.isoformat(),
             AbstractObject: lambda a: a.id,
@@ -27,7 +29,7 @@ class Message(AbstractObject):
             For example, a message with action "step" will call the "step" method.
             For async nodes, the method name will be prefixed with "a", so "step" becomes "astep".
 
-            A curated set of kind names to consider:
+            A curated set of methods to consider:
             - chat = "chat about this topic", "talk about this topic", etc.
             - request = "request this thing", "ask for this thing", etc.
             - response = "responding with this thing", "replying with this thing", etc.
@@ -46,11 +48,11 @@ class Message(AbstractObject):
         ),
     )
     role: Role = Field()
-    body: Any = Field()
+    body: str = Field()
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    reply_to: Optional[AbstractObject] = Field(default=None, title="reply to message")
-    sender: Optional[AbstractObject] = Field(default=None, title="sender node")
-    receiver: Optional[AbstractObject] = Field(default=None, title="receiver node")
+    sender: Optional[AbstractObject] = Field(default=None, title="sender id")
+    receiver: Optional[AbstractObject] = Field(default=None, title="receiver id")
+    reply_to: Optional["Message"] = Field(default=None, title="reply to message")
 
     @classmethod
     def reply(cls, message: "Message", **kwargs) -> "Message":
@@ -64,6 +66,26 @@ class Message(AbstractObject):
             method="response",
             **kwargs,
         )
+
+    @classmethod
+    @property
+    def init_fn(cls):
+        schema = cls.schema()
+
+        parameters = schema["properties"]
+        del parameters["id"]
+        for key in ("reply_to", "sender", "receiver"):
+            if key in parameters:
+                parameters[key] = {
+                    "title": parameters[key]["title"],
+                    "type": "string",
+                }
+
+        name = cls.__name__
+        description = cls.__doc__
+        required = schema["required"]
+
+        return dict_of(name, description, parameters, required)
 
 
 def messages_iter(message: Message) -> Iterable[Message]:

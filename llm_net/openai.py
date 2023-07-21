@@ -4,8 +4,16 @@ from typing import AsyncIterable, Iterable, Optional, Tuple, TypeVar
 from openai import ChatCompletion
 from pydantic import BaseModel, Field
 
+from llm_net.asyncio.gen import AsyncGenAgent
 from llm_net.gen import GenAgent, Message
-from llm_net.gen_async import GenAsyncAgent
+
+
+def chat_message(message: Message) -> Message:
+    return {"role": message.role, "content": str(message)}
+
+
+def chat_messages(messages: Iterable[Message]) -> Iterable[Message]:
+    return map(chat_message, messages)
 
 
 class OpenAIAgent(GenAgent):
@@ -20,7 +28,7 @@ def model_fn(model: type[BaseModel]):
     }
 
 
-message_fn = model_fn(Message)
+generic_message_fn = model_fn(Message)
 
 
 def agent_fn(agent: GenAgent):
@@ -29,7 +37,9 @@ def agent_fn(agent: GenAgent):
         "description": agent.description,
         "parameters": {
             "type": "object",
-            "oneOf": [message_class.schema() for message_class in agent.receivable_messages],
+            "oneOf": [
+                message_class.schema() for message_class in agent.receivable_messages
+            ],
         },
     }
 
@@ -42,14 +52,14 @@ def parse_completion_kwargs(completion) -> dict:
 def parse_completion_fn_call(
     completion, fn_name: Optional[str] = None, throw_error=True
 ) -> Tuple[str, dict]:
-    message = completion.choices[0].message
+    response = completion.choices[0].content
 
     if throw_error:
-        assert "function_call" in message
+        assert "function_call" in response
         if fn_name is not None:
-            assert message["function_call"]["name"] == fn_name
+            assert response["function_call"]["name"] == fn_name
 
-    name = message["function_call"]["name"]
+    name = response["function_call"]["name"]
 
     return (name, parse_completion_kwargs(completion))
 
@@ -67,15 +77,7 @@ def call_agent_fn(completion, node: GenAgent, throw_error=True) -> Iterable[Mess
 
 
 async def acall_agent_fn(
-    completion, node: GenAsyncAgent, throw_error=True
+    completion, node: AsyncGenAgent, throw_error=True
 ) -> AsyncIterable[Message]:
     kwargs = parse_completion_fn_call(completion, node.__name__, throw_error)
-    return node.areceive(**kwargs):
-
-
-def chat_message(message: Message) -> Message:
-    return {"role": message.role, "content": str(message)}
-
-
-def chat_messages(messages: Iterable[Message]) -> Iterable[Message]:
-    return map(chat_message, messages)
+    return node.areceive(**kwargs)

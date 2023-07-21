@@ -4,15 +4,13 @@ from uuid import uuid4
 import yaml
 from pydantic import BaseModel, Field
 
-from llm_net.types import Metadata
 
-
-class AbstractObject(ABC, BaseModel):
+class AbstractObject(BaseModel, ABC):
     class Config:
         arbitrary_types_allowed = True
 
     id: str = Field(default="", title="unique identifier")
-    metadata: Metadata = Field(default_factory=dict)
+    metadata: dict = Field(default_factory=dict)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

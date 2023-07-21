@@ -8,12 +8,12 @@ from llm_net.gen import Field, GenAgent, Message
 
 
 class Contractor(GenAgent):
-    def call_for_proposal(self, message: Message) -> Message:
+    def propose(self, message: Message) -> Message:
         """Manager requested a service from this agent."""
         accept = True
         content = "Yes" if accept else "No"
         if accept:
-            return Message.reply(message, content, method="propose")
+            return Message.reply(message, content, method="proposed")
         else:
             return Message.reply(message, content, method="reject")
 
@@ -38,7 +38,7 @@ class Manager(GenAgent):
 
     def perform(self, message: Message):
         """Perform the ContractNet protocol"""
-        responses = [c.call_for_proposal(message) for c in self.contractors]
+        responses = [c.propose(message) for c in self.contractors]
 
         for r in responses:
             reply = self.receive(r)
@@ -47,16 +47,16 @@ class Manager(GenAgent):
 
         # Set winning contractor to the first one
         winning_proposal = next(r for r in responses if r.method == "propose")
-        winner: GenAgent = winning_proposal.sender
+        winning_agent: GenAgent = winning_proposal.sender
         for r in responses:
             agent: GenAgent = r.sender
-            if agent is not winner:
+            if agent is not winning_agent:
                 agent.receive(Message.reply(r, "No", method="reject"))
 
         reply = Message.reply(
             winning_proposal, "Your proposal has been accepted.", method="accept"
         )
-        result = winning_proposal.receive(reply)
+        result = winning_agent.receive(reply)
         self.receive(result)
 
     def reject(self, message: Message):
@@ -64,7 +64,7 @@ class Manager(GenAgent):
         # Update learnings about the contractor
         # Update state
 
-    def propose(self, message: Message):
+    def proposed(self, message: Message):
         """Contractor proposes to complete the task."""
         # Update learnings about the contractor
         # Update state
