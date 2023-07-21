@@ -6,7 +6,6 @@ from llm_net.openai import (
     Message,
     OpenAIAgent,
     chat_messages,
-    model_fn,
     parse_completion_fn_call,
 )
 
@@ -47,7 +46,7 @@ class ExecutiveAgent(OpenAIAgent):
             messages=chat_messages(
                 [Message(role="system", content="You are a researcher."), message]
             ),
-            functions=[self.serper.call_fn, model_fn(ChatMessage)],
+            functions=[self.serper.call_fn, ChatMessage.init_fn],
         )
         fn, kwargs = parse_completion_fn_call(completion)
 
