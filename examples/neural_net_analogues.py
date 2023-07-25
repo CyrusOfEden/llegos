@@ -22,4 +22,5 @@ class TGN(GenNetwork):
         yield from self.forward(super().receive(message))
 
     def forward(self, messages: Iterable[Message]) -> Iterable[Message]:
+        """Apply an attentional mechanism to a sequence of messages"""
         ...
