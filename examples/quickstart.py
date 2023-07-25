@@ -46,7 +46,7 @@ from typing import List
 from openai import ChatCompletion
 from pydantic import BaseModel, Field
 
-from llm_net.gen import GenAgent, Message
+from llm_net.base import GenAgent, Message
 from llm_net.openai import chat_messages, model_fn, parse_completion_fn_call
 
 """

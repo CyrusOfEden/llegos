@@ -1,6 +1,6 @@
 from typing import Iterable
 
-from llm_net.gen import Field, GenAgent
+from llm_net.base import Field, GenAgent
 from llm_net.message import AssistantMessage, Message, UserMessage
 from llm_net.openai import agent_fn, chat_message, chat_messages
 

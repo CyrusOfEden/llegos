@@ -4,7 +4,7 @@ https://en.m.wikipedia.org/wiki/Contract_Net_Protocol
 
 from pprint import pprint
 
-from llm_net.gen import Field, GenAgent, Message
+from llm_net.base import Field, GenAgent, Message
 
 
 class Contractor(GenAgent):

@@ -3,7 +3,7 @@ from typing import Optional
 from redis_om import JsonModel
 
 from llm_net.abstract import AbstractObject
-from llm_net.gen import Field, Message
+from llm_net.base import Field, Message
 
 
 class AbstractRedisObject(JsonModel, AbstractObject):

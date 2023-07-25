@@ -1,4 +1,4 @@
-from llm_net.gen import GenAgent, Message
+from llm_net.base import GenAgent, Message
 
 
 class SubscribeMessage(Message):

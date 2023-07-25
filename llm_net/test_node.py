@@ -1,7 +1,7 @@
 from networkx import DiGraph
 from pydantic import Field
 
-from llm_net.gen import GenAgent
+from llm_net.base import GenAgent
 from llm_net.message import UserMessage
 
 

@@ -4,7 +4,7 @@ from os import environment as env
 from fastapi import FastAPI, WebSocket
 from upstash_redis.asyncio import Redis
 
-from llm_net.asyncio.gen import AsyncGenAgent
+from llm_net.asyncio import AsyncGenAgent
 from llm_net.message import Message
 
 redis = Redis(url=env["UPSTASH_REDIS_REST_URL"], token=env["UPSTASH_REDIS_REST_TOKEN"])
