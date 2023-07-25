@@ -8,15 +8,14 @@ That's where llm_net comes in. With llm_net, you can create, manage, and simulat
 
 ## Features
 
-1. Multi-Agent Systems: With llm_net, you can create systems composed of multiple autonomous agents, enabling rich and intricate behaviors and interactions.
-2. Message-Passing Paradigm: Communication between agents in llm_net is facilitated through a flexible message-passing paradigm, allowing for efficient and versatile inter-agent dialogue.
-3. Asynchronous Functionality: llm_net is built with support for asynchronous operations, making it possible to efficiently handle multiple tasks concurrently. This is particularly useful for scalable, high-performance agent systems.
-4. Event-Driven Architecture: llm_net embraces an event-driven programming approach, allowing agents to dynamically respond to events occurring within the system.
-5. Flexibility: The toolkit provides foundational structures, namely GenAgent and GenNetwork, for you to develop and customize your own autonomous agents and networks. This flexibility allows you to tailor llm_net to suit your unique requirements and use cases.
+1. **Multi-Agent Systems:** With llm_net, you can create systems composed of multiple autonomous agents, enabling rich and intricate behaviors and interactions.
+2. **Concurrent Message-Passing:** Communication between agents in llm_net is facilitated through a flexible message-passing paradigm, allowing for efficient and versatile inter-agent dialogue. Agents and/or process-based concurrency.
+4. **Event-Driven Architecture:** llm_net embraces an event-driven programming approach, allowing agents to dynamically respond to events occurring within the system.
+5. **Flexibility:** The toolkit provides foundational structures, namely GenAgent and GenNetwork, for you to develop and customize your own autonomous agents and networks. This flexibility allows you to tailor llm_net to suit your unique requirements and use cases.
 
 ## Elegant Abstractions
 
-llm_net centers around three abstractions: Generative Agents, Messages, and Generative Networks. These elements work together to facilitate complex interactions and behaviors in your multi-agent systems.
+llm_net centers around three abstractions: Messages, Generative Agents, and Generative Networks. These elements work together to facilitate complex interactions and behaviors in your multi-agent systems.
 
 ## Messages
 
@@ -36,7 +35,7 @@ The `Message` class also includes a couple of class methods:
 
 1. **reply**: This method creates a new message that is a reply to a previous message. It automatically sets the `sender`, `receiver`, `reply_to`, `role`, and `method` fields appropriately.
 2. **init_fn**: This is a property that returns a dictionary representing the schema for initializing a new `Message` object. This is useful for using JSON schema function completions to generate a new Message.
-3.
+
 ### Generative Agents
 
 At the heart of llm_net are the Generative Agents, or GenAgents. A [GenAgent](./llm_net/base.py) represents an individual autonomous agent in your system. These agents can be customized to suit a wide range of use cases, allowing you to implement your own unique agent behaviors.
@@ -52,28 +51,27 @@ GenAgents can be used to model:
 
 ## Generative Networks
 
-llm_net also introduces the concept of Generative Networks, or GenNetworks. A GenNetwork a higher-level structure that represents a network of GenAgents. A GenNetwork is a multi-graph where nodes represent GenAgents and edges point to other GenAgents listening to emitted Messages. This EventEmitter edge forms a communication channel, where an emitted Message is received by a listening GenAgent. This graph-based structure supports a broad spectrum of multi-agent architectures, from simple linear flows to complex network interactions.
+llm_net also introduces the concept of Generative Networks, or GenNetworks.  GenNetworks provide a way to pass events up the agent network without having to pass intermediate results up manually at every level.
 
-GenNetworks handle the distribution of messages within the network, ensuring that each message reaches its intended recipient. When a message is sent within a GenNetwork, it is automatically propagated to the appropriate agents based on the network's configuration.
+A GenNetwork a higher-level structure that represents a network of GenAgents. A GenNetwork is a multi-graph where nodes represent GenAgents and edges point to other GenAgents listening to emitted Messages. This EventEmitter edge forms a communication channel, where an emitted Message is received by a listening GenAgent. This graph-based structure supports a broad spectrum of multi-agent architectures, from simple linear flows to complex network interactions.
 
-Moreover, GenNetworks provide a context for the agents they contain. This is particularly valuable in more complex scenarios where an agent's behavior might depend on its network context. GenAgents can leverage their GenNetwork during message propagation. This enables more sophisticated interactions and cooperation between agents.
+Moreover, GenNetworks provide a context for the agents they contain. This is particularly valuable in more complex scenarios where an agent's behavior might depend on its network context, say, by providing a directory of other agents. GenAgents can leverage their GenNetwork during message propagation. This enables more sophisticated interactions and cooperation between agents.
 
-A key advantage of using GenNetworks is that it allows for encapsulation and modularity. You can design individual GenAgents with specific behaviors and then compose them into larger, more complex GenNetworks. Since GenNetworks subclass GenAgents, you can compose GenNetworks within GenNetworks! This recursive ability makes it easier to build complex multi-agent systems. In essence, GenNetworks act as a scaffolding for the structure of your multi-agent systems.
+A key advantage of using GenNetworks is that it allows for encapsulation and modularity. You can design individual GenAgents with specific behaviors and then compose them into larger, more complex GenNetworks. Since GenNetworks subclass GenAgents, you can compose GenNetworks within GenNetworks! This recursive ability makes it easier to build deep multi-agent systems. In essence, GenNetworks act as a scaffolding for the structure of your multi-agent systems.
 
 GenNetworks can be used to model:
 
-1. Multi-Agent Coordination: Multiple agents coordinate to solve a problem, with each agent handling a different part of the problem.
-2. Agent Hierarchy: Agents are organized into a hierarchy, with some agents directing the actions of others.
-3. Feedback Loop: Agents form a feedback loop, where the output of one agent feeds into the input of another, and so on.
-4. Distributed System: A complex system where tasks are distributed among multiple agents, and the results are collected and combined by another agent.
-5. Concurrent Processing: A system where multiple agents are processing tasks concurrently, showcasing the asynchrony capabilities of the GenNetwork.
+1. **Multi-Agent Coordination:** Multiple agents coordinate to solve a problem, with each agent handling a different part of the problem.
+2. **Agent Hierarchy:** Agents are organized into a hierarchy, with some agents directing the actions of others.
+3. **Feedback Loop:** Agents form a feedback loop, where the output of one agent feeds into the input of another, and so on.
+4. **Distributed System:** A complex system where tasks are distributed among multiple agents, and the results are collected and combined by another agent.
+
 
 ## Examples & Quick-Start
 
 [examples/quickstart.py](./examples/quickstart.py) shows how GenAgent composes openai.ChatCompletion and agent state. If you're familiar with Langchain or other agent frameworks, then think of GenAgent as the agent that uses different sub-agents to accomplish a variety of tasks.
 
 An example of a more complex interaction can be found in [examples/contract_net.py](./examples/contract_net.py), where a Manager agents receives a task, calls for proposals from a group of Contractors, reviews them, ultimately accepting one to delegate the task to.
-
 
 ## Future Work
 
@@ -90,7 +88,5 @@ We're excited to see where the community takes llm_net, and we look forward to c
 Contributions to llm_net are welcome and greatly appreciated. We believe that the community's collective wisdom and creativity will enable us to build a more powerful and flexible tool. If you're interested in contributing, here are some guidelines:
 
 1. **Issues**: Feel free to submit issues regarding bugs, feature requests, or other areas of concern. We value your feedback and will do our best to respond in a timely manner.
-
 2. **Code**: If you're interested in adding a feature or fixing a bug, please start by submitting an issue. Once we've had a chance to discuss your proposal, you can make a pull request with your changes.
-
 3. **Documentation**: Clear and comprehensive documentation makes any project more accessible. If you notice an area of the documentation that could be improved, or if you want to create new tutorials or guides, we would love your help.
