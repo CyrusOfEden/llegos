@@ -1,15 +1,14 @@
 from contextvars import ContextVar
-from typing import Iterable, Optional, Union
+from typing import Iterable, Union
 
+from janus import Queue
 from networkx import MultiDiGraph, is_directed_acyclic_graph
 from pyee import EventEmitter
 from sorcery import delegate_to_attr, dict_of
 
 from llm_net.abstract import AbstractObject, Field
 from llm_net.message import Message
-from llm_net.types import Role
-
-llm_net = ContextVar("llm_net.active_network")
+from llm_net.types import Method, Role
 
 
 class GenAgent(AbstractObject):
@@ -47,16 +46,27 @@ class GenAgent(AbstractObject):
 
     receivable_messages: set[type[Message]] = Field(
         default_factory=set,
-        description="set of message types that this node can receive",
+        description="set of methodsthat this node can receive",
     )
 
+    @property
+    def receivable_methods(self):
+        return {message.method for message in self.receivable_messages}
+
+    def can_receive(self, message: Message) -> bool:
+        return (
+            message.sender != self
+            and message.receiver == self
+            and message.method in self.receivable_methods
+        )
+
     def receive(self, message: Message) -> Iterable[Message]:
-        if message.sender == self or message.receiver != self:
-            return None
+        if not self.can_receive(message):
+            raise ValueError(f"Unexpected message {message}")
 
         self.emit("receive", message)
 
-        method = getattr(self, message.type) if message.type else self.call
+        method = getattr(self, message.method)
         return method(message)
 
     @classmethod
@@ -86,32 +96,57 @@ class GenAgent(AbstractObject):
         }
 
 
-class SystemAgent(GenAgent):
-    """Helper class for nodes whose messages should be set to role = system."""
-
-    role = "system"
-
-
 class AssistantAgent(GenAgent):
     """Helper class for nodes whose messages should be set to role = assistant."""
 
     role = "assistant"
 
 
+class SystemAgent(GenAgent):
+    """Helper class for nodes whose messages should be set to role = system."""
+
+    role = "system"
+
+
+class GenChannel(SystemAgent):
+    """For something more CSP-lke, use a GenChannel instead of a GenNetwork."""
+
+    _queue: Queue[Message] = Field(default_factory=Queue, exclude=True)
+
+    @property
+    def queue(self):
+        return self._queue.sync_q
+
+    @property
+    def unfinished_tasks(self):
+        return self._queue.unfinished_tasks
+
+    (
+        maxsize,
+        closed,
+        task_done,
+        qsize,
+        empty,
+        full,
+        put_nowait,
+        get_nowait,
+        put,
+        get,
+        join,
+    ) = delegate_to_attr("queue")
+
+
 class GenNetwork(SystemAgent):
     graph: MultiDiGraph = Field(
         default_factory=MultiDiGraph, include=False, exclude=True
     )
-    (nodes, edges, predecessors, successors) = delegate_to_attr("graph")
+    (nodes, edges, predecessors, successors, neighbors) = delegate_to_attr("graph")
 
-    def __init__(self, agents: list[GenAgent], **kwargs):
-        graph = MultiDiGraph()
-        for agent in agents:
-            for event in agent.event_names():
-                for listener in agent.listeners(event):
-                    graph.add_edge(agent, listener, key=event)
-
+    def __init__(self, links: dict[GenAgent, list[tuple[str, GenAgent]]], **kwargs):
         super().__init__(**kwargs)
+        for u, edges in links.items():
+            for event, v in edges:
+                self.link(u, event, v)
         assert is_directed_acyclic_graph(self.graph)
 
     @property
@@ -131,27 +166,42 @@ class GenNetwork(SystemAgent):
                 raise TypeError(f"lookup key must be str or GenAgent, not {type(key)}")
 
     def link(self, u: GenAgent, event: str, v: GenAgent, **attr):
-        self.graph.add_edge(u, v.receive, event=event, **attr)
-        u.add_listener(event, v.receive)
+        if (u, v.receive, event) not in self.graph.edges(keys=True):
+            u.add_listener(event, v.receive)
+            self.graph.add_edge(u, v.receive, event=event, **attr)
 
     def unlink(self, u: GenAgent, event: str, v: GenAgent):
-        self.graph.remove_edge(u, v.receive, key=event)
-        u.remove_listener(event, v.receive)
+        if (u, v.receive, event) in self.graph.edges(keys=True):
+            self.graph.remove_edge(u, v.receive, key=event)
+            u.remove_listener(event, v.receive)
+
+    def can_receive(self, message: Message) -> bool:
+        return (
+            message.receiver in self
+            and message.sender != message.receiver
+            and message.method in self.receivable_methods
+            and message.receiver.can_receive(message)
+        )
 
     def receive(self, message: Message) -> Iterable[Message]:
-        agent: Optional[GenAgent] = message.receiver
-        if agent is None:
-            return
-        if agent not in self:
-            raise ValueError(f"Receiver {agent.id} not in GenNetwork")
+        if not self.can_receive(message):
+            raise ValueError(f"Unexpected message {message}")
 
         self.emit("receive", message)
 
-        previous_network = llm_net.set(self)
+        previous_net = llm_net.set(self)
         try:
+            agent: GenAgent = message.receiver
             for response in agent.receive(message):
                 if (yield response) == StopIteration:
                     break
                 yield from self.receive(response)
         finally:
-            llm_net.reset(previous_network)
+            llm_net.reset(previous_net)
+
+
+class ChatMessage(Message):
+    method: Method = "chat"
+
+
+llm_net = ContextVar[GenNetwork]("llm_net.active_network")

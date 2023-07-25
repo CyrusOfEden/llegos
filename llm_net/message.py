@@ -68,6 +68,17 @@ class Message(AbstractObject):
         )
 
     @classmethod
+    def forward(cls, message: "Message", **kwargs) -> "Message":
+        sender = message.receiver
+        return cls(
+            sender=sender,
+            reply_to=message,
+            role=sender.role,
+            method="proxy",
+            **kwargs,
+        )
+
+    @classmethod
     @property
     def init_fn(cls):
         schema = cls.schema()

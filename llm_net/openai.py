@@ -2,7 +2,7 @@ import json
 from typing import AsyncIterable, Iterable, Optional, Tuple, TypeVar
 
 from openai import ChatCompletion
-from pydantic import BaseModel, Field
+from pydantic import Field
 
 from llm_net.asyncio import AsyncGenAgent
 from llm_net.base import GenAgent, Message
@@ -18,30 +18,6 @@ def chat_messages(messages: Iterable[Message]) -> Iterable[Message]:
 
 class OpenAIAgent(GenAgent):
     completion: ChatCompletion = Field()
-
-
-def model_fn(model: type[BaseModel]):
-    return {
-        "name": model.__name__,
-        "description": model.__doc__,
-        "parameters": model.schema()["properties"],
-    }
-
-
-generic_message_fn = model_fn(Message)
-
-
-def agent_fn(agent: GenAgent):
-    return {
-        "name": agent.id,
-        "description": agent.description,
-        "parameters": {
-            "type": "object",
-            "oneOf": [
-                message_class.schema() for message_class in agent.receivable_messages
-            ],
-        },
-    }
 
 
 def parse_completion_kwargs(completion) -> dict:
@@ -73,7 +49,7 @@ def parse_model(model: type[T], completion) -> T:
 
 def call_agent_fn(completion, node: GenAgent, throw_error=True) -> Iterable[Message]:
     kwargs = parse_completion_fn_call(completion, node.__name__, throw_error)
-    yield from node.receive(**kwargs)
+    return node.receive(**kwargs)
 
 
 async def acall_agent_fn(

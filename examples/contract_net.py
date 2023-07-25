@@ -4,7 +4,7 @@ https://en.m.wikipedia.org/wiki/Contract_Net_Protocol
 
 from pprint import pprint
 
-from llm_net.base import Field, GenAgent, Message
+from llm_net.base import Field, GenAgent, GenChannel, Message
 
 
 class Contractor(GenAgent):
@@ -32,9 +32,8 @@ class Contractor(GenAgent):
         # Update state
 
 
-class Manager(GenAgent):
+class ContractNet(GenChannel):
     contractors: list[Contractor] = Field(default_factory=list)
-    results: list[Message] = Field(default_factory=list)
 
     def perform(self, message: Message):
         """Perform the ContractNet protocol"""
@@ -80,8 +79,6 @@ class Manager(GenAgent):
         pprint(proposal)
         print("RESULT ====================================")
         pprint(result)
-
-        self.results.append(result)
 
     def cancel(self, message: Message):
         """Contractor was unable to fulfill the request."""
