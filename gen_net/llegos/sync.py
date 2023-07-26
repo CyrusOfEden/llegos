@@ -1,4 +1,4 @@
-from typing import Any, Generator, Iterable, Optional, TypeVar, Union
+from typing import Any, Callable, Generator, Iterable, Optional, TypeVar, Union
 
 from pyee import EventEmitter
 from sorcery import delegate_to_attr
@@ -95,7 +95,10 @@ class SystemAgent(GenAgent):
     role = "system"
 
 
-def dispatch(message: Message) -> Iterable[Message]:
+Applicator = Callable[[Message], Iterable[Message]]
+
+
+def apply(message: Message) -> Iterable[Message]:
     agent = message.receiver
     if not agent:
         raise StopIteration
@@ -107,7 +110,7 @@ def dispatch(message: Message) -> Iterable[Message]:
             yield response
 
 
-def propogate(message: Message) -> Iterable[Message]:
-    for reply in dispatch(message):
+def propogate(message: Message, applicator: Applicator = apply) -> Iterable[Message]:
+    for reply in applicator(message):
         yield reply
         yield from propogate(reply)

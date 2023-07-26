@@ -1,4 +1,5 @@
-from typing import Any, AsyncIterable, Coroutine, Optional, TypeVar, Union
+from functools import partial
+from typing import Any, AsyncIterable, Callable, Coroutine, Optional, TypeVar, Union
 
 from aiometer import amap
 from networkx import DiGraph
@@ -35,7 +36,10 @@ class AsyncGenAgent(GenAgent):
         return self.property(message)()
 
 
-async def dispatch(message: Message) -> AsyncIterable[Message]:
+Applicator = Callable[[Message], AsyncIterable[Message]]
+
+
+async def apply(message: Message) -> AsyncIterable[Message]:
     agent: Optional[AsyncGenAgent] = message.receiver
     if not agent:
         raise StopAsyncIteration
@@ -44,15 +48,18 @@ async def dispatch(message: Message) -> AsyncIterable[Message]:
         yield reply_l1
 
 
-async def propogate(message: Message) -> AsyncIterable[Message]:
-    async for reply_l1 in dispatch(message):
+async def propogate(
+    message: Message, applicator: Applicator = apply
+) -> AsyncIterable[Message]:
+    async for reply_l1 in applicator(message):
         yield reply_l1
         async for reply_l2 in propogate(reply_l1):
             yield reply_l2
 
 
-async def propogate_all(messages: list[Message]):
-    async with amap(propogate, messages) as generators:
+async def propogate_all(messages: list[Message], applicator: Applicator = apply):
+    mapper = partial(propogate, applicator=applicator)
+    async with amap(mapper, messages) as generators:
         async for gen in generators:
             async for reply in gen:
                 yield reply

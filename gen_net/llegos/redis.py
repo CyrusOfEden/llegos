@@ -2,8 +2,7 @@ from typing import Optional
 
 from redis_om import JsonModel
 
-from gen_net.abstract import AbstractObject
-from gen_net.sync import Field, Message
+from gen_net.sync import AbstractObject, Field, Message
 
 
 class AbstractRedisObject(JsonModel, AbstractObject):

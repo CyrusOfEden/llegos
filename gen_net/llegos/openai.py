@@ -1,9 +1,10 @@
 import json
 from typing import Iterable, Union
 
-from gen_net.llegos import Llego
-from gen_net.messages import messages_iter
-from gen_net.sync import AbstractObject, GenAgent, Message
+from gen_net.llegos.messages import messages_iter
+from gen_net.llegos.sync import AbstractObject, GenAgent, Message
+
+Llego = Union[GenAgent, AbstractObject]
 
 
 def messages_dicts(message: Message, count: int = 12):
@@ -48,7 +49,7 @@ def prepare_function_call(llegos: Iterable[Llego]):
     return schemas, coroutine_call
 
 
-def prepare_async_function_call(llegos: Iterable[Union[GenAgent, AbstractObject]]):
+def prepare_async_function_call(llegos: Iterable[Llego]):
     schemas, callables = schemas_and_callables(llegos)
 
     async def coroutine_call(completion):

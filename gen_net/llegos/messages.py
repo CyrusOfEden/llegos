@@ -3,6 +3,7 @@ from textwrap import dedent
 from typing import Iterable, Optional, Union
 
 from networkx import DiGraph
+from sorcery import delegate_to_attr
 
 from gen_net.abstract import AbstractObject, Field
 from gen_net.types import Method
@@ -95,7 +96,7 @@ def messages_list(message: Message, count: int = 12) -> list[Message]:
     return list(messages_iter(message, count))
 
 
-def messages_graph(messages: Iterable[Message]) -> DiGraph:
+def messages_graph(messages: Iterable[Message]):
     g = DiGraph()
     for message in messages:
         if message.reply:
