@@ -6,9 +6,8 @@ http://www.fipa.org/specs/fipa00029/SC00029H.pdf
 from abc import ABC, abstractmethod
 from typing import AsyncIterable, Union
 
-import aiometer
-
-from gen_net.llegos.networks import Field, GenNetwork, Message, NetworkAgent, apply
+from gen_net.llegos.asyncio import propogate_all
+from gen_net.llegos.networks import Field, GenNetwork, Message, NetworkAgent
 
 """
 First, we define our Message types.
@@ -95,9 +94,15 @@ class Initiator(NetworkAgent, ABC):
     receivable_messages = {Propose, Refuse, InformDone, InformResult, Failure}
 
     @abstractmethod
-    async def propose(self, message: Propose) -> Union[AcceptProposal, RejectProposal]:
+    async def propose(
+        self, message: Propose
+    ) -> AsyncIterable[Union[AcceptProposal, RejectProposal]]:
         """Receive a proposal and return an acceptance or a rejection"""
-        ...
+        ok = True
+        if ok:
+            yield AcceptProposal.reply(message)
+        else:
+            yield RejectProposal.reply(message)
 
     @abstractmethod
     async def inform_done(self, message: InformDone) -> None:
@@ -132,8 +137,6 @@ class ContractNet(GenNetwork):
             CFP.forward(message, sender=self.manager, receiver=c)
             for c in self.contractors
         ]
-        async with aiometer.amap(apply, messages) as generators:
-            async for gen in generators:
-                async for reply in gen:
-                    if (yield reply) is StopAsyncIteration:
-                        break
+        async for reply in propogate_all(messages):
+            if (yield reply) is StopAsyncIteration:
+                break

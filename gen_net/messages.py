@@ -1,6 +1,6 @@
 from datetime import datetime
 from textwrap import dedent
-from typing import Iterable, Optional, Union
+from typing import Generator, Iterable, Optional, Union
 
 from networkx import DiGraph
 from pydantic import Field
@@ -99,13 +99,27 @@ class Message(AbstractObject):
         return dict_of(name, description, parameters, required)
 
 
-def apply(message: Message) -> Iterable[Message]:
+def dispatch(message: Message) -> Iterable[Message]:
     agent = message.receiver
     if not agent:
-        return
-    for reply in agent.receive(message):
-        yield reply
-        yield from apply(reply)
+        raise StopIteration
+    response = agent.receive(message)
+    match response:
+        case Message():
+            yield response
+        case Generator():
+            for reply in response:
+                if (yield reply) is StopIteration:
+                    break
+
+
+def propogate(message: Message) -> Iterable[Message]:
+    for l1 in dispatch(message):
+        if (yield l1) is StopIteration:
+            break
+        for l2 in propogate(l1):
+            if (yield l2) is StopIteration:
+                break
 
 
 def messages_iter(message: Message, depth: int = 12) -> Iterable[Message]:

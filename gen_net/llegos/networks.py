@@ -5,7 +5,7 @@ from networkx import MultiDiGraph, is_directed_acyclic_graph
 from sorcery import delegate_to_attr
 
 from gen_net.agents import AbstractObject, Field, Message, SystemAgent
-from gen_net.llegos.asyncio import AsyncGenAgent, apply
+from gen_net.llegos.asyncio import AsyncGenAgent, propogate
 
 llm_net = ContextVar["GenNetwork"]("llm_net.active_network")
 
@@ -60,7 +60,7 @@ class GenNetwork(NetworkAgent, SystemAgent):
 
         previous_net = llm_net.set(self)
         try:
-            async for reply in apply(message):
+            async for reply in propogate(message):
                 if (yield reply) == StopIteration:
                     break
         finally:
