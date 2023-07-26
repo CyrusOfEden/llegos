@@ -18,10 +18,6 @@ class CFP(Message):
     method = "cfp"
 
 
-class Accept(Message):
-    method = "accept"
-
-
 class Refuse(Message):
     method = "refuse"
 
@@ -94,9 +90,7 @@ class Initiator(NetworkAgent, ABC):
     receivable_messages = {Propose, Refuse, InformDone, InformResult, Failure}
 
     @abstractmethod
-    async def propose(
-        self, message: Propose
-    ) -> AsyncIterable[Union[AcceptProposal, RejectProposal]]:
+    async def propose(self, message: Propose):
         """Receive a proposal and return an acceptance or a rejection"""
         ok = True
         if ok:
@@ -105,22 +99,22 @@ class Initiator(NetworkAgent, ABC):
             yield RejectProposal.reply(message)
 
     @abstractmethod
-    async def inform_done(self, message: InformDone) -> None:
+    async def inform_done(self, message: InformDone):
         """Receive a message that the task is done"""
         ...
 
     @abstractmethod
-    async def inform_result(self, message: InformResult) -> None:
+    async def inform_result(self, message: InformResult):
         """Receive a message with the result of the task"""
         yield Response.forward(message, sender=self)
 
     @abstractmethod
-    async def failure(self, message: Failure) -> None:
+    async def failure(self, message: Failure):
         """Receive a message that the task failed"""
         ...
 
 
-Message = Union[CFP, Accept, Refuse, Propose, AcceptProposal, RejectProposal]
+ContractNetMessage = Union[CFP, Refuse, Propose, AcceptProposal, RejectProposal]
 
 
 class ContractNet(GenNetwork):
@@ -132,11 +126,10 @@ class ContractNet(GenNetwork):
             links=[(manager, "contractor", c) for c in contractors], **kwargs
         )
 
-    async def request(self, message: Request) -> AsyncIterable[Message]:
-        messages = [
+    async def request(self, message: Request) -> AsyncIterable[ContractNetMessage]:
+        async for reply in propogate_all(
             CFP.forward(message, sender=self.manager, receiver=c)
             for c in self.contractors
-        ]
-        async for reply in propogate_all(messages):
+        ):
             if (yield reply) is StopAsyncIteration:
                 break
