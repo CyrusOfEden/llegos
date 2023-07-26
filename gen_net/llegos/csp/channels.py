@@ -2,7 +2,7 @@ from janus import Queue
 from sorcery import delegate_to_attr
 
 from gen_net.agents import Field, Message, SystemAgent
-from gen_net.legos.asyncio import AsyncGenAgent
+from gen_net.llegos.asyncio import AsyncGenAgent
 
 
 class GenChannel(SystemAgent):

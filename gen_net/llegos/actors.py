@@ -3,7 +3,7 @@ from typing import Any, AsyncIterable, Iterable, Optional
 import ray
 
 from gen_net.agents import AsyncGenAgent, GenAgent, Message
-from gen_net.legos.networks import GenNetwork, llm_net
+from gen_net.llegos.networks import GenNetwork, llm_net
 
 
 @ray.remote(max_restarts=3, max_task_retries=3, num_cpus=1)

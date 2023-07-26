@@ -5,7 +5,7 @@ from networkx import MultiDiGraph, is_directed_acyclic_graph
 from sorcery import delegate_to_attr
 
 from gen_net.agents import AbstractObject, Field, Message, SystemAgent
-from gen_net.legos.asyncio import AsyncGenAgent, apply
+from gen_net.llegos.asyncio import AsyncGenAgent, apply
 
 llm_net = ContextVar["GenNetwork"]("llm_net.active_network")
 

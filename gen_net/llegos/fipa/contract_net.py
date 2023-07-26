@@ -8,7 +8,7 @@ from typing import Union
 
 import aiometer
 
-from gen_net.legos.networks import Field, GenNetwork, Message, NetworkAgent, apply
+from gen_net.llegos.networks import Field, GenNetwork, Message, NetworkAgent, apply
 
 """
 First, we define our Message types.
