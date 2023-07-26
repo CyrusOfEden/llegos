@@ -55,17 +55,7 @@ class GenNetwork(NetworkAgent, SystemAgent):
 
     (nodes, edges, predecessors, successors, neighbors) = delegate_to_attr("graph")
 
-    def can_receive(self, message: Message) -> bool:
-        return (
-            message.receiver in self
-            and message.method in self.receivable_methods
-            and message.receiver.can_receive(message)
-        )
-
     async def receive(self, message: Message) -> Iterable[Message]:
-        if not self.can_receive(message):
-            raise ValueError(f"Unexpected message {message}")
-
         self.emit("receive", message)
 
         previous_net = llm_net.set(self)

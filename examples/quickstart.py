@@ -41,13 +41,11 @@ PyTorch lets you build neural networks, LLMNet lets you build agent networks.
 """
 
 
-from typing import List
-
 from openai import ChatCompletion
 from pydantic import BaseModel, Field
 
 from gen_net.agents import GenAgent, Message
-from gen_net.openai import chat_messages, model_fn, parse_completion_fn_call
+from gen_net.openai import chat_messages, parse_completion_fn_call
 
 """
 The gateway to llm-net is the GenAgent class for agents that can send and receive messages.
@@ -67,7 +65,7 @@ class Assistant(GenAgent):
         description="OpenAI ChatCompletion",
         exclude=True,
     )
-    chat_history: List[Message] = Field(
+    chat_history: list[Message] = Field(
         default_factory=list,
         description="messages prepended to ChatCompletion calls",
     )
@@ -117,7 +115,7 @@ class TweetWriter(Assistant):
         class Tweet(BaseModel):
             content: str = Field()
 
-        tweets: List[Tweet] = Field()
+        tweets: list[Tweet] = Field()
 
     def request(self, req):
         functions = [model_fn(self.TweetThread)]

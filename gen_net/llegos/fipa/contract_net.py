@@ -4,7 +4,7 @@ http://www.fipa.org/specs/fipa00029/SC00029H.pdf
 """
 
 from abc import ABC, abstractmethod
-from typing import Union
+from typing import AsyncIterable, Union
 
 import aiometer
 
@@ -49,6 +49,14 @@ class InformDone(Message):
 
 class InformResult(Message):
     method = "inform_result"
+
+
+class Request(Message):
+    method = "request"
+
+
+class Response(Message):
+    method = "response"
 
 
 """
@@ -99,12 +107,15 @@ class Initiator(NetworkAgent, ABC):
     @abstractmethod
     async def inform_result(self, message: InformResult) -> None:
         """Receive a message with the result of the task"""
-        ...
+        yield Response.forward(message, sender=self)
 
     @abstractmethod
     async def failure(self, message: Failure) -> None:
         """Receive a message that the task failed"""
         ...
+
+
+Message = Union[CFP, Accept, Refuse, Propose, AcceptProposal, RejectProposal]
 
 
 class ContractNet(GenNetwork):
@@ -116,13 +127,13 @@ class ContractNet(GenNetwork):
             links=[(manager, "contractor", c) for c in contractors], **kwargs
         )
 
-    async def perform(self, message: Message) -> None:
-        msgs = [
+    async def request(self, message: Request) -> AsyncIterable[Message]:
+        messages = [
             CFP.forward(message, sender=self.manager, receiver=c)
             for c in self.contractors
         ]
-        async with aiometer.amap(apply, msgs) as generators:
+        async with aiometer.amap(apply, messages) as generators:
             async for gen in generators:
-                async for message in gen:
-                    if (yield message) is StopAsyncIteration:
+                async for reply in gen:
+                    if (yield reply) is StopAsyncIteration:
                         break

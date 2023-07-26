@@ -68,15 +68,13 @@ class Message(AbstractObject):
         )
 
     @classmethod
-    def forward(
-        cls, message: "Message", receiver: AbstractObject, **kwargs
-    ) -> "Message":
+    def forward(cls, message: "Message", **kwargs) -> "Message":
         return cls(
             sender=message.receiver,
-            receiver=receiver,
             reply_to=message,
             role=message.receiver.role,
             method="forward",
+            body=message.body,
             **kwargs,
         )
 
@@ -105,9 +103,9 @@ def apply(message: Message) -> Iterable[Message]:
     agent = message.receiver
     if not agent:
         return
-    for l1 in agent.receive(message):
-        yield l1
-        yield from apply(l1)
+    for reply in agent.receive(message):
+        yield reply
+        yield from apply(reply)
 
 
 def messages_iter(message: Message, depth: int = 12) -> Iterable[Message]:

@@ -46,17 +46,7 @@ class GenAgent(AbstractObject):
     def receivable_methods(self):
         return {message.method for message in self.receivable_messages}
 
-    def can_receive(self, message: Message) -> bool:
-        return (
-            message.sender != self
-            and message.receiver == self
-            and message.method in self.receivable_methods
-        )
-
     def receive(self, message: Message) -> Iterable[Message]:
-        if not self.can_receive(message):
-            raise ValueError(f"Unexpected message {message}")
-
         self.emit("receive", message)
 
         generator = getattr(self, message.method)

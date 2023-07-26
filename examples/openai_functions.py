@@ -44,7 +44,10 @@ class ExecutiveAgent(OpenAIAgent):
     def request(self, message: Message):
         completion = self.completion.create(
             messages=chat_messages(
-                [Message(role="system", content="You are a researcher."), message]
+                [
+                    Message(role="system", content="You are a researcher."),
+                    message,
+                ]
             ),
             functions=[self.serper.call_fn, ChatMessage.init_fn],
         )
