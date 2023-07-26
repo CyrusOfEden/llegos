@@ -42,10 +42,9 @@ class Message(AbstractObject):
     )
     body: str = Field()
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    sender: Optional[AbstractObject] = Field(default=None, title="sender id")
-    receiver: Optional[AbstractObject] = Field(default=None, title="receiver id")
-    reply_to: Optional["Message"] = Field(default=None, title="reply to message")
-
+    sender: Optional[AbstractObject] = Field(default=None, alias="sender_id")
+    receiver: Optional[AbstractObject] = Field(default=None, alias="receiver_id")
+    reply_to: Optional["Message"] = Field(default=None, alias="reply_to_id")
     role = delegate_to_attr("sender")
 
     @classmethod

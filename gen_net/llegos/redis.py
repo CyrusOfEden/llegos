@@ -1,8 +1,6 @@
-from typing import Optional
-
 from redis_om import JsonModel
 
-from gen_net.sync import AbstractObject, Field, Message
+from gen_net.llegos.messages import AbstractObject, Message
 
 
 class AbstractRedisObject(JsonModel, AbstractObject):
@@ -12,9 +10,17 @@ class AbstractRedisObject(JsonModel, AbstractObject):
 
 
 class RedisMessage(Message, AbstractRedisObject):
-    sender: Optional[str] = Field(default=None, alias="sender_id", index=True)
-    receiver: Optional[str] = Field(default=None, alias="receiver_id", index=True)
-    reply_to: Optional[str] = Field(default=None, alias="reply_to_id", index=True)
+    def __init__(self, **kwargs):
+        if sender := kwargs.pop("sender", None):
+            kwargs["sender_id"] = sender.id
+
+        if receiver := kwargs.pop("receiver", None):
+            kwargs["receiver_id"] = receiver.id
+
+        if reply_to := kwargs.pop("reply_to", None):
+            kwargs["reply_to_id"] = reply_to.id
+
+        return super().__init__(**kwargs)
 
     @property
     def sender(self):
