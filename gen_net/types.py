@@ -1,6 +1,5 @@
-from typing import Literal, Union
+from typing import Literal
 
-Role = Union[str, Literal["system", "user", "assistant"]]
 Method = Literal[
     "ask",
     "be",

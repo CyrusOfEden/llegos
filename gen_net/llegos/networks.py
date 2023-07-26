@@ -1,11 +1,12 @@
+from abc import ABC, abstractmethod
 from contextvars import ContextVar
 from typing import AsyncIterable, Iterable, Union
 
 from networkx import MultiDiGraph, is_directed_acyclic_graph
 from sorcery import delegate_to_attr
 
-from gen_net.agents import AbstractObject, Field, Message, SystemAgent
 from gen_net.llegos.asyncio import AsyncGenAgent, propogate
+from gen_net.sync import AbstractObject, Field, GenReply, Message, SystemAgent
 
 llm_net = ContextVar["GenNetwork"]("llm_net.active_network")
 
@@ -20,13 +21,8 @@ class GenNetwork(NetworkAgent, SystemAgent):
         default_factory=MultiDiGraph, include=False, exclude=True
     )
 
-    def __init__(
-        self, links: dict[AsyncGenAgent, list[tuple[str, AsyncGenAgent]]], **kwargs
-    ):
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        for u, edges in links.items():
-            for event, v in edges:
-                self.link(u, event, v)
         assert is_directed_acyclic_graph(self.graph)
 
     @property
@@ -47,13 +43,17 @@ class GenNetwork(NetworkAgent, SystemAgent):
                     f"lookup key must be str or AsyncGenAgent, not {type(key)}"
                 )
 
-    def link(self, u: AsyncGenAgent, key: str, v: AsyncGenAgent, **attr):
-        self.graph.add_edge(u, v, key=key, **attr)
-
-    def unlink(self, u: AsyncGenAgent, key: str, v: AsyncGenAgent):
-        self.graph.remove_edge(u, v, key=key)
-
-    (nodes, edges, predecessors, successors, neighbors) = delegate_to_attr("graph")
+    (
+        add_edge,
+        add_edges_from,
+        edges,
+        neighbors,
+        nodes,
+        predecessors,
+        remove_edge,
+        remove_edges_from,
+        successors,
+    ) = delegate_to_attr("graph")
 
     async def receive(self, message: Message) -> Iterable[Message]:
         self.emit("receive", message)
@@ -67,9 +67,7 @@ class GenNetwork(NetworkAgent, SystemAgent):
             llm_net.reset(previous_net)
 
 
-class RGN(GenNetwork):
-    """RGN: Recurrent Generative Network"""
-
+class RecurrentGenNetwork(GenNetwork, ABC):
     hidden_state: AbstractObject = Field()
 
     async def receive(self, message: Message) -> Iterable[Message]:
@@ -78,16 +76,15 @@ class RGN(GenNetwork):
             async for l2 in self.forward(l1):
                 yield l2
 
-    async def forward(self, message: Message) -> Iterable[Message]:
+    @abstractmethod
+    async def forward(self, message: Message) -> GenReply[Message]:
         ...
 
 
-class TGN(GenNetwork):
-    """TGN: Transformer Generative Network"""
-
+class TransformerGenNetwork(GenNetwork, ABC):
     async def receive(self, message: Message) -> AsyncIterable[Message]:
         return await self.forward(super().receive(message))
 
+    @abstractmethod
     async def forward(self, messages: Iterable[Message]) -> AsyncIterable[Message]:
-        """Apply an attentional mechanism to a sequence of messages"""
         ...

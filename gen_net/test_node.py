@@ -1,8 +1,8 @@
 from networkx import DiGraph
 from pydantic import Field
 
-from gen_net.agents import GenAgent
 from gen_net.messages import UserMessage
+from gen_net.sync import GenAgent
 
 
 class Questioner(GenAgent):

@@ -2,8 +2,8 @@ from typing import Any, AsyncIterable, Iterable, Optional
 
 import ray
 
-from gen_net.agents import AsyncGenAgent, GenAgent, Message
 from gen_net.llegos.networks import GenNetwork, llm_net
+from gen_net.sync import AsyncGenAgent, GenAgent, Message
 
 
 @ray.remote(max_restarts=3, max_task_retries=3, num_cpus=1)
@@ -58,12 +58,6 @@ class GenAsyncActor:
 
 class GenAsyncActorNetwork(GenNetwork):
     async def receive(self, message: Message) -> AsyncIterable[Message]:
-        agent: Optional[GenAsyncActor] = message.receiver
-        if agent is None:
-            return
-        if agent not in self:
-            raise ValueError(f"Receiver {agent.id} not in GenNetwork")
-
         self.emit("receive", message)
 
         previous_network = llm_net.set(self)

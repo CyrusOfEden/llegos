@@ -1,13 +1,11 @@
 from datetime import datetime
 from textwrap import dedent
-from typing import Generator, Iterable, Optional, Union
+from typing import Iterable, Optional, Union
 
 from networkx import DiGraph
-from pydantic import Field
-from sorcery import dict_of
 
-from gen_net.abstract import AbstractObject
-from gen_net.types import Method, Role
+from gen_net.abstract import AbstractObject, Field
+from gen_net.types import Method
 
 
 class Message(AbstractObject):
@@ -22,14 +20,12 @@ class Message(AbstractObject):
             AbstractObject: lambda a: a.id,
         }
 
-    method: Union[str, Method] = Field(
+    intent: Union[str, Method] = Field(
         description=dedent(
             """\
-            By default, nodes will dispatch messages to a method named after the action.
-            For example, a message with action "step" will call the "step" method.
-            For async nodes, the method name will be prefixed with "a", so "step" becomes "astep".
+            Agents call methods named after the intent of the message.
 
-            A curated set of methods to consider:
+            A curated set of intents to consider:
             - chat = "chat about this topic", "talk about this topic", etc.
             - request = "request this thing", "ask for this thing", etc.
             - response = "responding with this thing", "replying with this thing", etc.
@@ -40,19 +36,16 @@ class Message(AbstractObject):
             - be = "be this way", "act as if you are", etc.
             - do = "do this thing", "perform this action", etc.
             - check = "check if this is true", "verify this", etc.
-            - log = "log this message", "record this message", etc.
-            - info = "provide information about this thing"
-            - warn = "warn about this thing"
-            - error = "error about this thing"
             """
         ),
     )
-    role: Role = Field()
     body: str = Field()
     created_at: datetime = Field(default_factory=datetime.utcnow)
     sender: Optional[AbstractObject] = Field(default=None, title="sender id")
     receiver: Optional[AbstractObject] = Field(default=None, title="receiver id")
     reply_to: Optional["Message"] = Field(default=None, title="reply to message")
+
+    role = delegate_to_attr("sender")
 
     @classmethod
     def reply(cls, message: "Message", **kwargs) -> "Message":
@@ -62,17 +55,16 @@ class Message(AbstractObject):
             sender=sender,
             receiver=receiver,
             reply_to=message,
-            role=sender.role,
             method="reply",
             **kwargs,
         )
 
     @classmethod
     def forward(cls, message: "Message", **kwargs) -> "Message":
+        sender = message.receiver
         return cls(
-            sender=message.receiver,
+            sender=sender,
             reply_to=message,
-            role=message.receiver.role,
             method="forward",
             body=message.body,
             **kwargs,
@@ -80,56 +72,27 @@ class Message(AbstractObject):
 
     @classmethod
     @property
-    def init_fn(cls):
-        schema = cls.schema()
+    def init_schema(cls):
+        schema = super().init_schema()
 
-        parameters = schema["properties"]
-        del parameters["id"]
+        params = schema["parameters"]
         for key in ("reply_to", "sender", "receiver"):
-            if key in parameters:
-                parameters[key] = {
-                    "title": parameters[key]["title"],
-                    "type": "string",
-                }
+            params[key] = {
+                "title": params[key]["title"],
+                "type": "string",
+            }
 
-        name = cls.__name__
-        description = cls.__doc__
-        required = schema["required"]
-
-        return dict_of(name, description, parameters, required)
+        return schema
 
 
-def dispatch(message: Message) -> Iterable[Message]:
-    agent = message.receiver
-    if not agent:
-        raise StopIteration
-    response = agent.receive(message)
-    match response:
-        case Message():
-            yield response
-        case Generator():
-            for reply in response:
-                if (yield reply) is StopIteration:
-                    break
-
-
-def propogate(message: Message) -> Iterable[Message]:
-    for l1 in dispatch(message):
-        if (yield l1) is StopIteration:
-            break
-        for l2 in propogate(l1):
-            if (yield l2) is StopIteration:
-                break
-
-
-def messages_iter(message: Message, depth: int = 12) -> Iterable[Message]:
-    if message.reply and depth > 0:
-        yield from messages_iter(message.reply, depth - 1)
+def messages_iter(message: Message, count: int = 12) -> Iterable[Message]:
+    if message.reply and count > 0:
+        yield from messages_iter(message.reply, count - 1)
     yield message
 
 
-def messages_list(message: Message, depth: int = 12) -> list[Message]:
-    return list(messages_iter(message, depth))
+def messages_list(message: Message, count: int = 12) -> list[Message]:
+    return list(messages_iter(message, count))
 
 
 def messages_graph(messages: Iterable[Message]) -> DiGraph:

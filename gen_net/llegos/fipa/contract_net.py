@@ -127,9 +127,9 @@ class ContractNet(GenNetwork):
         )
 
     async def request(self, message: Request) -> AsyncIterable[ContractNetMessage]:
-        async for reply in propogate_all(
+        messages = [
             CFP.forward(message, sender=self.manager, receiver=c)
             for c in self.contractors
-        ):
-            if (yield reply) is StopAsyncIteration:
-                break
+        ]
+        async for reply in propogate_all(messages):
+            yield reply

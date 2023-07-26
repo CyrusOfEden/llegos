@@ -1,28 +1,38 @@
-from typing import AsyncIterable, Optional
+from typing import Any, AsyncIterable, Coroutine, Optional, TypeVar, Union
 
 from aiometer import amap
 from networkx import DiGraph
 from pyee import AsyncIOEventEmitter
 
-from gen_net.agents import Field, GenAgent, Message
+from gen_net.sync import Field, GenAgent, Message
+
+T = TypeVar("T", bound=Message)
+AsyncGenReply = Union[Optional[T], AsyncIterable[T]]
 
 
 class AsyncGenAgent(GenAgent):
     event_emitter: AsyncIOEventEmitter = Field(
-        default_factory=AsyncIOEventEmitter, init=False
+        default_factory=AsyncIOEventEmitter, exclude=True
     )
 
     async def receive(self, message: Message) -> AsyncIterable[Message]:
-        if message is None or message.sender == self or message.receiver != self:
-            raise StopAsyncIteration
-
+        response = getattr(self, message.intent)
         self.emit("receive", message)
 
-        generator = getattr(self, message.method)
-        async for reply in generator(message):
-            if (yield reply) is StopAsyncIteration:
-                break
-            self.emit("reply", reply)
+        match response:
+            case AsyncIterable():
+                async for reply in response:
+                    yield reply
+            case Coroutine():
+                reply = await response
+                if reply:
+                    yield reply
+
+    async def property(self, message: Message) -> Any:
+        return getattr(self, message.intent)
+
+    async def call(self, message: Message) -> Any:
+        return self.property(message)()
 
 
 async def dispatch(message: Message) -> AsyncIterable[Message]:
@@ -30,32 +40,22 @@ async def dispatch(message: Message) -> AsyncIterable[Message]:
     if not agent:
         raise StopAsyncIteration
     response = agent.receive(message)
-    match response:
-        case AsyncIterable():
-            async for l1 in response:
-                if (yield l1) is StopAsyncIteration:
-                    break
-        case _:
-            l1 = await response
-            if l1:
-                yield l1
+    async for reply_l1 in response:
+        yield reply_l1
 
 
 async def propogate(message: Message) -> AsyncIterable[Message]:
-    async for l1 in dispatch(message):
-        if (yield l1) is StopAsyncIteration:
-            break
-        async for l2 in propogate(l1):
-            if (yield l2) is StopAsyncIteration:
-                break
+    async for reply_l1 in dispatch(message):
+        yield reply_l1
+        async for reply_l2 in propogate(reply_l1):
+            yield reply_l2
 
 
 async def propogate_all(messages: list[Message]):
     async with amap(propogate, messages) as generators:
         async for gen in generators:
             async for reply in gen:
-                if (yield reply) is StopAsyncIteration:
-                    break
+                yield reply
 
 
 async def messages_to_graph(messages: AsyncIterable[Message]) -> DiGraph:

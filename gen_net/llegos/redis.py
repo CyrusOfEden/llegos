@@ -3,7 +3,7 @@ from typing import Optional
 from redis_om import JsonModel
 
 from gen_net.abstract import AbstractObject
-from gen_net.agents import Field, Message
+from gen_net.sync import Field, Message
 
 
 class AbstractRedisObject(JsonModel, AbstractObject):
@@ -31,7 +31,7 @@ class RedisMessage(Message, AbstractRedisObject):
 
     @classmethod
     @property
-    def init_fn(cls):
-        schema = super().init_fn
+    def init_schema(cls):
+        schema = super().init_schema
         del schema["parameters"]["pk"]
         return schema

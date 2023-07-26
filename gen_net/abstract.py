@@ -9,7 +9,7 @@ class AbstractObject(BaseModel, ABC):
     class Config:
         arbitrary_types_allowed = True
 
-    id: str = Field(default="", title="unique identifier")
+    id: str = Field()
     metadata: dict = Field(default_factory=dict)
 
     def __init__(self, **kwargs):
@@ -22,3 +22,18 @@ class AbstractObject(BaseModel, ABC):
 
     def __hash__(self):
         return hash(self.id)
+
+    @classmethod
+    @property
+    def init_schema(cls):
+        schema = cls.schema()
+
+        parameters = schema["properties"]
+        del parameters["id"]
+
+        return {
+            "name": cls.__name__,
+            "description": cls.__doc__,
+            "parameters": parameters,
+            "required": schema["required"],
+        }
