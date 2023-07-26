@@ -2,8 +2,8 @@ from typing import Any, AsyncIterable, Iterable, Optional
 
 import ray
 
-from llm_net.asyncio import AsyncGenAgent
-from llm_net.base import GenAgent, GenNetwork, Message, llm_net
+from gen_net.agents import AsyncGenAgent, GenAgent, Message
+from gen_net.legos.networks import GenNetwork, llm_net
 
 
 @ray.remote(max_restarts=3, max_task_retries=3, num_cpus=1)
@@ -52,12 +52,12 @@ class GenAsyncActor:
     def property(self, prop: str) -> Any:
         return getattr(self.node, prop)
 
-    async def areceive(self, message: Message):
-        return await self.node.areceive(message)
+    async def receive(self, message: Message):
+        return await self.node.receive(message)
 
 
 class GenAsyncActorNetwork(GenNetwork):
-    async def areceive(self, message: Message) -> AsyncIterable[Message]:
+    async def receive(self, message: Message) -> AsyncIterable[Message]:
         agent: Optional[GenAsyncActor] = message.receiver
         if agent is None:
             return
@@ -68,10 +68,10 @@ class GenAsyncActorNetwork(GenNetwork):
 
         previous_network = llm_net.set(self)
         try:
-            async for response in agent.areceive.remote(message):
+            async for response in agent.receive.remote(message):
                 if (yield response) == StopIteration:
                     break
-                async for response in self.areceive(response):
+                async for response in self.receive(response):
                     yield response
         finally:
             llm_net.reset(previous_network)

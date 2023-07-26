@@ -1,7 +1,7 @@
 from langchain.utilities import GoogleSerperAPIWrapper
 from pydantic import Field
 
-from llm_net.openai import (
+from gen_net.openai import (
     GenAgent,
     Message,
     OpenAIAgent,

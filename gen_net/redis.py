@@ -2,8 +2,8 @@ from typing import Optional
 
 from redis_om import JsonModel
 
-from llm_net.abstract import AbstractObject
-from llm_net.base import Field, Message
+from gen_net.abstract import AbstractObject
+from gen_net.agents import Field, Message
 
 
 class AbstractRedisObject(JsonModel, AbstractObject):

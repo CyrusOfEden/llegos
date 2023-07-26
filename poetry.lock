@@ -151,6 +151,20 @@ files = [
 aiohttp = ">=1.1"
 
 [[package]]
+name = "aiometer"
+version = "0.4.0"
+description = "A Python concurrency scheduling library, compatible with asyncio and trio"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "aiometer-0.4.0-py3-none-any.whl", hash = "sha256:020cc80716565deeb091eb1c0c78ee9693ed5177f193f56ec253de9dde794b23"},
+    {file = "aiometer-0.4.0.tar.gz", hash = "sha256:dfdd4c082d1dd03271216574ddaa9b0cd17bb0004f94992cc4c85fcbc1abfab5"},
+]
+
+[package.dependencies]
+anyio = ">=3.2,<4.0"
+
+[[package]]
 name = "aiosignal"
 version = "1.3.1"
 description = "aiosignal: a list of registered asynchronous callbacks"
@@ -3050,20 +3064,6 @@ files = [
 ]
 
 [[package]]
-name = "outcome"
-version = "1.2.0"
-description = "Capture the outcome of Python function calls."
-optional = false
-python-versions = ">=3.7"
-files = [
-    {file = "outcome-1.2.0-py2.py3-none-any.whl", hash = "sha256:c4ab89a56575d6d38a05aa16daeaa333109c1f96167aba8901ab18b6b5e0f7f5"},
-    {file = "outcome-1.2.0.tar.gz", hash = "sha256:6f82bd3de45da303cf1f771ecafa1633750a358436a8bb60e06a1ceb745d2672"},
-]
-
-[package.dependencies]
-attrs = ">=19.2.0"
-
-[[package]]
 name = "overrides"
 version = "7.3.1"
 description = "A decorator to automatically detect mismatch when overriding a method."
@@ -4675,17 +4675,6 @@ littleutils = ">=0.2.1"
 wrapt = "*"
 
 [[package]]
-name = "sortedcontainers"
-version = "2.4.0"
-description = "Sorted Containers -- Sorted List, Sorted Dict, Sorted Set"
-optional = false
-python-versions = "*"
-files = [
-    {file = "sortedcontainers-2.4.0-py2.py3-none-any.whl", hash = "sha256:a163dcaede0f1c021485e957a39245190e74249897e2ae4b2aa38595db237ee0"},
-    {file = "sortedcontainers-2.4.0.tar.gz", hash = "sha256:25caa5a06cc30b6b83d11423433f65d1f9d76c4c6a0c90e3379eaa43b9bfdb88"},
-]
-
-[[package]]
 name = "soupsieve"
 version = "2.4.1"
 description = "A modern CSS selector implementation for Beautiful Soup."
@@ -5125,26 +5114,6 @@ files = [
 [package.extras]
 docs = ["myst-parser", "pydata-sphinx-theme", "sphinx"]
 test = ["argcomplete (>=2.0)", "pre-commit", "pytest", "pytest-mock"]
-
-[[package]]
-name = "trio"
-version = "0.22.2"
-description = "A friendly Python library for async concurrency and I/O"
-optional = false
-python-versions = ">=3.7"
-files = [
-    {file = "trio-0.22.2-py3-none-any.whl", hash = "sha256:f43da357620e5872b3d940a2e3589aa251fd3f881b65a608d742e00809b1ec38"},
-    {file = "trio-0.22.2.tar.gz", hash = "sha256:3887cf18c8bcc894433420305468388dac76932e9668afa1c49aa3806b6accb3"},
-]
-
-[package.dependencies]
-attrs = ">=20.1.0"
-cffi = {version = ">=1.14", markers = "os_name == \"nt\" and implementation_name != \"pypy\""}
-exceptiongroup = {version = ">=1.0.0rc9", markers = "python_version < \"3.11\""}
-idna = "*"
-outcome = "*"
-sniffio = "*"
-sortedcontainers = "*"
 
 [[package]]
 name = "twine"
@@ -5774,4 +5743,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10.9,<4.0"
-content-hash = "8bfc54e118e1ce47835c953de6157251beb1662340acfe3a47bada4c99473d9f"
+content-hash = "d01dbe4a8c3bd374e7af3b7915c937993a5e96a45526f25d84ffccd38a796622"

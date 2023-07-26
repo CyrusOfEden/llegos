@@ -1,8 +1,8 @@
 from typing import Iterable
 
-from llm_net.base import Field, GenAgent
-from llm_net.message import AssistantMessage, Message, UserMessage
-from llm_net.openai import agent_fn, chat_message, chat_messages
+from gen_net.agents import Field, GenAgent
+from gen_net.messages import Message
+from gen_net.openai import chat_message, chat_messages
 
 
 def test_fn_node_call():

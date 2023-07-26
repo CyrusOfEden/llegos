@@ -4,8 +4,7 @@ from os import environment as env
 from fastapi import FastAPI, WebSocket
 from upstash_redis.asyncio import Redis
 
-from llm_net.asyncio import AsyncGenAgent
-from llm_net.message import Message
+from gen_net.agents import AsyncGenAgent, Message
 
 redis = Redis(url=env["UPSTASH_REDIS_REST_URL"], token=env["UPSTASH_REDIS_REST_TOKEN"])
 
@@ -21,7 +20,7 @@ def agent_app(id: str) -> FastAPI:
         agent = AsyncGenAgent(**json.loads(data))
 
         while message := Message(**ws.receive_json()):
-            async for response in agent.areceive(message):
+            async for response in agent.receive(message):
                 await ws.send_json(response.dict())
 
         await redis.set(id, agent.json())

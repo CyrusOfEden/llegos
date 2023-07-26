@@ -46,8 +46,8 @@ from typing import List
 from openai import ChatCompletion
 from pydantic import BaseModel, Field
 
-from llm_net.base import GenAgent, Message
-from llm_net.openai import chat_messages, model_fn, parse_completion_fn_call
+from gen_net.agents import GenAgent, Message
+from gen_net.openai import chat_messages, model_fn, parse_completion_fn_call
 
 """
 The gateway to llm-net is the GenAgent class for agents that can send and receive messages.

@@ -4,8 +4,8 @@ from typing import AsyncIterable, Iterable, Optional, Tuple, TypeVar
 from openai import ChatCompletion
 from pydantic import Field
 
-from llm_net.asyncio import AsyncGenAgent
-from llm_net.base import GenAgent, Message
+from gen_net.agents import GenAgent, Message
+from gen_net.asyncio import AsyncGenAgent
 
 
 def chat_message(message: Message) -> Message:

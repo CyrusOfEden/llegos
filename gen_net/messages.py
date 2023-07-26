@@ -1,13 +1,13 @@
 from datetime import datetime
 from textwrap import dedent
-from typing import AsyncIterable, Iterable, Optional, Union
+from typing import Iterable, Optional, Union
 
 from networkx import DiGraph
 from pydantic import Field
 from sorcery import dict_of
 
-from llm_net.abstract import AbstractObject
-from llm_net.types import Method, Role
+from gen_net.abstract import AbstractObject
+from gen_net.types import Method, Role
 
 
 class Message(AbstractObject):
@@ -63,18 +63,20 @@ class Message(AbstractObject):
             receiver=receiver,
             reply_to=message,
             role=sender.role,
-            method="response",
+            method="reply",
             **kwargs,
         )
 
     @classmethod
-    def forward(cls, message: "Message", **kwargs) -> "Message":
-        sender = message.receiver
+    def forward(
+        cls, message: "Message", receiver: AbstractObject, **kwargs
+    ) -> "Message":
         return cls(
-            sender=sender,
+            sender=message.receiver,
+            receiver=receiver,
             reply_to=message,
-            role=sender.role,
-            method="proxy",
+            role=message.receiver.role,
+            method="forward",
             **kwargs,
         )
 
@@ -99,27 +101,28 @@ class Message(AbstractObject):
         return dict_of(name, description, parameters, required)
 
 
-def messages_iter(message: Message) -> Iterable[Message]:
-    if message.reply:
-        yield from messages_iter(message.reply)
+def apply(message: Message) -> Iterable[Message]:
+    agent = message.receiver
+    if not agent:
+        return
+    for l1 in agent.receive(message):
+        yield l1
+        yield from apply(l1)
+
+
+def messages_iter(message: Message, depth: int = 12) -> Iterable[Message]:
+    if message.reply and depth > 0:
+        yield from messages_iter(message.reply, depth - 1)
     yield message
 
 
-def messages_list(message: Message) -> Iterable[Message]:
-    return list(messages_iter(message))
+def messages_list(message: Message, depth: int = 12) -> list[Message]:
+    return list(messages_iter(message, depth))
 
 
-def messages_to_graph(messages: Iterable[Message]) -> DiGraph:
+def messages_graph(messages: Iterable[Message]) -> DiGraph:
     g = DiGraph()
     for message in messages:
-        if message.reply:
-            g.add_edge(message.reply, message)
-    return g
-
-
-async def amessages_to_graph(messages: AsyncIterable[Message]) -> DiGraph:
-    g = DiGraph()
-    async for message in messages:
         if message.reply:
             g.add_edge(message.reply, message)
     return g

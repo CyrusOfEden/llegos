@@ -6,13 +6,13 @@ build-backend = "poetry.core.masonry.api"
 line-length = 100
 
 [tool.poetry]
-name = "llm-net"
+name = "gen-net"
 version = "0.1.0"
 description = "..."
 authors = ["Shaman AI <hello@shaman.ai>"]
-license = "MIT"
+license = "LGPLv3"
 readme = "README.md"
-packages = [{ include = "llm_net" }]
+packages = [{ include = "gen_net" }]
 
 [tool.poetry.dependencies]
 python = ">=3.10.9,<4.0"
@@ -23,6 +23,7 @@ networkx = "^3.1"
 openai = "^0.27"
 ijson = "^3.2.2"
 janus = "^1.0.0"
+aiometer = "^0.4.0"
 
 [tool.poetry.group.dev]
 optional = true
@@ -62,4 +63,3 @@ optional = true
 
 [tool.poetry.group.async.dependencies]
 httpx = ">=0.23"
-trio = "^0.22.0"
