@@ -17,7 +17,6 @@ class Message(AbstractObject):
     class Config(AbstractObject.Config):
         arbitrary_types_allowed = True
         json_encoders = {
-            datetime: lambda dt: dt.isoformat(),
             AbstractObject: lambda a: a.id,
         }
 
@@ -42,33 +41,37 @@ class Message(AbstractObject):
     )
     body: str = Field()
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    sender: Optional[AbstractObject] = Field(default=None, alias="sender_id")
-    receiver: Optional[AbstractObject] = Field(default=None, alias="receiver_id")
-    reply_to: Optional["Message"] = Field(default=None, alias="reply_to_id")
+    sender: Optional[AbstractObject] = Field(
+        default=None, serialization_alias="sender_id"
+    )
+    receiver: Optional[AbstractObject] = Field(
+        default=None, serialization_alias="receiver_id"
+    )
+    reply_to: Optional["Message"] = Field(
+        default=None, serialization_alias="reply_to_id"
+    )
     role = delegate_to_attr("sender")
 
-    @classmethod
-    def reply(cls, message: "Message", **kwargs) -> "Message":
-        sender = message.receiver
-        receiver = message.sender
-        return cls(
-            sender=sender,
-            receiver=receiver,
-            reply_to=message,
-            method="reply",
+    @staticmethod
+    def reply(message: "Message", **kwargs) -> "Message":
+        update = {
+            "sender": message.receiver,
+            "receiver": message.sender,
+            "reply_to": message,
+            "method": "reply",
             **kwargs,
-        )
+        }
+        return message.copy(update)
 
-    @classmethod
-    def forward(cls, message: "Message", **kwargs) -> "Message":
-        sender = message.receiver
-        return cls(
-            sender=sender,
-            reply_to=message,
-            method="forward",
-            body=message.body,
+    @staticmethod
+    def forward(message: "Message", **kwargs) -> "Message":
+        update = {
+            "sender": message.receiver,
+            "reply_to": message,
+            "body": message.body,
             **kwargs,
-        )
+        }
+        return message.copy(update)
 
     @classmethod
     @property

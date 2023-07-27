@@ -16,6 +16,8 @@ First, we define our Message types.
 
 class CFP(Message):
     method = "cfp"
+    objective: str = Field()
+    constraints: list[str] = Field()
 
 
 class Refuse(Message):

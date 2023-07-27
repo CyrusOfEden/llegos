@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 
+from pydantic import InstanceOf
+
 from gen_net.llegos.asyncio import propogate_all
 from gen_net.llegos.networks import AsyncGenAgent, Field, GenNetwork, Message
 
@@ -19,7 +21,7 @@ class ConversationalAgent(AsyncGenAgent, ABC):
 
 
 class Conversation(GenNetwork):
-    members: list[ConversationalAgent] = Field(min_items=2)
+    members: list[InstanceOf[ConversationalAgent]] = Field(min_items=2)
 
     async def converse(self, message: Converse):
         messages = [
@@ -28,4 +30,5 @@ class Conversation(GenNetwork):
             if member != message.sender
         ]
         async for reply in propogate_all(messages):
+            yield reply
             yield reply

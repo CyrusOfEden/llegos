@@ -16,7 +16,7 @@ packages = [{ include = "gen_net" }]
 
 [tool.poetry.dependencies]
 python = ">=3.10.9,<4.0"
-pydantic = ">=1,<2"
+pydantic = ">=1,<2.1"
 sorcery = "^0.2.2"
 llama_index = "^0.7"
 networkx = "^3.1"
@@ -45,7 +45,6 @@ wikipedia = "^1.4.0"
 tiktoken = "^0.4.0"
 pytest-asyncio = "^0.21.0"
 pyee = "^11.0.0"
-agent_actors = { git = "https://github.com/shaman-ai/agent-actors.git", branch = "main" }
 supabase = "^1.0.3"
 fastapi = "^0.100.0"
 upstash-redis = "^0.15.0"
