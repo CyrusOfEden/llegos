@@ -1,25 +1,25 @@
-# llm_net
+# Llegos
 
-Welcome to llm_net, a toolkit for crafting advanced multi-generative-agent systems.
+Welcome to Llegos, a toolkit for crafting advanced multi-generative-agent systems.
 
 In the rapidly evolving field of artificial intelligence, multi-agent systems have emerged as a powerful paradigm for modeling complex behaviors and interactions. Whether it's a team of robots, a colleciton of software agents, or a group of virtual characters interacting in a video game, the frontier multi-agent systems powered by LLMs remains to be explored.
 
-That's where llm_net comes in. With llm_net, you can create, manage, and simulate a wide variety of multi-agent systems, from the simple to the complex. This toolkit offers a range of features designed to make it simpler to build multi-agent systems.
+That's where Llegos comes in. With Llegos, you can create, manage, and simulate a wide variety of multi-agent systems, from the simple to the complex. This toolkit offers a range of features designed to make it simpler to build multi-agent systems.
 
 ## Features
 
-1. **Multi-Agent Systems:** With llm_net, you can create systems composed of multiple autonomous agents, enabling rich and intricate behaviors and interactions.
-2. **Concurrent Message-Passing:** Communication between agents in llm_net is facilitated through a flexible message-passing paradigm, allowing for efficient and versatile inter-agent dialogue. Agents and/or process-based concurrency.
-4. **Event-Driven Architecture:** llm_net embraces an event-driven programming approach, allowing agents to dynamically respond to events occurring within the system.
-5. **Flexibility:** The toolkit provides foundational structures, namely GenAgent and GenNetwork, for you to develop and customize your own autonomous agents and networks. This flexibility allows you to tailor llm_net to suit your unique requirements and use cases.
+1. **Multi-Agent Systems:** With Llegos, you can create systems composed of multiple autonomous agents, enabling rich and intricate behaviors and interactions.
+2. **Concurrent Message-Passing:** Communication between agents in Llegos is facilitated through a flexible message-passing paradigm, allowing for efficient and versatile inter-agent dialogue. Agents and/or process-based concurrency.
+4. **Event-Driven Architecture:** Llegos embraces an event-driven programming approach, allowing agents to dynamically respond to events occurring within the system.
+5. **Flexibility:** The toolkit provides foundational structures, namely GenAgent and GenNetwork, for you to develop and customize your own autonomous agents and networks. This flexibility allows you to tailor Llegos to suit your unique requirements and use cases.
 
 ## Elegant Abstractions
 
-llm_net centers around three abstractions: Messages, Generative Agents, and Generative Networks. These elements work together to facilitate complex interactions and behaviors in your multi-agent systems.
+Llegos centers around three abstractions: Messages, Generative Agents, and Generative Networks. These elements work together to facilitate complex interactions and behaviors in your multi-agent systems.
 
 ## Messages
 
-Communication is facilitated through the [Message](./llm_net/message.py) data model. In llm_net, a Message carries various forms of information, requests, or commands, acting as the primary conduit for inter-agent communication.
+Communication is facilitated through the [Message](./Llegos/message.py) data model. In Llegos, a Message carries various forms of information, requests, or commands, acting as the primary conduit for inter-agent communication.
 
 Messages have the following attributes:
 
@@ -38,9 +38,9 @@ The `Message` class also includes a couple of class methods:
 
 ### Generative Agents
 
-At the heart of llm_net are the Generative Agents, or GenAgents. A [GenAgent](./llm_net/base.py) represents an individual autonomous agent in your system. These agents can be customized to suit a wide range of use cases, allowing you to implement your own unique agent behaviors.
+At the heart of Llegos are the Generative Agents, or GenAgents. A [GenAgent](./Llegos/base.py) represents an individual autonomous agent in your system. These agents can be customized to suit a wide range of use cases, allowing you to implement your own unique agent behaviors.
 
-The GenAgent class in llm_net provides a foundation for creating these agents. It includes built-in methods for receiving and handling messages, emitting events, and listening to events from other agents. This event-driven architecture allows for a reactive programming paradigm where agents can dynamically respond to events occurring within the system.
+The GenAgent class in Llegos provides a foundation for creating these agents. It includes built-in methods for receiving and handling messages, emitting events, and listening to events from other agents. This event-driven architecture allows for a reactive programming paradigm where agents can dynamically respond to events occurring within the system.
 
 GenAgents can be used to model:
 
@@ -51,7 +51,7 @@ GenAgents can be used to model:
 
 ## Generative Networks
 
-llm_net also introduces the concept of Generative Networks, or GenNetworks.  GenNetworks provide a way to pass events up the agent network without having to pass intermediate results up manually at every level.
+Llegos also introduces the concept of Generative Networks, or GenNetworks.  GenNetworks provide a way to pass events up the agent network without having to pass intermediate results up manually at every level.
 
 A GenNetwork a higher-level structure that represents a network of GenAgents. A GenNetwork is a multi-graph where nodes represent GenAgents and edges point to other GenAgents listening to emitted Messages. This EventEmitter edge forms a communication channel, where an emitted Message is received by a listening GenAgent. This graph-based structure supports a broad spectrum of multi-agent architectures, from simple linear flows to complex network interactions.
 
@@ -75,17 +75,17 @@ An example of a more complex interaction can be found in [examples/contract_net.
 
 ## Future Work
 
-As llm_net is still in its early stages, there are many exciting directions for future development. Here are some areas we're particularly interested in:
+As Llegos is still in its early stages, there are many exciting directions for future development. Here are some areas we're particularly interested in:
 
-1. **Autonomous Agent Architectures**: We're interested in developers like you creating your own agent architectures with llm_net and are happy to feature your repository.
-1. **Expanded Communication Protocols**: While llm_net currently supports simple message passing, we're interested in adding more advanced communication protocols. This might include negotiation protocols, voting mechanisms, or more complex dialogue management strategies.
-3. **Integration with Other Libraries**: llm_net is designed to be flexible and adaptable. We're interested in making it easy to integrate llm_net with other popular machine learning, natural language processing, and agent-based modeling libraries.
+1. **Autonomous Agent Architectures**: We're interested in developers like you creating your own agent architectures with Llegos and are happy to feature your repository.
+1. **Expanded Communication Protocols**: While Llegos currently supports simple message passing, we're interested in adding more advanced communication protocols. This might include negotiation protocols, voting mechanisms, or more complex dialogue management strategies.
+3. **Integration with Other Libraries**: Llegos is designed to be flexible and adaptable. We're interested in making it easy to integrate Llegos with other popular machine learning, natural language processing, and agent-based modeling libraries.
 
-We're excited to see where the community takes llm_net, and we look forward to collaborating with you!
+We're excited to see where the community takes Llegos, and we look forward to collaborating with you!
 
 ## Contribution
 
-Contributions to llm_net are welcome and greatly appreciated. We believe that the community's collective wisdom and creativity will enable us to build a more powerful and flexible tool. If you're interested in contributing, here are some guidelines:
+Contributions to Llegos are welcome and greatly appreciated. We believe that the community's collective wisdom and creativity will enable us to build a more powerful and flexible tool. If you're interested in contributing, here are some guidelines:
 
 1. **Issues**: Feel free to submit issues regarding bugs, feature requests, or other areas of concern. We value your feedback and will do our best to respond in a timely manner.
 2. **Code**: If you're interested in adding a feature or fixing a bug, please start by submitting an issue. Once we've had a chance to discuss your proposal, you can make a pull request with your changes.
