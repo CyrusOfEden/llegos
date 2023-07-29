@@ -21,7 +21,7 @@ class DialogAgent(NetworkAgent, ABC):
         return [agent for agent in neighbors if network.has_edge(self, agent, Dialog)]
 
 
-class DialogNetwork(AgentNetwork):
+class AgentDialogNetwork(AgentNetwork):
     agents: set[DialogAgent] = Field(min_items=2, allow_mutation=False)
 
     def __init__(self, **kwargs):
