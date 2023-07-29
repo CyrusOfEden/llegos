@@ -18,6 +18,15 @@ class AsyncAgent(EphemeralAgent):
         description="emitting events is non-blocking",
     )
 
+    def __or__(self, other: "AsyncAgent") -> "AsyncAgent":
+        async def async_generator(message: EphemeralMessage):
+            async for reply_l1 in self.receive(message):
+                yield reply_l1
+                async for reply_l2 in other.receive(reply_l1):
+                    yield reply_l2
+
+        return async_generator
+
     async def receive(
         self, message: EphemeralMessage
     ) -> AsyncIterable[EphemeralMessage]:
@@ -36,6 +45,11 @@ class AsyncAgent(EphemeralAgent):
 
 
 AsyncApplicator = Callable[[EphemeralMessage], AsyncIterable[EphemeralMessage]]
+
+
+async def async_drain(messages: AsyncIterable[EphemeralMessage]):
+    async for _ in messages:
+        ...
 
 
 async def async_apply(message: EphemeralMessage) -> AsyncIterable[EphemeralMessage]:
@@ -71,6 +85,6 @@ async def async_propogate_all(
 async def async_message_graph(messages: AsyncIterable[EphemeralMessage]) -> DiGraph:
     g = DiGraph()
     async for message in messages:
-        if message.reply:
-            g.add_edge(message.reply, message)
+        if message.reply_to:
+            g.add_edge(message.reply_to, message)
     return g

@@ -15,9 +15,9 @@ class MockAgent(EphemeralAgent):
     receivable_messages: set[type[EphemeralMessage]] = {Inform}
 
     def inform(self, message: Inform):
-        yield Ack.reply(message, body=f"Ack: {message.id}")
+        yield Ack.reply_to(message, body=f"Ack: {message.id}")
 
 
 class MockAsyncAgent(AsyncAgent, MockAgent):
     async def inform(self, message: Inform):
-        yield Ack.reply(message, body=f"Ack: {message.id}")
+        yield Ack.reply_to(message, body=f"Ack: {message.id}")

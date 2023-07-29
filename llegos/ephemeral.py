@@ -7,7 +7,6 @@ from typing import Callable, Iterable, Optional, TypeVar
 from uuid import uuid4
 
 import yaml
-from networkx import DiGraph
 from pydantic import UUID4, BaseModel, Field
 from pyee import EventEmitter
 from sorcery import delegate_to_attr
@@ -85,7 +84,6 @@ class EphemeralMessage(EphemeralObject):
             """
         ),
     )
-    body: str = Field()
     created_at: datetime = Field(default_factory=datetime.utcnow)
     sender: Optional[EphemeralObject] = Field(
         default=None, serialization_alias="sender_id"
@@ -93,20 +91,26 @@ class EphemeralMessage(EphemeralObject):
     receiver: Optional[EphemeralObject] = Field(
         default=None, serialization_alias="receiver_id"
     )
-    reply_to: Optional["EphemeralMessage"] = Field(
-        default=None, serialization_alias="reply_to_id"
+    parent: Optional["EphemeralMessage"] = Field(
+        default=None, serialization_alias="parent_id"
     )
 
     @property
     def role(self):
         return self.sender.role
 
+    # def lift(self, cls: type["EphemeralMessage"], **kwargs) -> "EphemeralMessage":
+    #     attrs = self.copy(exclude={"id", "created_at"})
+    #     attrs["intent"] = cls.__fields__["intent"].default
+    #     attrs.update(kwargs)
+    #     return self.__class__(**attrs)
+
     @classmethod
-    def reply(cls, message: "EphemeralMessage", **kwargs) -> "EphemeralMessage":
+    def reply_to(cls, message: "EphemeralMessage", **kwargs) -> "EphemeralMessage":
         attrs = dict(
             sender=message.receiver,
             receiver=message.sender,
-            reply_to=message,
+            parent=message,
             intent=cls.__fields__["intent"].default,
         )
         attrs.update(kwargs)
@@ -117,7 +121,7 @@ class EphemeralMessage(EphemeralObject):
         attrs = dict(
             sender=message.receiver,
             body=message.body,
-            reply_to=message,
+            parent=message,
             intent=cls.__fields__["intent"].default,
         )
         attrs.update(kwargs)
@@ -171,6 +175,14 @@ class EphemeralAgent(EphemeralObject):
             case EphemeralMessage():
                 yield response
 
+    def __or__(self, other: "EphemeralAgent"):
+        def generator(message: EphemeralMessage):
+            for reply in self.receive(message):
+                yield reply
+                yield from other.receive(reply)
+
+        return generator
+
     @property
     def public_description(self):
         return self.__class__.__doc__
@@ -211,11 +223,3 @@ def propogate_all(messages: Iterable[EphemeralMessage], applicator: Applicator =
     mapper = partial(propogate, applicator=applicator)
     for generator in map(mapper, messages):
         yield from generator()
-
-
-def message_graph(messages: Iterable[EphemeralMessage]):
-    g = DiGraph()
-    for message in messages:
-        if message.reply:
-            g.add_edge(message.reply, message)
-    return g

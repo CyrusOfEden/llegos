@@ -38,11 +38,14 @@ class AgentNetwork(NetworkAgent, SystemAgent):
 
     (
         __getitem__,
+        add_edges_from,
+        add_weighted_edges_from,
         edges,
-        has_edge,
         get_edge_data,
-        nodes,
+        has_edge,
         neighbors,
+        nodes,
+        remove_edges_from,
     ) = delegate_to_attr("graph")
 
     @property

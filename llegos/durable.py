@@ -57,11 +57,10 @@ class DurableMessage(AbstractDurableObject, EphemeralMessage, table=True):
         ),
         index=True,
     )
-    body: str = Field()
     created_at: datetime = Field(default_factory=datetime.utcnow)
     sender_id: Optional[uuid4] = Field(default=None, index=True, nullable=True)
     receiver_id: Optional[uuid4] = Field(default=None, index=True, nullable=True)
-    reply_to_id: Optional[uuid4] = Field(
+    parent_id: Optional[uuid4] = Field(
         default=None, index=True, nullable=True, foreign_key="messages.id"
     )
     role = delegate_to_attr("sender")
@@ -73,13 +72,13 @@ class DurableMessage(AbstractDurableObject, EphemeralMessage, table=True):
     receiver: Optional["DurableAgent"] = Relationship(
         back_populates="messages", sa_relationship_args={"lazy", "select"}
     )
-    reply_to: Optional["DurableMessage"] = Relationship(
-        back_populates="replies",
+    parent: Optional["DurableMessage"] = Relationship(
+        back_populates="children",
         sa_relationship_args={"lazy": "select"},
         sa_relationship_kwargs={"remote_side": "Message.id"},
     )
-    replies: list["DurableMessage"] = Relationship(
-        back_populates="reply_to", sa_relationship_args={"lazy": "select"}
+    children: list["DurableMessage"] = Relationship(
+        back_populates="parent", sa_relationship_args={"lazy": "select"}
     )
 
 

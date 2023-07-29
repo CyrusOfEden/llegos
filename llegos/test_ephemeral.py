@@ -16,7 +16,7 @@ class TestInform:
         assert message.body == "Hello, world!"
         assert isinstance(message.sender, MockAgent)
         assert isinstance(message.receiver, MockAgent)
-        assert message.reply_to is None
+        assert message.parent is None
 
     # Tests that a reply message is created correctly
     def test_create_reply_message(self):
@@ -25,12 +25,12 @@ class TestInform:
             sender=MockAgent(),
             receiver=MockAgent(),
         )
-        reply = Inform.reply(message, body="Reply", intent="reply")
+        reply = Inform.reply_to(message, body="Reply", intent="reply")
         assert reply.intent == "reply"
         assert reply.body == "Reply"
         assert reply.sender == message.receiver
         assert reply.receiver == message.sender
-        assert reply.reply_to == message
+        assert reply.parent == message
 
     # Tests that a forward message is created correctly
     def test_create_forward_message(self):
@@ -44,7 +44,7 @@ class TestInform:
         assert forward_message.body == "Hello, world!"
         assert forward_message.sender == message.receiver
         assert forward_message.receiver is None
-        assert forward_message.reply_to == message
+        assert forward_message.parent == message
 
     # Tests that a ValueError is raised when creating a message with an invalid sender
     def test_invalid_sender(self):
@@ -65,14 +65,14 @@ class TestInform:
                 receiver="invalid_receiver",
             )
 
-    # Tests that creating a message with an invalid reply_to raises an exception
-    def test_invalid_reply_to(self):
+    # Tests that creating a message with an invalid parent raises an exception
+    def test_invalid_parent(self):
         with pytest.raises(ValueError):
             Inform(
                 body="Hello, world!",
                 sender=MockAgent(),
                 receiver=MockAgent(),
-                reply_to="invalid",
+                parent="invalid",
             )
 
     # Tests that creating a message with an invalid created_at raises a ValueError

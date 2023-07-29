@@ -29,11 +29,11 @@ Messages have the following attributes:
 4. **created_at**: This is a datetime object that indicates when the message was created. It is automatically set to the current time when the message is instantiated.
 5. **sender**: This is an `AbstractObject` (which could be a `GenAgent`) that sent the message. It is set to None by default, and can be set when the message is created.
 6. **receiver**: This is an `AbstractObject` (which could be a `GenAgent`) that is the intended recipient of the message. Like `sender`, it is also set to None by default, and can be set when the message is created.
-7. **reply_to**: This is a reference to another `Message` object. It is used when a message is a reply to a previous message. This allows for the creation of message threads and is useful for maintaining context in conversations.
+7. **parent**: This is a reference to another `Message` object. It is used when a message is a reply to a previous message. This allows for the creation of message threads and is useful for maintaining context in conversations.
 
 The `Message` class also includes a couple of class methods:
 
-1. **reply**: This method creates a new message that is a reply to a previous message. It automatically sets the `sender`, `receiver`, `reply_to`, `role`, and `method` fields appropriately.
+1. **reply**: This method creates a new message that is a reply to a previous message. It automatically sets the `sender`, `receiver`, `parent`, `role`, and `method` fields appropriately.
 2. **init_fn**: This is a property that returns a dictionary representing the schema for initializing a new `Message` object. This is useful for using JSON schema function completions to generate a new Message.
 
 ### Generative Agents
