@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 from llegos.asyncio import AsyncAgent, EphemeralMessage
 from llegos.openai import callable_schemas, parse_function_call, prepare_async_call
-from llegos.test_helpers import MockAsyncAgent
+from llegos.test_mocks import MockAsyncAgent
 
 
 class FunctionCallCompletion(BaseModel):

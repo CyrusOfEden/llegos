@@ -3,7 +3,7 @@ import pytest
 import ray
 
 from llegos.actors import ActorAgent, actor_namespace, actor_propogate_all
-from llegos.test_helpers import Inform, MockAsyncAgent
+from llegos.test_mocks import Inform, MockAsyncAgent
 
 
 class MockActorAgent(ActorAgent, MockAsyncAgent):

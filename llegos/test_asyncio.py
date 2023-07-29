@@ -2,7 +2,7 @@
 import pytest
 
 from llegos.asyncio import async_propogate, async_propogate_all
-from llegos.test_helpers import Inform, MockAsyncAgent
+from llegos.test_mocks import Inform, MockAsyncAgent
 
 
 class TestAsyncAgent:

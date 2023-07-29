@@ -8,6 +8,7 @@ if TYPE_CHECKING:
 Intent = (
     str
     | Literal[
+        "ack",
         "action",
         "ask",
         "be",
@@ -16,6 +17,8 @@ Intent = (
         "generate",
         "inform",
         "predict",
+        "forward",
+        "backward",
         "proxy",
         "query",
         "request",
@@ -75,6 +78,18 @@ class Response(EphemeralMessage):
 
 class Step(EphemeralMessage):
     intent: Intent = "step"
+
+
+class Forward(EphemeralMessage):
+    intent: Intent = "forward"
+
+
+class Backward(EphemeralMessage):
+    intent: Intent = "backward"
+
+
+class Ack(EphemeralMessage):
+    intent: Intent = "ack"
 
 
 def message_chain(

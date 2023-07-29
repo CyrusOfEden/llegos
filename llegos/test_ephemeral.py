@@ -2,7 +2,7 @@ from typing import Iterable
 
 import pytest
 
-from llegos.test_helpers import Inform, MockAgent
+from llegos.test_mocks import Inform, MockAgent
 
 
 class TestInform:
