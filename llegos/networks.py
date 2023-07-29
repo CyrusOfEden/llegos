@@ -19,6 +19,14 @@ class NetworkAgent(ActorAgent):
     def relationships(self):
         return self.network.edges(self)
 
+    def receptive_agents(self, cls: type[EphemeralMessage]):
+        network = self.network
+        return [
+            agent
+            for _, agent in network.edges(self)
+            if network.has_edge(self, agent, cls)
+        ]
+
 
 class AgentNetwork(NetworkAgent, SystemAgent):
     graph: MultiDiGraph = Field(

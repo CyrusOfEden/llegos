@@ -14,6 +14,7 @@ Intent = (
         "backward",
         "be",
         "chat",
+        "dialog",
         "do",
         "forward",
         "generate",
@@ -50,6 +51,10 @@ class Be(EphemeralMessage):
 
 class Chat(EphemeralMessage):
     intent: Intent = "chat"
+
+
+class Dialog(EphemeralMessage):
+    intent: Intent = "dialog"
 
 
 class Do(EphemeralMessage):

@@ -4,69 +4,57 @@ http://www.fipa.org/specs/fipa00029/SC00029H.pdf
 """
 
 from abc import ABC, abstractmethod
-from typing import AsyncIterable
 
-from statemachine import StateMachine
-
-from llegos.asyncio import async_propogate_all
-from llegos.networks import AgentNetwork, EphemeralMessage, Field, NetworkAgent
+from llegos.asyncio import async_message_graph, async_propogate_all
+from llegos.messages import Request, Response
+from llegos.networks import AgentNetwork, Field, NetworkAgent
 
 """
 First, we define our Message types.
 """
 
 
-class CallForProposal(EphemeralMessage):
+class CallForProposal(Request):
     intent = "call_for_proposal"
     objective: str = Field()
-    constraints: list[str] = Field()
+    desires: list[str] = Field(default_factory=list)
+    requirements: list[str] = Field(default_factory=list)
+    constraints: list[str] = Field(default_factory=list)
 
 
-class Refuse(EphemeralMessage):
+class Refuse(Response):
     intent = "refuse"
+    reason: str
 
 
-class Propose(EphemeralMessage):
+class Propose(Response):
     intent = "propose"
+    body: str
 
 
-class AcceptProposal(EphemeralMessage):
+class AcceptProposal(Response):
     intent = "accept_proposal"
 
 
-class RejectProposal(EphemeralMessage):
+class RejectProposal(Response):
     intent = "reject_proposal"
 
 
-class Failure(EphemeralMessage):
+class Failure(Response):
     intent = "failure"
+    reason: str
 
 
-class InformDone(EphemeralMessage):
+class InformDone(Response):
     intent = "inform_done"
 
 
-class InformResult(EphemeralMessage):
+class InformResult(Response):
     intent = "inform_result"
+    result: str
 
 
-class Request(EphemeralMessage):
-    intent = "request"
-
-
-class Response(EphemeralMessage):
-    intent = "response"
-
-
-class Participant(NetworkAgent, StateMachine, ABC):
-    """
-    An abstract base class for a contract net participant, i.e. a contractor meant to
-    receive a CFP, respond with a proposal, and then perform the task if their proposal
-    was approved.
-    """
-
-    receivable_messages = {CallForProposal, RejectProposal, AcceptProposal}
-
+class Contractor(NetworkAgent, ABC):
     @abstractmethod
     async def call_for_proposal(self, message: CallForProposal) -> Propose | Refuse:
         """Receive a call for a proposal and return a proposal or a refusal"""
@@ -85,8 +73,10 @@ class Participant(NetworkAgent, StateMachine, ABC):
         ...
 
 
-class Initiator(NetworkAgent, StateMachine, ABC):
-    receivable_messages = {Propose, Refuse, InformDone, InformResult, Failure}
+class Delegator(NetworkAgent, ABC):
+    @property
+    def receptive_contractors(self):
+        return self.receptive_agents(CallForProposal)
 
     @abstractmethod
     async def propose(self, message: Propose):
@@ -95,7 +85,6 @@ class Initiator(NetworkAgent, StateMachine, ABC):
     @abstractmethod
     async def inform_done(self, message: InformDone):
         """Receive a message that the task is done"""
-        ...
 
     @abstractmethod
     async def inform_result(self, message: InformResult):
@@ -105,36 +94,29 @@ class Initiator(NetworkAgent, StateMachine, ABC):
     @abstractmethod
     async def failure(self, message: Failure):
         """Receive a message that the task failed"""
-        ...
-
-
-ContractNetMessage = (
-    CallForProposal | Refuse | Propose | AcceptProposal | RejectProposal
-)
 
 
 class ContractNet(AgentNetwork):
-    manager: Initiator = Field(allow_mutation=False)
-    contractors: list[Participant] = Field(min_items=1, allow_mutation=False)
+    delegator: Delegator = Field(allow_mutation=False)
+    contractors: list[Contractor] = Field(min_items=1, allow_mutation=False)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
         self.graph.add_edges_from(
-            (self.manager, contractor, message)
+            (self.delegator, contractor, message)
             for contractor in self.contractors
             for message in contractor.receivable_messages
         )
         self.graph.add_edges_from(
-            (contractor, self.manager, message)
+            (contractor, self.delegator, message)
             for contractor in self.contractors
-            for message in self.manager.receivable_messages
+            for message in self.delegator.receivable_messages
         )
 
-    async def request(self, message: Request) -> AsyncIterable[ContractNetMessage]:
+    async def request(self, message: Request):
         messages = [
-            CallForProposal.forward(message, sender=self.manager, receiver=c)
+            CallForProposal.forward(message, sender=self.delegator, receiver=c)
             for c in self.contractors
         ]
-        async for reply in async_propogate_all(messages):
-            yield reply
+        await async_message_graph(async_propogate_all(messages))

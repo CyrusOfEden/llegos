@@ -2,23 +2,19 @@ from abc import ABC, abstractmethod
 from itertools import permutations
 
 from llegos.asyncio import AsyncReply
-from llegos.networks import AgentNetwork, EphemeralMessage, Field, NetworkAgent
-
-
-class Dialog(EphemeralMessage):
-    intent = "dialog"
+from llegos.messages import Dialog
+from llegos.networks import AgentNetwork, Field, NetworkAgent
 
 
 class DialogAgent(NetworkAgent, ABC):
-    @abstractmethod
-    async def converse(self, message: Dialog) -> AsyncReply[Dialog]:
-        ...
-
     @property
-    def conversation_partners(self):
-        network = self.network
-        neighbors = network.neighbors(self)
-        return [agent for agent in neighbors if network.has_edge(self, agent, Dialog)]
+    def dialog_agents(self):
+        return self.receptive_agents(Dialog)
+
+    @abstractmethod
+    async def dialog(self, message: Dialog) -> AsyncReply[Dialog]:
+        "Yield 0 or more messages"
+        ...
 
 
 class AgentDialogNetwork(AgentNetwork):
