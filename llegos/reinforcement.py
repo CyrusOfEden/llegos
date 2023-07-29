@@ -103,8 +103,8 @@ class ReinforcementAgent(AsyncAgent, ABC):
     action: ActionAgent = Field(exclude=True)
     world_model: WorldModelAgent = Field(exclude=True)
 
-    async def forward(self, step: Step, search_depth: int) -> Action:
-        if search_depth <= 0:
+    async def forward(self, step: Step, action_horizon: int) -> Action:
+        if action_horizon <= 0:
             raise ValueError("search_depth must be greater than 0")
 
         predicted_actions: list[tuple[Action, float]] = []
@@ -121,10 +121,10 @@ class ReinforcementAgent(AsyncAgent, ABC):
             predicted_actions.append((action, predicted_loss.value))
 
         action = sorted(predicted_actions, key=itemgetter(1))[0][0]
-        if search_depth == 1:
+        if action_horizon == 1:
             return action
 
-        final_action = await self.forward(predicted_step, search_depth - 1)
+        final_action = await self.forward(predicted_step, action_horizon - 1)
         predictions = message_path(step, final_action)
         next_action = next(p for p in predictions if isinstance(p, Action))
         return next_action
