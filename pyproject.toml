@@ -6,24 +6,24 @@ build-backend = "poetry.core.masonry.api"
 line-length = 100
 
 [tool.poetry]
-name = "gen-net"
+name = "llegos"
 version = "0.1.0"
-description = "..."
+description = "Llegos for building Python Agents"
 authors = ["Shaman AI <hello@shaman.ai>"]
 license = "LGPLv3"
 readme = "README.md"
-packages = [{ include = "gen_net" }]
+packages = [{ include = "llegos" }]
 
 [tool.poetry.dependencies]
 python = ">=3.10.9,<4.0"
 pydantic = ">=1,<2.1"
 sorcery = "^0.2.2"
-llama_index = "^0.7"
 networkx = "^3.1"
 openai = "^0.27"
 ijson = "^3.2.2"
 janus = "^1.0.0"
 aiometer = "^0.4.0"
+sqlmodel = "^0.0.8"
 
 [tool.poetry.group.dev]
 optional = true
@@ -31,34 +31,25 @@ optional = true
 [tool.poetry.group.dev.dependencies]
 black = "^23.3.0"
 faiss-cpu = "^1.7.4"
+fastapi = "^0.100.0"
+httpx = ">=0.23"
 ipdb = "^0.13.13"
 ipython = "^8.12.0"
 jupyter = "^1.0.0"
+llama_index = ">=0.5"
 mypy = "^1.2.0"
+pyee = "^11.0.0"
 pytest = "^7.3.1"
+pytest-asyncio = "^0.21.0"
 python-dotenv = "^1.0.0"
+ray = "^2.4.0"
+redis-om = "^0.2.1"
 ruff = "^0.0.261"
 setuptools = "^67.6.1"
 streamlit = "^1.24"
-types-pyyaml = "^6.0.12.9"
-wikipedia = "^1.4.0"
-tiktoken = "^0.4.0"
-pytest-asyncio = "^0.21.0"
-pyee = "^11.0.0"
 supabase = "^1.0.3"
-fastapi = "^0.100.0"
+tiktoken = "^0.4.0"
+types-pyyaml = "^6.0.12.9"
 upstash-redis = "^0.15.0"
 websockets = ">=10.3,<11.0"
-redis-om = "^0.2.1"
-
-[tool.poetry.group.ray]
-optional = true
-
-[tool.poetry.group.ray.dependencies]
-ray = "^2.4.0"
-
-[tool.poetry.group.async]
-optional = true
-
-[tool.poetry.group.async.dependencies]
-httpx = ">=0.23"
+wikipedia = "^1.4.0"

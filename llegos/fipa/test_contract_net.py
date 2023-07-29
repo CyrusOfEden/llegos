@@ -1,6 +1,6 @@
 import pytest
 
-from gen_net.llegos.fipa.contract_net import (
+from llegos.fipa.contract_net import (
     CFP,
     Accept,
     AcceptProposal,
