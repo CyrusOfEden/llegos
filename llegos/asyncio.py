@@ -2,7 +2,6 @@ from collections.abc import AsyncGenerator, Awaitable
 from functools import partial
 from typing import AsyncIterable, Callable, Iterable, Optional, TypeVar
 
-from aiometer import amap
 from networkx import DiGraph
 from pyee.asyncio import AsyncIOEventEmitter
 
@@ -41,9 +40,10 @@ AsyncApplicator = Callable[[EphemeralMessage], AsyncIterable[EphemeralMessage]]
 
 async def async_apply(message: EphemeralMessage) -> AsyncIterable[EphemeralMessage]:
     agent: Optional[AsyncAgent] = message.receiver
-    if agent:
-        async for reply_l1 in agent.receive(message):
-            yield reply_l1
+    if not agent:
+        return
+    async for reply in agent.receive(message):
+        yield reply
 
 
 async def async_propogate(
@@ -59,14 +59,13 @@ async def async_propogate_all(
     messages: Iterable[EphemeralMessage] | AsyncIterable[EphemeralMessage],
     applicator: AsyncApplicator = async_apply,
 ):
-    if isinstance(AsyncGenerator, messages):
+    if isinstance(messages, AsyncGenerator):
         messages = (m async for m in messages)
 
     propogator = partial(async_propogate, applicator=applicator)
-    async with amap(propogator, messages) as generators:
-        async for gen in generators:
-            async for reply_l1 in gen:
-                yield reply_l1
+    for message in messages:
+        async for reply in propogator(message):
+            yield reply
 
 
 async def async_message_graph(messages: AsyncIterable[EphemeralMessage]) -> DiGraph:

@@ -1,12 +1,12 @@
+from contextlib import contextmanager
 from contextvars import ContextVar
 from functools import partial
-from typing import Any, AsyncIterable, Optional
+from typing import Any, AsyncIterable, Iterable, Optional
 
 import ray
 
 from llegos.asyncio import (
     AsyncAgent,
-    AsyncReply,
     EphemeralMessage,
     async_propogate,
     async_propogate_all,
@@ -16,11 +16,11 @@ actor_namespace = ContextVar("actor_namespace", default="llegos.actors.ns")
 
 
 class ActorAgent(AsyncAgent):
-    @property
-    def actor(self):
+    @contextmanager
+    def get_actor(self):
         ns = actor_namespace.get()
-        id = self.id
-        return Actor.options(namespace=ns, name=id, get_if_exists=True).remote(self)
+        id = str(self.id)
+        yield Actor.options(namespace=ns, name=id, get_if_exists=True).remote(self)
 
 
 @ray.remote(max_restarts=3, max_task_retries=3)
@@ -33,17 +33,22 @@ class Actor:
     def property(self, prop: str) -> Any:
         return getattr(self.agent, prop)
 
-    @ray.method(num_returns="dynamic")
-    async def receive(self, message: EphemeralMessage) -> AsyncReply[EphemeralMessage]]:
+    @ray.method(num_returns="streaming")
+    async def receive(
+        self, message: EphemeralMessage
+    ) -> AsyncIterable[EphemeralMessage]:
         async for reply in self.agent.receive(message):
             yield reply
 
 
-async def actor_apply(message: EphemeralMessage) -> AsyncIterable[EphemeralMessage]:
+async def actor_apply(message: EphemeralMessage) -> Iterable[EphemeralMessage]:
     agent: Optional[ActorAgent] = message.receiver
-    if agent:
-        async for reply_l1 in agent.actor.receive.remote(message):
-            yield reply_l1
+    if not agent:
+        return
+    with agent.get_actor() as actor:
+        async for reply_ref in actor.receive.remote(message):
+            reply = await reply_ref
+            yield reply
 
 
 actor_propogate = partial(async_propogate, applicator=actor_apply)

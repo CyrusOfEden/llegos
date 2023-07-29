@@ -2,45 +2,30 @@ from typing import Iterable
 
 import pytest
 
-from llegos.ephemeral import EphemeralAgent, EphemeralMessage
+from llegos.test_helpers import Inform, MockAgent
 
 
-class Inform(EphemeralMessage):
-    intent = "inform"
-
-
-class Ack(EphemeralMessage):
-    intent = "ack"
-
-
-class MockAgent(EphemeralAgent):
-    def inform(self, message: Inform):
-        yield Ack.reply(message, body=f"Ack: {message.id}")
-
-
-class TestEphemeralMessage:
+class TestInform:
     def test_create_message_with_standard_fields(self):
-        message = EphemeralMessage(
-            intent="chat",
+        message = Inform(
             body="Hello, world!",
             sender=MockAgent(),
             receiver=MockAgent(),
         )
-        assert message.intent == "chat"
+        assert message.intent == "inform"
         assert message.body == "Hello, world!"
-        assert isinstance(message.sender, EphemeralAgent)
-        assert isinstance(message.receiver, EphemeralAgent)
+        assert isinstance(message.sender, MockAgent)
+        assert isinstance(message.receiver, MockAgent)
         assert message.reply_to is None
 
     # Tests that a reply message is created correctly
     def test_create_reply_message(self):
-        message = EphemeralMessage(
-            intent="chat",
+        message = Inform(
             body="Hello, world!",
             sender=MockAgent(),
             receiver=MockAgent(),
         )
-        reply = EphemeralMessage.reply(message, body="Reply", intent="reply")
+        reply = Inform.reply(message, body="Reply", intent="reply")
         assert reply.intent == "reply"
         assert reply.body == "Reply"
         assert reply.sender == message.receiver
@@ -49,14 +34,13 @@ class TestEphemeralMessage:
 
     # Tests that a forward message is created correctly
     def test_create_forward_message(self):
-        message = EphemeralMessage(
-            intent="chat",
+        message = Inform(
             body="Hello, world!",
             sender=MockAgent(),
             receiver=MockAgent(),
         )
-        forward_message = EphemeralMessage.forward(message, intent="chat")
-        assert forward_message.intent == "chat"
+        forward_message = Inform.forward(message)
+        assert forward_message.intent == "inform"
         assert forward_message.body == "Hello, world!"
         assert forward_message.sender == message.receiver
         assert forward_message.receiver is None
@@ -65,7 +49,7 @@ class TestEphemeralMessage:
     # Tests that a ValueError is raised when creating a message with an invalid sender
     def test_invalid_sender(self):
         with pytest.raises(ValueError):
-            EphemeralMessage(
+            Inform(
                 intent="chat",
                 body="Hello, world!",
                 sender="invalid sender",
@@ -75,8 +59,7 @@ class TestEphemeralMessage:
     # Tests that an exception is raised when creating a message with an invalid receiver
     def test_invalid_receiver(self):
         with pytest.raises(ValueError):
-            EphemeralMessage(
-                intent="chat",
+            Inform(
                 body="Hello, world!",
                 sender=MockAgent(),
                 receiver="invalid_receiver",
@@ -85,8 +68,7 @@ class TestEphemeralMessage:
     # Tests that creating a message with an invalid reply_to raises an exception
     def test_invalid_reply_to(self):
         with pytest.raises(ValueError):
-            EphemeralMessage(
-                intent="chat",
+            Inform(
                 body="Hello, world!",
                 sender=MockAgent(),
                 receiver=MockAgent(),
@@ -96,8 +78,7 @@ class TestEphemeralMessage:
     # Tests that creating a message with an invalid created_at raises a ValueError
     def test_invalid_created_at(self):
         with pytest.raises(ValueError):
-            EphemeralMessage(
-                intent="chat",
+            Inform(
                 body="Hello, world!",
                 sender=MockAgent(),
                 receiver=MockAgent(),
@@ -106,18 +87,15 @@ class TestEphemeralMessage:
 
     # Tests that the role of a message is derived from the role of the sender
     def test_message_role_derived_from_sender_role(self):
-        sender = EphemeralAgent(role="system")
-        receiver = EphemeralAgent(role="user")
-        message = EphemeralMessage(
-            intent="chat",
+        sender = MockAgent(role="system")
+        message = Inform(
             body="Hello, world!",
             sender=sender,
-            receiver=receiver,
         )
         assert message.role == "system"
 
 
-class TestEphemeralAgent:
+class TestMockAgent:
     # Tests that the agent can emit an event
     def test_agent_can_emit_event(self):
         agent = MockAgent()

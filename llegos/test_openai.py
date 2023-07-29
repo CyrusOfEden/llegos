@@ -4,8 +4,8 @@ import pytest
 from pydantic import BaseModel
 
 from llegos.asyncio import AsyncAgent, EphemeralMessage
-from llegos.messages import Intent
 from llegos.openai import callable_schemas, parse_function_call, prepare_async_call
+from llegos.test_helpers import MockAsyncAgent
 
 
 class FunctionCallCompletion(BaseModel):
@@ -16,24 +16,9 @@ class MockCompletion(BaseModel):
     choices: list[FunctionCallCompletion]
 
 
-class Inform(EphemeralMessage):
-    intent: Intent = "inform"
-
-
-class Ack(EphemeralMessage):
-    intent: Intent = "ack"
-
-
-class MockAgent(AsyncAgent):
-    receivable_messages: set[type[EphemeralMessage]] = {Inform}
-
-    async def inform(self, message: Inform):
-        yield Ack.reply(message, body=f"Ack: {message.id}")
-
-
 class TestCallableSchemas:
     def test_callable_schemas(self):
-        llegos = [MockAgent(), EphemeralMessage]
+        llegos = [MockAsyncAgent(), EphemeralMessage]
         callables, schemas = callable_schemas(llegos)
 
         assert len(callables) == 2
@@ -46,7 +31,7 @@ class TestCallableSchemas:
 
         for llego in llegos:
             match llego:
-                case MockAgent():
+                case MockAsyncAgent():
                     key = str(llego.id)
                     assert key in callables
                     assert callables[key][0] == "receive"
@@ -119,8 +104,8 @@ class TestPrepareAsyncCall:
     @pytest.mark.asyncio
     async def test_receive_message(self):
         llegos = [
-            MockAgent(),
-            MockAgent(),
+            MockAsyncAgent(),
+            MockAsyncAgent(),
             EphemeralMessage,
         ]
         schemas, async_function_call = prepare_async_call(llegos)
@@ -155,8 +140,8 @@ class TestPrepareAsyncCall:
     @pytest.mark.asyncio
     async def test_unknown_completion_call(self):
         llegos = [
-            MockAgent(),
-            MockAgent(),
+            MockAsyncAgent(),
+            MockAsyncAgent(),
             EphemeralMessage,
         ]
         schemas, async_function_call = prepare_async_call(llegos)
