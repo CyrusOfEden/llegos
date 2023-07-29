@@ -3384,6 +3384,17 @@ mypy = ["mypy", "types-requests"]
 test = ["coverage (>=5,<6)", "mock (==1.3.0)", "pytest (>=7,<8)", "pytest-mock (>=2,<3)", "pytest-xdist (>=1,<2)", "responses (==0.13.3)"]
 
 [[package]]
+name = "python-statemachine"
+version = "2.1.0"
+description = "Python Finite State Machines made easy."
+optional = false
+python-versions = ">=3.7,<3.12"
+files = [
+    {file = "python_statemachine-2.1.0-py3-none-any.whl", hash = "sha256:195d8a1059ea22e94effce35d5fd9352362391e07ed248e04e27fadb49b41726"},
+    {file = "python_statemachine-2.1.0.tar.gz", hash = "sha256:aded5878526f5249465ce5aec3fb8babc9e08261bba4a4e0d147403e73335c34"},
+]
+
+[[package]]
 name = "python-ulid"
 version = "1.1.0"
 description = "Universally Unique Lexicographically Sortable Identifier"
@@ -5257,5 +5268,5 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 
 [metadata]
 lock-version = "2.0"
-python-versions = ">=3.10.9,<4.0"
-content-hash = "d2a688cb5374a134fa95a4e72de742013f6f53c4f1bb5c69ed1d9b1f6830dcf0"
+python-versions = ">=3.10.9,<3.12"
+content-hash = "4b951c46b8145b66470788e051c7b39c0bce21e3a4c0e0ca09cc785e65ccada3"

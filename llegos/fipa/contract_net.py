@@ -6,18 +6,18 @@ http://www.fipa.org/specs/fipa00029/SC00029H.pdf
 from abc import ABC, abstractmethod
 from typing import AsyncIterable
 
+from statemachine import StateMachine
+
 from llegos.asyncio import async_propogate_all
-from llegos.messages import message_chain
 from llegos.networks import AgentNetwork, EphemeralMessage, Field, NetworkAgent
-from llegos.openai import prepare_async_call
 
 """
 First, we define our Message types.
 """
 
 
-class CFP(EphemeralMessage):
-    intent = "cfp"
+class CallForProposal(EphemeralMessage):
+    intent = "call_for_proposal"
     objective: str = Field()
     constraints: list[str] = Field()
 
@@ -58,22 +58,17 @@ class Response(EphemeralMessage):
     intent = "response"
 
 
-"""
-Then, onto the agents!
-"""
-
-
-class Participant(NetworkAgent, ABC):
+class Participant(NetworkAgent, StateMachine, ABC):
     """
     An abstract base class for a contract net participant, i.e. a contractor meant to
     receive a CFP, respond with a proposal, and then perform the task if their proposal
     was approved.
     """
 
-    receivable_messages = {CFP, RejectProposal, AcceptProposal, Failure}
+    receivable_messages = {CallForProposal, RejectProposal, AcceptProposal}
 
     @abstractmethod
-    async def cfp(self, message: CFP) -> Propose | Refuse:
+    async def call_for_proposal(self, message: CallForProposal) -> Propose | Refuse:
         """Receive a call for a proposal and return a proposal or a refusal"""
         ...
 
@@ -90,23 +85,12 @@ class Participant(NetworkAgent, ABC):
         ...
 
 
-class Initiator(NetworkAgent, ABC):
+class Initiator(NetworkAgent, StateMachine, ABC):
     receivable_messages = {Propose, Refuse, InformDone, InformResult, Failure}
 
     @abstractmethod
     async def propose(self, message: Propose):
         """Receive a proposal and return an acceptance or a rejection"""
-        messages, functions, call_function = prepare_async_call(
-            message_chain(message, height=12),
-            llegos=[AcceptProposal, RejectProposal],
-        )
-
-        completion = self.completion.create(
-            messages=messages, functions=functions, temperature=0.8, max_tokens=250
-        )
-
-        async for reply in call_function(completion):
-            yield reply  # reply is either AcceptProposal or RejectProposal
 
     @abstractmethod
     async def inform_done(self, message: InformDone):
@@ -124,7 +108,9 @@ class Initiator(NetworkAgent, ABC):
         ...
 
 
-ContractNetMessage = CFP | Refuse | Propose | AcceptProposal | RejectProposal
+ContractNetMessage = (
+    CallForProposal | Refuse | Propose | AcceptProposal | RejectProposal
+)
 
 
 class ContractNet(AgentNetwork):
@@ -141,7 +127,7 @@ class ContractNet(AgentNetwork):
 
     async def request(self, message: Request) -> AsyncIterable[ContractNetMessage]:
         messages = [
-            CFP.forward(message, sender=self.manager, receiver=c)
+            CallForProposal.forward(message, sender=self.manager, receiver=c)
             for c in self.contractors
         ]
         async for reply in async_propogate_all(messages):
