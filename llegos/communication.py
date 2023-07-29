@@ -23,7 +23,7 @@ class ConversationalAgent(NetworkAgent, ABC):
         return [agent for agent in neighbors if network.has_edge(self, agent, Converse)]
 
 
-class PairwiseConversationalAgentNetwork(AgentNetwork):
+class PairwiseConversationAgentNetwork(AgentNetwork):
     agents: set[ConversationalAgent] = Field(min_items=2)
     graph: MultiGraph = Field(default_factory=MultiGraph, include=False, exclude=True)
 

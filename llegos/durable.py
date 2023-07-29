@@ -1,6 +1,6 @@
 from datetime import datetime
 from textwrap import dedent
-from typing import Optional, Union
+from typing import Optional
 from uuid import uuid4
 
 from pydantic import UUID4
@@ -37,7 +37,7 @@ class AbstractDurableObject(SQLModel, EphemeralObject):
 class DurableMessage(AbstractDurableObject, EphemeralMessage, table=True):
     __tablename__ = "messages"
 
-    intent: Union[str, Intent] = Field(
+    intent: Intent = Field(
         description=dedent(
             """\
             Agents call methods named after the intent of the message.

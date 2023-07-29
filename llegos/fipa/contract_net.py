@@ -4,7 +4,7 @@ http://www.fipa.org/specs/fipa00029/SC00029H.pdf
 """
 
 from abc import ABC, abstractmethod
-from typing import AsyncIterable, Union
+from typing import AsyncIterable
 
 from llegos.asyncio import async_propogate_all
 from llegos.messages import message_chain
@@ -73,14 +73,14 @@ class Participant(NetworkAgent, ABC):
     receivable_messages = {CFP, RejectProposal, AcceptProposal, Failure}
 
     @abstractmethod
-    async def cfp(self, message: CFP) -> Union[Propose, Refuse]:
+    async def cfp(self, message: CFP) -> Propose | Refuse:
         """Receive a call for a proposal and return a proposal or a refusal"""
         ...
 
     @abstractmethod
     async def accept_proposal(
         self, message: AcceptProposal
-    ) -> Union[InformDone, InformResult, Failure]:
+    ) -> InformDone | InformResult | Failure:
         """Receive an accepted proposal and perform the task"""
         ...
 
@@ -124,7 +124,7 @@ class Initiator(NetworkAgent, ABC):
         ...
 
 
-ContractNetMessage = Union[CFP, Refuse, Propose, AcceptProposal, RejectProposal]
+ContractNetMessage = CFP | Refuse | Propose | AcceptProposal | RejectProposal
 
 
 class ContractNet(AgentNetwork):

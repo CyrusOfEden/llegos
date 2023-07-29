@@ -1,12 +1,14 @@
 from abc import ABC
+from collections.abc import Generator
 from datetime import datetime
 from functools import partial
 from textwrap import dedent
-from typing import Callable, Iterable, Optional, TypeVar, Union
+from typing import Callable, Iterable, Optional, TypeVar
+from uuid import uuid4
 
 import yaml
 from networkx import DiGraph
-from pydantic import BaseModel, Field
+from pydantic import UUID4, BaseModel, Field
 from pyee import EventEmitter
 from sorcery import delegate_to_attr
 
@@ -17,11 +19,8 @@ class EphemeralObject(BaseModel, ABC):
     class Config:
         arbitrary_types_allowed = True
 
+    id: UUID4 = Field(default_factory=uuid4)
     metadata: dict = Field(default_factory=dict)
-
-    @property
-    def id(self):
-        return id(self)
 
     def __str__(self):
         return yaml.dump(self.dict(), sort_keys=False)
@@ -33,9 +32,20 @@ class EphemeralObject(BaseModel, ABC):
     @property
     def init_schema(cls):
         schema = cls.schema()
+        if "properties" not in schema:
+            schema = schema["definitions"][cls.__name__]
 
-        parameters = schema["properties"]
-        del parameters["id"]
+        parameters = {}
+        for key, value in schema["properties"].items():
+            if key == "id":
+                continue
+            elif value.get("serialization_alias", "").endswith("_id"):
+                parameters[f"{key}_id"] = {
+                    "title": value["title"],
+                    "type": "string",
+                }
+            else:
+                parameters[key] = value
 
         return {
             "name": cls.__name__,
@@ -56,7 +66,7 @@ class EphemeralMessage(EphemeralObject):
             EphemeralObject: lambda a: a.id,
         }
 
-    intent: Union[str, Intent] = Field(
+    intent: Intent = Field(
         description=dedent(
             """\
             Agents call methods named after the intent of the message.
@@ -91,44 +101,31 @@ class EphemeralMessage(EphemeralObject):
     def role(self):
         return self.sender.role
 
-    @staticmethod
-    def reply(message: "EphemeralMessage", **kwargs) -> "EphemeralMessage":
-        update = {
-            "sender": message.receiver,
-            "receiver": message.sender,
-            "reply_to": message,
-            "method": "reply",
-            **kwargs,
-        }
-        return message.copy(update)
-
-    @staticmethod
-    def forward(message: "EphemeralMessage", **kwargs) -> "EphemeralMessage":
-        update = {
-            "sender": message.receiver,
-            "reply_to": message,
-            "body": message.body,
-            **kwargs,
-        }
-        return message.copy(update)
+    @classmethod
+    def reply(cls, message: "EphemeralMessage", **kwargs) -> "EphemeralMessage":
+        attrs = dict(
+            sender=message.receiver,
+            receiver=message.sender,
+            reply_to=message,
+            intent=cls.__fields__["intent"].default,
+        )
+        attrs.update(kwargs)
+        return cls(**attrs)
 
     @classmethod
-    @property
-    def init_schema(cls):
-        schema = super().init_schema()
-
-        params = schema["parameters"]
-        for key in ("reply_to", "sender", "receiver"):
-            params[key] = {
-                "title": params[key]["title"],
-                "type": "string",
-            }
-
-        return schema
+    def forward(cls, message: "EphemeralMessage", **kwargs) -> "EphemeralMessage":
+        attrs = dict(
+            sender=message.receiver,
+            body=message.body,
+            reply_to=message,
+            intent=cls.__fields__["intent"].default,
+        )
+        attrs.update(kwargs)
+        return cls(**attrs)
 
 
 T = TypeVar("T", bound=EphemeralMessage)
-Reply = Union[Optional[T], Iterable[T]]
+Reply = Optional[T] | Iterable[T]
 
 
 class EphemeralAgent(EphemeralObject):
@@ -159,20 +156,17 @@ class EphemeralAgent(EphemeralObject):
 
     @property
     def receivable_intents(self):
-        return {message.intent for message in self.receivable_messages}
-
-    def draft_message(self, content: str, method: str, **kwargs) -> EphemeralMessage:
-        """Helper method for creating a message with the node's role and id."""
-        return EphemeralMessage(
-            sender=self, role=self.role, intent=method, content=content, **kwargs
-        )
+        return {
+            message.__fields__["intent"].default for message in self.receivable_messages
+        }
 
     def receive(self, message: EphemeralMessage) -> Reply[EphemeralMessage]:
-        response = getattr(self, message.intent)
         self.emit(message.intent, message)
 
+        response = getattr(self, message.intent)(message)
+
         match response:
-            case Iterable():
+            case Generator():
                 yield from response
             case EphemeralMessage():
                 yield response
@@ -182,9 +176,9 @@ class EphemeralAgent(EphemeralObject):
         return self.__class__.__doc__
 
     @property
-    def receive_fn(self):
+    def receive_schema(self):
         return {
-            "name": self.id,
+            "name": str(self.id),
             "description": self.public_description,
             "parameters": {
                 "title": "message",
@@ -201,7 +195,7 @@ Applicator = Callable[[EphemeralMessage], Iterable[EphemeralMessage]]
 def apply(message: EphemeralMessage) -> Iterable[EphemeralMessage]:
     agent: Optional[EphemeralAgent] = message.receiver
     if not agent:
-        raise StopIteration
+        return []
     yield from agent.receive(message)
 
 

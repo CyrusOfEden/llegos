@@ -1,22 +1,15 @@
+from collections.abc import AsyncGenerator, Awaitable
 from functools import partial
-from typing import (
-    AsyncIterable,
-    Callable,
-    Coroutine,
-    Iterable,
-    Optional,
-    TypeVar,
-    Union,
-)
+from typing import AsyncIterable, Callable, Iterable, Optional, TypeVar
 
 from aiometer import amap
 from networkx import DiGraph
-from pyee import AsyncIOEventEmitter
+from pyee.asyncio import AsyncIOEventEmitter
 
 from llegos.ephemeral import EphemeralAgent, EphemeralMessage, Field
 
 T = TypeVar("T", bound=EphemeralMessage)
-AsyncReply = Union[Optional[T], AsyncIterable[T]]
+AsyncReply = Optional[T] | AsyncIterable[T]
 
 
 class AsyncAgent(EphemeralAgent):
@@ -29,14 +22,15 @@ class AsyncAgent(EphemeralAgent):
     async def receive(
         self, message: EphemeralMessage
     ) -> AsyncIterable[EphemeralMessage]:
-        response = getattr(self, message.intent)
         self.emit(message.intent, message)
 
+        response = getattr(self, message.intent)(message)
+
         match response:
-            case AsyncIterable():
+            case AsyncGenerator():
                 async for reply in response:
                     yield reply
-            case Coroutine():
+            case Awaitable():
                 reply = await response
                 if reply:
                     yield reply
@@ -47,10 +41,9 @@ AsyncApplicator = Callable[[EphemeralMessage], AsyncIterable[EphemeralMessage]]
 
 async def async_apply(message: EphemeralMessage) -> AsyncIterable[EphemeralMessage]:
     agent: Optional[AsyncAgent] = message.receiver
-    if not agent:
-        raise StopAsyncIteration
-    async for reply_l1 in agent.receive(message):
-        yield reply_l1
+    if agent:
+        async for reply_l1 in agent.receive(message):
+            yield reply_l1
 
 
 async def async_propogate(
@@ -63,10 +56,10 @@ async def async_propogate(
 
 
 async def async_propogate_all(
-    messages: Union[Iterable[EphemeralMessage], AsyncIterable[EphemeralMessage]],
+    messages: Iterable[EphemeralMessage] | AsyncIterable[EphemeralMessage],
     applicator: AsyncApplicator = async_apply,
 ):
-    if isinstance(AsyncIterable, messages):
+    if isinstance(AsyncGenerator, messages):
         messages = (m async for m in messages)
 
     propogator = partial(async_propogate, applicator=applicator)

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from contextvars import ContextVar
-from typing import AsyncIterable, Iterable, Union
+from typing import AsyncIterable, Iterable
 
 from networkx import MultiDiGraph
 from sorcery import delegate_to_attr
@@ -25,7 +25,7 @@ class AgentNetwork(NetworkAgent, SystemAgent):
         default_factory=MultiDiGraph, include=False, exclude=True
     )
 
-    def __contains__(self, key: Union[str, NetworkAgent]) -> bool:
+    def __contains__(self, key: str | NetworkAgent) -> bool:
         match key:
             case str():
                 return key in self.directory
