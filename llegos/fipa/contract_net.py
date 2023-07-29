@@ -114,16 +114,22 @@ ContractNetMessage = (
 
 
 class ContractNet(AgentNetwork):
-    manager: Initiator = Field()
-    contractors: list[Participant] = Field(min_items=1)
+    manager: Initiator = Field(allow_mutation=False)
+    contractors: list[Participant] = Field(min_items=1, allow_mutation=False)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        [
-            (self.manager, contractor.receivable_messages, contractor)
+        self.graph.add_edges_from(
+            (self.manager, contractor, message)
             for contractor in self.contractors
-        ]
+            for message in contractor.receivable_messages
+        )
+        self.graph.add_edges_from(
+            (contractor, self.manager, message)
+            for contractor in self.contractors
+            for message in self.manager.receivable_messages
+        )
 
     async def request(self, message: Request) -> AsyncIterable[ContractNetMessage]:
         messages = [
