@@ -11,14 +11,14 @@ Intent = (
         "ack",
         "action",
         "ask",
+        "backward",
         "be",
         "chat",
         "do",
+        "forward",
         "generate",
         "inform",
         "predict",
-        "forward",
-        "backward",
         "proxy",
         "query",
         "request",
@@ -28,12 +28,20 @@ Intent = (
 )
 
 
+class Ack(EphemeralMessage):
+    intent: Intent = "ack"
+
+
 class Action(EphemeralMessage):
     intent: Intent = "action"
 
 
 class Ask(EphemeralMessage):
     intent: Intent = "ask"
+
+
+class Backward(EphemeralMessage):
+    intent: Intent = "backward"
 
 
 class Be(EphemeralMessage):
@@ -46,6 +54,10 @@ class Chat(EphemeralMessage):
 
 class Do(EphemeralMessage):
     intent: Intent = "do"
+
+
+class Forward(EphemeralMessage):
+    intent: Intent = "forward"
 
 
 class Generate(EphemeralMessage):
@@ -78,18 +90,6 @@ class Response(EphemeralMessage):
 
 class Step(EphemeralMessage):
     intent: Intent = "step"
-
-
-class Forward(EphemeralMessage):
-    intent: Intent = "forward"
-
-
-class Backward(EphemeralMessage):
-    intent: Intent = "backward"
-
-
-class Ack(EphemeralMessage):
-    intent: Intent = "ack"
 
 
 def message_chain(

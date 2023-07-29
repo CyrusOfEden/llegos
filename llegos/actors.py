@@ -43,12 +43,11 @@ class Actor:
 
 async def actor_apply(message: EphemeralMessage) -> Iterable[EphemeralMessage]:
     agent: Optional[ActorAgent] = message.receiver
-    if not agent:
-        return
-    with agent.get_actor() as actor:
-        async for reply_ref in actor.receive.remote(message):
-            reply = await reply_ref
-            yield reply
+    if agent:
+        with agent.get_actor() as actor:
+            async for reply_ref in actor.receive.remote(message):
+                reply = await reply_ref
+                yield reply
 
 
 actor_propogate = partial(async_propogate, applicator=actor_apply)
