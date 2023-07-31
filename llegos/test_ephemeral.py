@@ -1,102 +1,10 @@
 from typing import Iterable
 
-import pytest
-
-from llegos.test_mocks import Inform, MockAgent
-
-
-class TestInform:
-    def test_create_message_with_standard_fields(self):
-        message = Inform(
-            body="Hello, world!",
-            sender=MockAgent(),
-            receiver=MockAgent(),
-        )
-        assert message.intent == "inform"
-        assert message.body == "Hello, world!"
-        assert isinstance(message.sender, MockAgent)
-        assert isinstance(message.receiver, MockAgent)
-        assert message.parent is None
-
-    # Tests that a reply message is created correctly
-    def test_create_reply_message(self):
-        message = Inform(
-            body="Hello, world!",
-            sender=MockAgent(),
-            receiver=MockAgent(),
-        )
-        reply = Inform.reply_to(message, body="Reply", intent="reply")
-        assert reply.intent == "reply"
-        assert reply.body == "Reply"
-        assert reply.sender == message.receiver
-        assert reply.receiver == message.sender
-        assert reply.parent == message
-
-    # Tests that a forward message is created correctly
-    def test_create_forward_message(self):
-        message = Inform(
-            body="Hello, world!",
-            sender=MockAgent(),
-            receiver=MockAgent(),
-        )
-        forward_message = Inform.forward(message)
-        assert forward_message.intent == "inform"
-        assert forward_message.body == "Hello, world!"
-        assert forward_message.sender == message.receiver
-        assert forward_message.receiver is None
-        assert forward_message.parent == message
-
-    # Tests that a ValueError is raised when creating a message with an invalid sender
-    def test_invalid_sender(self):
-        with pytest.raises(ValueError):
-            Inform(
-                intent="chat",
-                body="Hello, world!",
-                sender="invalid sender",
-                receiver=MockAgent(),
-            )
-
-    # Tests that an exception is raised when creating a message with an invalid receiver
-    def test_invalid_receiver(self):
-        with pytest.raises(ValueError):
-            Inform(
-                body="Hello, world!",
-                sender=MockAgent(),
-                receiver="invalid_receiver",
-            )
-
-    # Tests that creating a message with an invalid parent raises an exception
-    def test_invalid_parent(self):
-        with pytest.raises(ValueError):
-            Inform(
-                body="Hello, world!",
-                sender=MockAgent(),
-                receiver=MockAgent(),
-                parent="invalid",
-            )
-
-    # Tests that creating a message with an invalid created_at raises a ValueError
-    def test_invalid_created_at(self):
-        with pytest.raises(ValueError):
-            Inform(
-                body="Hello, world!",
-                sender=MockAgent(),
-                receiver=MockAgent(),
-                created_at="invalid",
-            )
-
-    # Tests that the role of a message is derived from the role of the sender
-    def test_message_role_derived_from_sender_role(self):
-        sender = MockAgent(role="system")
-        message = Inform(
-            body="Hello, world!",
-            sender=sender,
-        )
-        assert message.role == "system"
+from llegos.messages import Ack
+from llegos.test_utilities import MockAgent
 
 
 class TestMockAgent:
-    # Tests that the agent can emit an event
     def test_agent_can_emit_event(self):
         agent = MockAgent()
         event_emitted = False
@@ -110,7 +18,6 @@ class TestMockAgent:
 
         assert event_emitted
 
-    # Tests that the agent can remove a listener from an event
     def test_remove_listener(self):
         agent = MockAgent()
         event_name = "test_event"
@@ -125,13 +32,12 @@ class TestMockAgent:
 
     def test_agent_receive_message(self):
         agent = MockAgent()
-        message = Inform(body="Hello, world!")
+        assert agent.receivable_messages == {Ack}
+
+        message = Ack()
         response = agent.receive(message)
         assert isinstance(response, Iterable)
-        assert next(response).body == f"Ack: {message.id}"
 
-    # Tests that the agent can correctly retrieve a set of receivable intents
-    def test_get_receivable_intents(self):
-        agent = MockAgent()
-        agent.receivable_messages = {Inform}
-        assert agent.receivable_intents == {"inform"}
+        reply: Ack = next(response)
+        assert reply.intent == "ack"
+        assert reply.parent == message

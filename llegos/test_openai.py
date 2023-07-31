@@ -1,11 +1,12 @@
-from typing import Literal, Optional
+from typing import Literal
 
 import pytest
 from pydantic import BaseModel
 
-from llegos.asyncio import AsyncAgent, EphemeralMessage
-from llegos.openai import callable_schemas, parse_function_call, prepare_async_call
-from llegos.test_mocks import MockAsyncAgent
+from llegos.asyncio import AsyncAgent
+from llegos.messages import Ack
+from llegos.openai import callable_schemas, parse_function_call, prepare_call
+from llegos.test_utilities import ChatMessage, EphemeralMessage, MockAsyncAgent
 
 
 class FunctionCallCompletion(BaseModel):
@@ -17,7 +18,7 @@ class MockCompletion(BaseModel):
 
 
 class TestCallableSchemas:
-    def test_callable_schemas(self):
+    def test_function_schemas(self):
         llegos = [MockAsyncAgent(), EphemeralMessage]
         callables, schemas = callable_schemas(llegos)
 
@@ -30,17 +31,9 @@ class TestCallableSchemas:
             assert "required" in schema
 
         for llego in llegos:
-            match llego:
-                case MockAsyncAgent():
-                    key = str(llego.id)
-                    assert key in callables
-                    assert callables[key][0] == "receive"
-                    assert callables[key][1] == llego.receive
-                case type():
-                    key = llego.__name__
-                    assert key in callables
-                    assert callables[key][0] == "init"
-                    assert callables[key][1] == llego
+            key = str(llego.id) if isinstance(llego, AsyncAgent) else llego.__name__
+            assert key in callables
+            assert callables[key] == llego
 
 
 class TestParseFunctionCall:
@@ -71,12 +64,12 @@ class TestPrepareAsyncCall:
     async def test_create_message(self):
         llegos = [
             AsyncAgent(),
-            EphemeralMessage,
+            ChatMessage,
         ]
-        schemas, function_call = prepare_async_call(llegos)
+        schemas, function_call = prepare_call(llegos)
         assert len(schemas) == 2
         assert schemas[0]["name"] == str(llegos[0].id)
-        assert schemas[1]["name"] == "EphemeralMessage"
+        assert schemas[1]["name"] == "ChatMessage"
 
         completion = MockCompletion.parse_obj(
             {
@@ -84,8 +77,8 @@ class TestPrepareAsyncCall:
                     {
                         "content": {
                             "function_call": {
-                                "name": "EphemeralMessage",
-                                "arguments": '{ "intent": "chat", "body": "Hello" }',
+                                "name": "ChatMessage",
+                                "arguments": '{ "body": "Hello" }',
                             }
                         }
                     }
@@ -93,12 +86,10 @@ class TestPrepareAsyncCall:
             }
         )
 
-        message: Optional[EphemeralMessage] = None
-        async for result in function_call(completion):
-            message = result
+        message: ChatMessage = function_call(completion)
 
         assert message
-        assert message.intent == "chat"
+        assert message.intent == "chat_message"
         assert message.body == "Hello"
 
     @pytest.mark.asyncio
@@ -106,9 +97,9 @@ class TestPrepareAsyncCall:
         llegos = [
             MockAsyncAgent(),
             MockAsyncAgent(),
-            EphemeralMessage,
+            ChatMessage,
         ]
-        schemas, async_function_call = prepare_async_call(llegos)
+        schemas, function_call = prepare_call(llegos)
 
         completion = MockCompletion.parse_obj(
             {
@@ -117,7 +108,7 @@ class TestPrepareAsyncCall:
                         "content": {
                             "function_call": {
                                 "name": str(llegos[1].id),
-                                "arguments": '{ "intent": "inform", "body": "Hello" }',
+                                "arguments": '{ "intent": "ack" }',
                             }
                         }
                     }
@@ -125,26 +116,20 @@ class TestPrepareAsyncCall:
             }
         )
 
-        results: list[EphemeralMessage] = []
-        async for message in async_function_call(completion):
-            results.append(message)
-
-        assert len(results) == 1
-
-        ack = results[0]
+        ack: EphemeralMessage = await anext(function_call(completion))
 
         assert ack
         assert ack.intent == "ack"
-        assert ack.body.startswith("Ack: ")
+        assert ack.parent is not None  # the message sent by the function call
 
     @pytest.mark.asyncio
     async def test_unknown_completion_call(self):
         llegos = [
             MockAsyncAgent(),
             MockAsyncAgent(),
-            EphemeralMessage,
+            Ack,
         ]
-        schemas, async_function_call = prepare_async_call(llegos)
+        schemas, function_call = prepare_call(llegos)
         completion = MockCompletion.parse_obj(
             {
                 "choices": [
@@ -160,5 +145,4 @@ class TestPrepareAsyncCall:
             }
         )
         with pytest.raises(KeyError):
-            async for reply in async_function_call(completion):
-                ...
+            function_call(completion)

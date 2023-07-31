@@ -6,7 +6,7 @@ from networkx import DiGraph
 from pydantic import Field
 
 from llegos.asyncio import AsyncAgent
-from llegos.messages import Action, Inform, Step, message_path, nearest_parent
+from llegos.messages import Action, Inform, Step, find_ancestor, message_path
 
 
 class Loss(Inform):
@@ -94,7 +94,7 @@ class WorldModelAgent(AsyncAgent, ABC):
     @abstractmethod
     async def backward(self, realized_step: Step):
         "Update the model based on the material step."
-        nearest_parent(realized_step, Action)
+        find_ancestor(realized_step, Action)
 
 
 class ReinforcementAgent(AsyncAgent, ABC):

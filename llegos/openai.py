@@ -1,8 +1,10 @@
 import json
 from typing import Iterable
 
+from openai.openai_object import OpenAIObject
+
 from llegos.asyncio import AsyncAgent
-from llegos.ephemeral import EphemeralAgent, EphemeralMessage
+from llegos.ephemeral import EphemeralAgent, EphemeralMessage, EphemeralObject
 from llegos.messages import message_chain
 
 
@@ -19,18 +21,13 @@ def callable_schemas(
     schemas = []
     callables = {}
     for llego in llegos:
-        if isinstance(llego, EphemeralAgent):
-            schema = llego.receive_schema
-            schemas.append(schema)
-            callables[schema["name"]] = ("receive", llego.receive)
-        else:
-            schema = llego.init_schema
-            schemas.append(schema)
-            callables[schema["name"]] = ("init", llego)
+        schema = llego.init_schema if isinstance(llego, type) else llego.call_schema
+        schemas.append(schema)
+        callables[schema["name"]] = llego
     return callables, schemas
 
 
-def parse_function_call(completion):
+def parse_function_call(completion: OpenAIObject):
     call = completion.choices[0].content["function_call"]
     return call["name"], json.loads(call["arguments"])
 
@@ -38,29 +35,15 @@ def parse_function_call(completion):
 def prepare_call(llegos: Iterable[EphemeralAgent | type[EphemeralMessage]]):
     callables, schemas = callable_schemas(llegos)
 
-    def function_call(completion):
+    def function_call(completion: OpenAIObject):
         name, kwargs = parse_function_call(completion)
-        method, callable = callables[name]
-        match method:
-            case "receive":
-                yield from callable(EphemeralMessage(**kwargs))
-            case "init":
-                yield callable(**kwargs)
+        callable = callables[name]
+
+        if isinstance(callable, type) and issubclass(callable, EphemeralObject):
+            init_object = callable
+            return init_object(**kwargs)
+
+        agent_receive = callable(EphemeralMessage(**kwargs))
+        return agent_receive
 
     return schemas, function_call
-
-
-def prepare_async_call(llegos: Iterable[AsyncAgent | type[EphemeralMessage]]):
-    callables, schemas = callable_schemas(llegos)
-
-    async def async_function_call(completion):
-        name, kwargs = parse_function_call(completion)
-        method, callable = callables[name]
-        match method:
-            case "receive":
-                async for reply in callable(EphemeralMessage(**kwargs)):
-                    yield reply
-            case "init":
-                yield callable(**kwargs)
-
-    return schemas, async_function_call

@@ -1,8 +1,8 @@
+import re
 from abc import ABC
 from collections.abc import Generator
 from datetime import datetime
 from functools import partial
-from textwrap import dedent
 from typing import Callable, Iterable, Optional, TypeVar
 from uuid import uuid4
 
@@ -11,15 +11,14 @@ from pydantic import UUID4, BaseModel, Field
 from pyee import EventEmitter
 from sorcery import delegate_to_attr
 
-from llegos.messages import Intent
-
 
 class EphemeralObject(BaseModel, ABC):
     class Config:
         arbitrary_types_allowed = True
+        extra = "allow"
 
     id: UUID4 = Field(default_factory=uuid4)
-    metadata: dict = Field(default_factory=dict)
+    metadata: dict = Field(default_factory=dict, exclude=True)
 
     def __str__(self):
         return yaml.dump(self.dict(), sort_keys=False)
@@ -50,8 +49,11 @@ class EphemeralObject(BaseModel, ABC):
             "name": cls.__name__,
             "description": cls.__doc__,
             "parameters": parameters,
-            "required": schema["required"],
+            "required": schema.get("required", []),
         }
+
+
+_camel_case_pattern = re.compile(r"(?<!^)(?=[A-Z])")
 
 
 class EphemeralMessage(EphemeralObject):
@@ -65,25 +67,14 @@ class EphemeralMessage(EphemeralObject):
             EphemeralObject: lambda a: a.id,
         }
 
-    intent: Intent = Field(
-        description=dedent(
-            """\
-            Agents call methods named after the intent of the message.
-
-            A curated set of intents to consider:
-            - chat = "chat about this topic", "talk about this topic", etc.
-            - request = "request this thing", "ask for this thing", etc.
-            - response = "responding with this thing", "replying with this thing", etc.
-            - query = "query for information"
-            - inform = "inform of new data", "tell about this thing", etc.
-            - proxy = "route this message to another agent"
-            - step = process the environment, a la multi agent reinforcement learning
-            - be = "be this way", "act as if you are", etc.
-            - do = "do this thing", "perform this action", etc.
-            - check = "check if this is true", "verify this", etc.
-            """
-        ),
+    intent: str = Field(
+        description="the method to call on the receiver",
     )
+    context: dict = Field(
+        default_factory=dict,
+        description="data to pass through the message chain",
+    )
+
     created_at: datetime = Field(default_factory=datetime.utcnow)
     sender: Optional[EphemeralObject] = Field(
         default=None, serialization_alias="sender_id"
@@ -95,34 +86,48 @@ class EphemeralMessage(EphemeralObject):
         default=None, serialization_alias="parent_id"
     )
 
+    def __init__(self, **kwargs):
+        if "intent" not in kwargs:
+            kwargs["intent"] = re.sub(
+                _camel_case_pattern, "_", self.__class__.__name__
+            ).lower()
+        super().__init__(**kwargs)
+
     @property
     def role(self):
         return self.sender.role
 
-    # def lift(self, cls: type["EphemeralMessage"], **kwargs) -> "EphemeralMessage":
-    #     attrs = self.copy(exclude={"id", "created_at"})
-    #     attrs["intent"] = cls.__fields__["intent"].default
-    #     attrs.update(kwargs)
-    #     return self.__class__(**attrs)
+    def forward_to(self, receiver: EphemeralObject):
+        return self.__class__.forward(self, to=receiver)
 
     @classmethod
-    def reply_to(cls, message: "EphemeralMessage", **kwargs) -> "EphemeralMessage":
+    def lift(cls, message: "EphemeralMessage", **kwargs):
+        attrs = message.dict(exclude={"id", "created_at"})
+        for field in cls.__fields__.values():
+            if field.default is not None:
+                attrs[field.name] = field.default
+        attrs.update(kwargs)
+        return cls(**attrs)
+
+    @classmethod
+    def reply_to(cls, message: "EphemeralMessage", **kwargs):
         attrs = dict(
             sender=message.receiver,
             receiver=message.sender,
             parent=message,
-            intent=cls.__fields__["intent"].default,
         )
         attrs.update(kwargs)
         return cls(**attrs)
 
     @classmethod
-    def forward(cls, message: "EphemeralMessage", **kwargs) -> "EphemeralMessage":
+    def forward(
+        cls, message: "EphemeralMessage", to: Optional[EphemeralObject] = None, **kwargs
+    ) -> "EphemeralMessage":
         attrs = dict(
             sender=message.receiver,
+            reciever=to,
             body=message.body,
             parent=message,
-            intent=cls.__fields__["intent"].default,
         )
         attrs.update(kwargs)
         return cls(**attrs)
@@ -159,10 +164,20 @@ class EphemeralAgent(EphemeralObject):
     )
 
     @property
-    def receivable_intents(self):
+    def call_schema(self):
         return {
-            message.__fields__["intent"].default for message in self.receivable_messages
+            "name": str(self.id),
+            "description": self.public_description,
+            "parameters": {
+                "message": {
+                    "oneOf": [cls.init_schema for cls in self.receivable_messages]
+                },
+            },
+            "required": ["message"],
         }
+
+    def __call__(self, message: EphemeralMessage) -> Reply[EphemeralMessage]:
+        return self.receive(message)
 
     def receive(self, message: EphemeralMessage) -> Reply[EphemeralMessage]:
         self.emit(message.intent, message)
@@ -175,30 +190,9 @@ class EphemeralAgent(EphemeralObject):
             case EphemeralMessage():
                 yield response
 
-    def __or__(self, other: "EphemeralAgent"):
-        def generator(message: EphemeralMessage):
-            for reply in self.receive(message):
-                yield reply
-                yield from other.receive(reply)
-
-        return generator
-
     @property
-    def public_description(self):
-        return self.__class__.__doc__
-
-    @property
-    def receive_schema(self):
-        return {
-            "name": str(self.id),
-            "description": self.public_description,
-            "parameters": {
-                "title": "message",
-                "type": "object",
-                "oneOf": [cls.init_schema for cls in self.receivable_messages],
-            },
-            "required": ["message"],
-        }
+    def public_description(self) -> str:
+        return self.__class__.__doc__ or ""
 
 
 Applicator = Callable[[EphemeralMessage], Iterable[EphemeralMessage]]

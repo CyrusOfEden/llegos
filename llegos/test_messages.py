@@ -1,13 +1,89 @@
-from llegos.ephemeral import EphemeralMessage
+import pytest
+
 from llegos.messages import message_list
+from llegos.test_utilities import Ack, ChatMessage, MockAgent
+
+
+class MessagesTest:
+    def test_message_init(self):
+        message = Ack(
+            sender=MockAgent(),
+            receiver=MockAgent(),
+        )
+        assert message.intent == "ack"
+        assert isinstance(message.sender, MockAgent)
+        assert isinstance(message.receiver, MockAgent)
+        assert message.parent is None
+
+    def test_message_reply_to(self):
+        message = Ack(
+            sender=MockAgent(),
+            receiver=MockAgent(),
+        )
+        reply = Ack.reply_to(message)
+        assert reply.intent == "ack"
+        assert reply.sender == message.receiver
+        assert reply.receiver == message.sender
+        assert reply.parent == message
+
+    def test_message_forward(self):
+        message = Ack(
+            sender=MockAgent(),
+            receiver=MockAgent(),
+        )
+        new_receiver = MockAgent()
+        fwd = Ack.forward(message, to=new_receiver)
+
+        assert fwd.intent == "ack"
+        assert fwd.sender == message.receiver
+        assert fwd.receiver is None
+        assert fwd.parent == message
+
+    def test_message_role_derived_from_sender_role(self):
+        sender = MockAgent(role="system")
+        message = Ack(
+            body="Hello, world!",
+            sender=sender,
+        )
+        assert message.role == "system"
+
+    def test_invalid_sender(self):
+        with pytest.raises(ValueError):
+            Ack(
+                sender="invalid sender",
+                receiver=MockAgent(),
+            )
+
+    def test_invalid_receiver(self):
+        with pytest.raises(ValueError):
+            Ack(
+                sender=MockAgent(),
+                receiver="invalid_receiver",
+            )
+
+    def test_invalid_parent(self):
+        with pytest.raises(ValueError):
+            Ack(
+                sender=MockAgent(),
+                receiver=MockAgent(),
+                parent="invalid",
+            )
+
+    def test_invalid_created_at(self):
+        with pytest.raises(ValueError):
+            Ack(
+                sender=MockAgent(),
+                receiver=MockAgent(),
+                created_at="invalid",
+            )
 
 
 class TestMessageList:
     def test_replies(self):
-        m1 = EphemeralMessage(body="Initial message", intent="chat")
-        m2 = EphemeralMessage(body="First reply", parent=m1, intent="chat")
-        m2_1 = EphemeralMessage(body="Second reply", parent=m2, intent="chat")
-        m2_2 = EphemeralMessage(body="Third reply", parent=m2, intent="chat")
+        m1 = ChatMessage(body="Initial message", intent="chat")
+        m2 = ChatMessage(body="First reply", parent=m1, intent="chat")
+        m2_1 = ChatMessage(body="Second reply", parent=m2, intent="chat")
+        m2_2 = ChatMessage(body="Third reply", parent=m2, intent="chat")
 
         assert message_list(m2_1) == [m1, m2, m2_1]
         assert message_list(m2_2, height=2) == [m2, m2_2]

@@ -85,6 +85,6 @@ async def async_propogate_all(
 async def async_message_graph(messages: AsyncIterable[EphemeralMessage]) -> DiGraph:
     g = DiGraph()
     async for message in messages:
-        if message.reply_to:
-            g.add_edge(message.reply_to, message)
+        if message.parent:
+            g.add_edge(message.parent, message)
     return g
