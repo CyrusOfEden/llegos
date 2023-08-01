@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 from llegos.asyncio import AsyncAgent
 from llegos.messages import Ack
-from llegos.openai import callable_schemas, parse_function_call, prepare_call
+from llegos.openai import callable_schemas, parse_function_call, prepare_functions
 from llegos.test_utilities import ChatMessage, EphemeralMessage, MockAsyncAgent
 
 
@@ -66,7 +66,7 @@ class TestPrepareAsyncCall:
             AsyncAgent(),
             ChatMessage,
         ]
-        schemas, function_call = prepare_call(llegos)
+        schemas, function_call = prepare_functions(llegos)
         assert len(schemas) == 2
         assert schemas[0]["name"] == str(llegos[0].id)
         assert schemas[1]["name"] == "ChatMessage"
@@ -99,7 +99,7 @@ class TestPrepareAsyncCall:
             MockAsyncAgent(),
             ChatMessage,
         ]
-        schemas, function_call = prepare_call(llegos)
+        schemas, function_call = prepare_functions(llegos)
 
         completion = MockCompletion.parse_obj(
             {
@@ -129,7 +129,7 @@ class TestPrepareAsyncCall:
             MockAsyncAgent(),
             Ack,
         ]
-        schemas, function_call = prepare_call(llegos)
+        schemas, function_call = prepare_functions(llegos)
         completion = MockCompletion.parse_obj(
             {
                 "choices": [

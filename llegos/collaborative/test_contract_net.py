@@ -16,67 +16,22 @@ https://en.m.wikipedia.org/wiki/Contract_Net_Protocol
 """
 
 import pytest
-from openai import ChatCompletion
 
-from llegos.asyncio import AsyncAgent, Field
 from llegos.collaborative.contract_net import (
     Accept,
     CallForProposal,
     ContractNet,
     Contractor,
     Failure,
-    Inform,
     Manager,
     Propose,
     Reject,
     Request,
 )
-from llegos.openai import prepare_call
-
-
-class OpenAIAgent(AsyncAgent):
-    completion: ChatCompletion = Field(default_factory=ChatCompletion)
 
 
 class InvariantError(TypeError):
     ...
-
-
-class Manager(Manager, OpenAIAgent):
-    async def propose(self, message: Propose) -> Accept | Reject:
-        schemas, extract_message = prepare_call([Accept, Reject])
-        # completion = await self.completion.acreate(
-        #     prompt=f"{message.sender} proposes {message.content}. Do you agree?",
-        #     functions=schemas,
-        # )
-        # return next(extract_message(completion))
-
-    async def inform(self, message: Inform) -> None:
-        ...
-
-    async def failure(self, message: Failure) -> None:
-        ...
-
-
-class Contractor(Contractor, OpenAIAgent):
-    async def call_for_proposal(self, message: CallForProposal) -> Propose | Reject:
-        schemas, extract_message = prepare_call([Propose, Reject])
-        # completion = await self.completion.acreate(
-        #     prompt=f"{message.sender} requests {message.objective}. Do you agree?",
-        #     functions=schemas,
-        # )
-        # return next(extract_message(completion))
-
-    async def accept(self, message: Accept) -> Inform | Failure:
-        schemas, extract_message = prepare_call([Inform, Failure])
-        # completion = await self.completion.acreate(
-        #     prompt=f"{message.sender} accepts your proposal. Now, what is your response?",
-        #     functions=schemas,
-        # )
-        # return next(extract_message(completion))
-
-    async def reject(self, message: Reject) -> None:
-        ...
 
 
 class DemotivatedWorker(Contractor):

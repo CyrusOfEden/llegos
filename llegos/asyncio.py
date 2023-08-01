@@ -1,6 +1,6 @@
-from collections.abc import AsyncGenerator, Awaitable
+from collections.abc import AsyncGenerator, AsyncIterable, Awaitable, Iterable
 from functools import partial
-from typing import AsyncIterable, Callable, Iterable, Optional, TypeVar
+from typing import Callable, Optional, TypeVar
 
 from networkx import DiGraph
 from pyee.asyncio import AsyncIOEventEmitter
@@ -35,13 +35,18 @@ class AsyncAgent(EphemeralAgent):
         response = getattr(self, message.intent)(message)
 
         match response:
-            case AsyncGenerator():
+            case AsyncIterable():
                 async for reply in response:
+                    yield reply
+            case Iterable():
+                for reply in response:
                     yield reply
             case Awaitable():
                 reply = await response
                 if reply:
                     yield reply
+            case EphemeralMessage():
+                yield response
 
 
 AsyncApplicator = Callable[[EphemeralMessage], AsyncIterable[EphemeralMessage]]

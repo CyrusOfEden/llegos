@@ -1,9 +1,9 @@
 import re
 from abc import ABC
-from collections.abc import Generator
+from collections.abc import Iterable
 from datetime import datetime
 from functools import partial
-from typing import Callable, Iterable, Optional, TypeVar
+from typing import Callable, Optional, TypeVar
 from uuid import uuid4
 
 import yaml
@@ -185,7 +185,7 @@ class EphemeralAgent(EphemeralObject):
         response = getattr(self, message.intent)(message)
 
         match response:
-            case Generator():
+            case Iterable():
                 yield from response
             case EphemeralMessage():
                 yield response

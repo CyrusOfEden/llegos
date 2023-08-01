@@ -5,6 +5,28 @@ from networkx import DiGraph
 from llegos.ephemeral import EphemeralMessage
 
 
+class UserMessage(EphemeralMessage):
+    @property
+    def role(self):
+        return "user"
+
+
+class SystemMessage(EphemeralMessage):
+    @property
+    def role(self):
+        return "system"
+
+
+class AssistantMessage(EphemeralMessage):
+    @property
+    def role(self):
+        return "assistant"
+
+
+class Chat(EphemeralMessage):
+    content: str
+
+
 class Ack(EphemeralMessage):
     ...
 

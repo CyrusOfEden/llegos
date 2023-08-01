@@ -2,7 +2,7 @@ from contextvars import ContextVar
 from operator import itemgetter
 from typing import AsyncIterable
 
-from networkx import DiGraph
+from networkx import MultiGraph
 from sorcery import delegate_to_attr
 
 from llegos.asyncio import AsyncAgent, EphemeralMessage, async_propogate
@@ -21,7 +21,7 @@ class NetworkAgent(AsyncAgent):
 
 
 class AgentNetwork(NetworkAgent, SystemAgent):
-    graph: DiGraph = Field(default_factory=DiGraph, include=False, exclude=True)
+    graph: MultiGraph = Field(default_factory=MultiGraph, include=False, exclude=True)
 
     def __contains__(self, key: str | NetworkAgent) -> bool:
         match key:

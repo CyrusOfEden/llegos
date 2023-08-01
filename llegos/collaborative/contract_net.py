@@ -3,10 +3,10 @@ Implements the Iterative Contract Net protocol as depicted in this diagram:
 https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Icnp.svg/880px-Icnp.svg.png
 """
 
-from abc import ABC, abstractmethod
 
-from llegos.messages import EphemeralMessage, find_closest
+from llegos.messages import EphemeralMessage, SystemMessage, UserMessage, find_closest
 from llegos.networks import AgentNetwork, Field, NetworkAgent
+from llegos.openai import OpenAIAgent, prepare_functions, prepare_messages
 
 
 class Request(EphemeralMessage):
@@ -44,8 +44,7 @@ class Response(EphemeralMessage):
     result: str
 
 
-class Contractor(NetworkAgent, ABC):
-    @abstractmethod
+class Contractor(OpenAIAgent, NetworkAgent):
     async def call_for_proposal(self, message: CallForProposal) -> Propose | Reject:
         accept = True
         if accept:
@@ -53,19 +52,17 @@ class Contractor(NetworkAgent, ABC):
         else:
             return Reject.reply_to(message, reason="I can't do it")
 
-    @abstractmethod
     async def accept(self, message: Accept) -> Inform | Failure:
         try:
             return Inform.reply_to(message, result="I did it!")
         except Exception as e:
             return Failure.reply_to(message, reason=str(e))
 
-    @abstractmethod
     async def reject(self, message: Reject) -> None:
         ...
 
 
-class Manager(NetworkAgent, ABC):
+class Manager(OpenAIAgent, NetworkAgent):
     @property
     def receptive_contractors(self):
         return self.receptive_agents(CallForProposal)
@@ -74,22 +71,24 @@ class Manager(NetworkAgent, ABC):
         for contractor in self.receptive_contractors:
             yield CallForProposal.forward(message, to=contractor)
 
-    @abstractmethod
     async def propose(self, message: Propose) -> Reject | Propose | Accept:
-        "Receive a proposal and return an acceptance or a rejection"
-        accept = False
-        revise = True
-        if accept:
-            return Accept.reply_to(message)
-        elif revise:
-            return CallForProposal.reply_to(message, body="Try again.")
-        else:
-            return Reject.reply_to(message)
+        functions, function_call = prepare_functions(
+            [Accept, CallForProposal, Reject],
+        )
+
+        messages = prepare_messages(
+            system=SystemMessage(""), prompt=UserMessage.reply_to(message, content="")
+        )
+
+        completion = await self.completion.acreate(
+            functions=functions, messages=messages
+        )
+
+        return function_call(completion)
 
     async def inform(self, result: Inform):
         yield Inform.forward(result, to=self.network)
 
-    @abstractmethod
     async def failure(self, failure: Failure):
         yield Failure.forward(failure, to=self.network)
 
@@ -103,7 +102,6 @@ class ContractNet(AgentNetwork):
 
         for priority, contractor in enumerate(self.contractors):
             self.graph.add_edge(self.manager, contractor, weight=priority)
-            self.graph.add_edge(contractor, self.manager, weight=priority)
 
     async def request(self, task: Request):
         return task.forward_to(self.manager)

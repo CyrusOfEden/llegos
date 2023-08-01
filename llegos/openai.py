@@ -1,18 +1,24 @@
 import json
 from typing import Iterable
 
+from openai import ChatCompletion
 from openai.openai_object import OpenAIObject
 
 from llegos.asyncio import AsyncAgent
-from llegos.ephemeral import EphemeralAgent, EphemeralMessage, EphemeralObject
-from llegos.messages import message_chain
+from llegos.ephemeral import EphemeralAgent, EphemeralMessage, EphemeralObject, Field
+from llegos.messages import SystemMessage, message_chain
+
+
+class OpenAIAgent(AsyncAgent):
+    completion: ChatCompletion = Field()
+
+
+def message_dict(message: EphemeralMessage):
+    return {"role": message.role, "content": str(message)}
 
 
 def message_dicts(message: EphemeralMessage, history: int = 12):
-    return [
-        {"role": message.role, "content": str(message)}
-        for message in message_chain(message, height=history)
-    ]
+    return [message_dict(m) for m in message_chain(message, height=history)]
 
 
 def callable_schemas(
@@ -32,7 +38,13 @@ def parse_function_call(completion: OpenAIObject):
     return call["name"], json.loads(call["arguments"])
 
 
-def prepare_call(llegos: Iterable[EphemeralAgent | type[EphemeralMessage]]):
+def prepare_messages(system: SystemMessage, prompt: EphemeralMessage):
+    return [message_dict(system), *message_dicts(prompt)]
+
+
+def prepare_functions(
+    llegos: Iterable[EphemeralAgent | type[EphemeralMessage]],
+):
     callables, schemas = callable_schemas(llegos)
 
     def function_call(completion: OpenAIObject):
