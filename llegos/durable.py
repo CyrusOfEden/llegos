@@ -1,5 +1,4 @@
 from datetime import datetime
-from textwrap import dedent
 from uuid import uuid4
 
 from beartype.typing import Optional
@@ -14,7 +13,6 @@ from llegos.ephemeral import (
     EphemeralMessage,
     EphemeralObject,
 )
-from llegos.messages import Intent
 
 
 class AbstractDurableObject(SQLModel, EphemeralObject):
@@ -42,26 +40,6 @@ class AbstractDurableObject(SQLModel, EphemeralObject):
 class DurableMessage(AbstractDurableObject, EphemeralMessage, table=True):
     __tablename__ = "messages"
 
-    intent: Intent = Field(
-        description=dedent(
-            """\
-            Agents call methods named after the intent of the message.
-
-            A curated set of intents to consider:
-            - chat = "chat about this topic", "talk about this topic", etc.
-            - request = "request this thing", "ask for this thing", etc.
-            - response = "responding with this thing", "replying with this thing", etc.
-            - query = "query for information"
-            - inform = "inform of new data", "tell about this thing", etc.
-            - proxy = "route this message to another agent"
-            - step = process the environment, a la multi agent reinforcement learning
-            - be = "be this way", "act as if you are", etc.
-            - do = "do this thing", "perform this action", etc.
-            - check = "check if this is true", "verify this", etc.
-            """
-        ),
-        index=True,
-    )
     created_at: datetime = Field(default_factory=datetime.utcnow)
     sender_id: Optional[uuid4] = Field(default=None, index=True, nullable=True)
     receiver_id: Optional[uuid4] = Field(default=None, index=True, nullable=True)
