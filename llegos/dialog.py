@@ -2,8 +2,12 @@ from abc import ABC, abstractmethod
 from itertools import permutations
 
 from llegos.asyncio import AsyncReply
-from llegos.messages import Dialog
+from llegos.ephemeral import EphemeralMessage
 from llegos.networks import AgentNetwork, Field, NetworkAgent
+
+
+class Dialog(EphemeralMessage):
+    message: str
 
 
 class DialogAgent(NetworkAgent, ABC):
@@ -12,7 +16,7 @@ class DialogAgent(NetworkAgent, ABC):
         return self.receptive_agents(Dialog)
 
     @abstractmethod
-    async def dialog(self, message: Dialog) -> AsyncReply[Dialog]:
+    async def dialog(self, d: Dialog) -> AsyncReply[Dialog]:
         "Yield 0 or more messages"
         ...
 
