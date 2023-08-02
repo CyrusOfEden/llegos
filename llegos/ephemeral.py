@@ -13,8 +13,6 @@ from pydantic import UUID4, BaseModel, Field
 from pyee import EventEmitter
 from sorcery import delegate_to_attr
 
-from llegos.cognition import Cognition
-
 
 class EphemeralObject(BaseModel, ABC):
     class Config:
@@ -32,6 +30,10 @@ class EphemeralObject(BaseModel, ABC):
 
 
 _camel_case_pattern = re.compile(r"(?<!^)(?=[A-Z])")
+
+
+class EphemeralCognition(EphemeralObject, ABC):
+    ...
 
 
 class EphemeralMessage(EphemeralObject):
@@ -122,7 +124,7 @@ Reply = Optional[T] | Iterable[T]
 
 
 class EphemeralAgent(EphemeralObject):
-    cognition: Cognition = Field()
+    cognition: EphemeralCognition = Field()
     role: str = Field(
         default="user", description="used to set the role for messages from this node"
     )

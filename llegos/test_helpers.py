@@ -1,8 +1,7 @@
 from openai import ChatCompletion
 
 from llegos.asyncio import AsyncAgent
-from llegos.cognition import Cognition
-from llegos.ephemeral import EphemeralAgent, EphemeralMessage, Field
+from llegos.ephemeral import EphemeralAgent, EphemeralCognition, EphemeralMessage, Field
 from llegos.messages import Ack
 
 
@@ -10,8 +9,8 @@ class ChatMessage(EphemeralMessage):
     body: str
 
 
-class MockCognition(Cognition):
-    llm: ChatCompletion = Field()
+class MockCognition(EphemeralCognition):
+    language: ChatCompletion = Field(default_factory=ChatCompletion)
     working_memory: list[EphemeralMessage] = Field(default_factory=list)
     short_term_memory: list[EphemeralMessage] = Field(default_factory=list)
     long_term_memory: list[EphemeralMessage] = Field(default_factory=list)

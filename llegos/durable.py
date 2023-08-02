@@ -8,7 +8,12 @@ from sorcery import delegate_to_attr
 from sqlalchemy import text
 from sqlmodel import Field, Relationship, SQLModel
 
-from llegos.ephemeral import EphemeralAgent, EphemeralMessage, EphemeralObject
+from llegos.ephemeral import (
+    EphemeralAgent,
+    EphemeralCognition,
+    EphemeralMessage,
+    EphemeralObject,
+)
 from llegos.messages import Intent
 
 
@@ -82,18 +87,33 @@ class DurableMessage(AbstractDurableObject, EphemeralMessage, table=True):
     )
 
 
+class DurableCognition(AbstractDurableObject, EphemeralCognition):
+    __tablename__ = "cognition"
+
+    agent_id: UUID4 = Field(nullable=False, index=True)
+    agent: "DurableAgent" = Relationship(
+        back_populates="cognition",
+        sa_relationship_kwargs={"lazy": "join"},
+    )
+
+
 class DurableAgent(AbstractDurableObject, EphemeralAgent):
     __tablename__ = "agents"
 
+    cognition: DurableCognition = Relationship(
+        foreign_key="cognition.agent_id",
+        back_populates="agent",
+        sa_relationship_kwargs={"lazy": "join"},
+    )
     messages_sent: list[DurableMessage] = Relationship(
+        foreign_key="messages.sender_id",
         back_populates="sender",
         sa_relationship_kwargs={"lazy": "select"},
-        foreign_key="messages.sender_id",
     )
     messages_received: list[DurableMessage] = Relationship(
+        foreign_key="messages.receiver_id",
         back_populates="receiver",
         sa_relationship_kwargs={"lazy": "select"},
-        foreign_key="messages.receiver_id",
     )
 
 
