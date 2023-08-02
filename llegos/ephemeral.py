@@ -30,32 +30,6 @@ class EphemeralObject(BaseModel, ABC):
     def __hash__(self):
         return hash(self.id)
 
-    @classmethod
-    @property
-    def init_schema(cls):
-        schema = cls.schema()
-        if "properties" not in schema:
-            schema = schema["definitions"][cls.__name__]
-
-        parameters = {}
-        for key, value in schema["properties"].items():
-            if key == "id":
-                continue
-            elif value.get("serialization_alias", "").endswith("_id"):
-                parameters[f"{key}_id"] = {
-                    "title": value["title"],
-                    "type": "string",
-                }
-            else:
-                parameters[key] = value
-
-        return {
-            "name": cls.__name__,
-            "description": cls.__doc__,
-            "parameters": parameters,
-            "required": schema.get("required", []),
-        }
-
 
 _camel_case_pattern = re.compile(r"(?<!^)(?=[A-Z])")
 
@@ -173,19 +147,6 @@ class EphemeralAgent(EphemeralObject):
         default_factory=set,
         description="set of intents that this agent can receive",
     )
-
-    @property
-    def call_schema(self):
-        return {
-            "name": str(self.id),
-            "description": self.public_description,
-            "parameters": {
-                "message": {
-                    "oneOf": [cls.init_schema for cls in self.receivable_messages]
-                },
-            },
-            "required": ["message"],
-        }
 
     def __call__(self, message: EphemeralMessage) -> Reply[EphemeralMessage]:
         return self.receive(message)
