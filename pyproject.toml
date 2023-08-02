@@ -25,6 +25,8 @@ janus = "^1.0.0"
 aiometer = "^0.4.0"
 sqlmodel = "^0.0.8"
 python-statemachine = "^2.1.0"
+beartype = "^0.15.0"
+deepmerge = "^1.1.0"
 
 [tool.poetry.group.dev]
 optional = true

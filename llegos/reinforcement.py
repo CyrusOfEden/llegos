@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from operator import itemgetter
-from typing import AsyncIterable
 
+from beartype.typing import AsyncIterable
 from networkx import DiGraph
 from pydantic import Field
 

@@ -1,7 +1,7 @@
-from typing import Iterable
+from beartype.typing import Iterable
 
 from llegos.messages import Ack
-from llegos.test_utilities import MockAgent
+from llegos.test_helpers import MockAgent
 
 
 class TestMockAgent:

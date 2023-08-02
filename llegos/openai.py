@@ -1,6 +1,7 @@
 import json
-from typing import Iterable
 
+from beartype import beartype
+from beartype.typing import Iterable
 from openai import ChatCompletion
 from openai.openai_object import OpenAIObject
 
@@ -21,6 +22,7 @@ def message_dicts(message: EphemeralMessage, history: int = 12):
     return [message_dict(m) for m in message_chain(message, height=history)]
 
 
+@beartype
 def callable_schemas(
     llegos: Iterable[EphemeralAgent | AsyncAgent | type[EphemeralMessage]],
 ) -> tuple[dict[str, tuple[str, callable]], list[dict]]:

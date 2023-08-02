@@ -16,15 +16,15 @@ class Insight(Knowledge):
 
 
 class Learner(NetworkAgent, OpenAIAgent):
-    async def knowledge(self, message: Knowledge):
+    def knowledge(self, message: Knowledge):
         ...
 
-    async def insight(self, message: Insight):
+    def insight(self, message: Insight):
         ...
 
 
 class Guide(Learner):
-    async def observation(self, message: Observation):
+    def observation(self, message: Observation):
         ...
 
 

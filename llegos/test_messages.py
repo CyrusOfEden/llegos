@@ -1,7 +1,7 @@
 import pytest
 
 from llegos.messages import message_list
-from llegos.test_utilities import Ack, ChatMessage, MockAgent
+from llegos.test_helpers import Ack, ChatMessage, MockAgent
 
 
 class MessagesTest:

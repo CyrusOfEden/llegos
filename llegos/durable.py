@@ -1,8 +1,8 @@
 from datetime import datetime
 from textwrap import dedent
-from typing import Optional
 from uuid import uuid4
 
+from beartype.typing import Optional
 from pydantic import UUID4
 from sorcery import delegate_to_attr
 from sqlalchemy import text
@@ -85,9 +85,6 @@ class DurableMessage(AbstractDurableObject, EphemeralMessage, table=True):
 class DurableAgent(AbstractDurableObject, EphemeralAgent):
     __tablename__ = "agents"
 
-    state: "DurableAgentState" = Relationship(
-        back_populates="agent", sa_relationship_args={"lazy": "join"}
-    )
     messages_sent: list[DurableMessage] = Relationship(
         back_populates="sender",
         sa_relationship_kwargs={"lazy": "select"},
@@ -97,19 +94,6 @@ class DurableAgent(AbstractDurableObject, EphemeralAgent):
         back_populates="receiver",
         sa_relationship_kwargs={"lazy": "select"},
         foreign_key="messages.receiver_id",
-    )
-
-
-class DurableAgentState(AbstractDurableObject):
-    """Use to store agent state"""
-
-    __tablename__ = "states"
-
-    agent_id: UUID4 = Field(
-        index=True, foreign_key="agents.id", sa_column_kwargs={"nullable": False}
-    )
-    agent: DurableAgent = Relationship(
-        back_populates="state", sa_relationship_args={"lazy": "select"}
     )
 
 

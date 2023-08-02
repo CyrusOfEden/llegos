@@ -1,7 +1,7 @@
 from contextvars import ContextVar
 from operator import itemgetter
-from typing import AsyncIterable
 
+from beartype.typing import AsyncIterable
 from networkx import MultiGraph
 from sorcery import delegate_to_attr
 
@@ -62,4 +62,4 @@ class AgentNetwork(NetworkAgent, SystemAgent):
             network_context.reset(previous_network)
 
 
-network_context = ContextVar("llegos.networks.context", default=AgentNetwork())
+network_context = ContextVar("llegos.networks.context")

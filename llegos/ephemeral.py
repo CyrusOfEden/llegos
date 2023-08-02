@@ -3,13 +3,17 @@ from abc import ABC
 from collections.abc import Iterable
 from datetime import datetime
 from functools import partial
-from typing import Callable, Optional, TypeVar
 from uuid import uuid4
 
+import deepmerge
 import yaml
+from beartype import beartype
+from beartype.typing import Callable, Optional, TypeVar
 from pydantic import UUID4, BaseModel, Field
 from pyee import EventEmitter
 from sorcery import delegate_to_attr
+
+from llegos.cognition import Cognition
 
 
 class EphemeralObject(BaseModel, ABC):
@@ -63,6 +67,7 @@ class EphemeralMessage(EphemeralObject):
 
     class Config(EphemeralObject.Config):
         arbitrary_types_allowed = True
+        deepmerge = deepmerge.always_merger.merge
         json_encoders = {
             EphemeralObject: lambda a: a.id,
         }
@@ -103,20 +108,24 @@ class EphemeralMessage(EphemeralObject):
     @classmethod
     def lift(cls, message: "EphemeralMessage", **kwargs):
         attrs = message.dict(exclude={"id", "created_at"})
+
         for field in cls.__fields__.values():
             if field.default is not None:
                 attrs[field.name] = field.default
-        attrs.update(kwargs)
+
+        cls.Config.deepmerge(attrs, kwargs)
         return cls(**attrs)
 
     @classmethod
     def reply_to(cls, message: "EphemeralMessage", **kwargs):
         attrs = dict(
+            parent=message,
             sender=message.receiver,
             receiver=message.sender,
-            parent=message,
+            context=message.context,
         )
-        attrs.update(kwargs)
+
+        cls.Config.deepmerge(attrs, kwargs)
         return cls(**attrs)
 
     @classmethod
@@ -124,12 +133,13 @@ class EphemeralMessage(EphemeralObject):
         cls, message: "EphemeralMessage", to: Optional[EphemeralObject] = None, **kwargs
     ) -> "EphemeralMessage":
         attrs = dict(
+            parent=message,
             sender=message.receiver,
             reciever=to,
-            body=message.body,
-            parent=message,
+            context=message.context,
         )
-        attrs.update(kwargs)
+
+        cls.Config.deepmerge(attrs, kwargs)
         return cls(**attrs)
 
 
@@ -138,6 +148,7 @@ Reply = Optional[T] | Iterable[T]
 
 
 class EphemeralAgent(EphemeralObject):
+    cognition: Cognition = Field()
     role: str = Field(
         default="user", description="used to set the role for messages from this node"
     )
@@ -185,10 +196,10 @@ class EphemeralAgent(EphemeralObject):
         response = getattr(self, message.intent)(message)
 
         match response:
-            case Iterable():
-                yield from response
             case EphemeralMessage():
                 yield response
+            case Iterable():
+                yield from response
 
     @property
     def public_description(self) -> str:
@@ -198,6 +209,7 @@ class EphemeralAgent(EphemeralObject):
 Applicator = Callable[[EphemeralMessage], Iterable[EphemeralMessage]]
 
 
+@beartype
 def apply(message: EphemeralMessage) -> Iterable[EphemeralMessage]:
     agent: Optional[EphemeralAgent] = message.receiver
     if not agent:
@@ -205,6 +217,7 @@ def apply(message: EphemeralMessage) -> Iterable[EphemeralMessage]:
     yield from agent.receive(message)
 
 
+@beartype
 def propogate(
     message: EphemeralMessage, applicator: Applicator = apply
 ) -> Iterable[EphemeralMessage]:
@@ -213,6 +226,7 @@ def propogate(
         yield from propogate(reply)
 
 
+@beartype
 def propogate_all(messages: Iterable[EphemeralMessage], applicator: Applicator = apply):
     mapper = partial(propogate, applicator=applicator)
     for generator in map(mapper, messages):

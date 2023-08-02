@@ -86,11 +86,11 @@ class Manager(OpenAIAgent, NetworkAgent):
 
         return function_call(completion)
 
-    async def inform(self, result: Inform):
-        yield Inform.forward(result, to=self.network)
+    def inform(self, result: Inform):
+        return Inform.forward(result, to=self.network)
 
-    async def failure(self, failure: Failure):
-        yield Failure.forward(failure, to=self.network)
+    def failure(self, failure: Failure):
+        return Failure.forward(failure, to=self.network)
 
 
 class ContractNet(AgentNetwork):
@@ -103,9 +103,9 @@ class ContractNet(AgentNetwork):
         for priority, contractor in enumerate(self.contractors):
             self.graph.add_edge(self.manager, contractor, weight=priority)
 
-    async def request(self, task: Request):
+    def request(self, task: Request):
         return task.forward_to(self.manager)
 
-    async def inform(self, result: Inform):
+    def inform(self, result: Inform):
         request = find_closest(Request, of_message=result)
         return Response.forward(result, to=request.sender)

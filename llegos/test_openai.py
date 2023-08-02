@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from llegos.asyncio import AsyncAgent
 from llegos.messages import Ack
 from llegos.openai import callable_schemas, parse_function_call, prepare_functions
-from llegos.test_utilities import ChatMessage, EphemeralMessage, MockAsyncAgent
+from llegos.test_helpers import ChatMessage, EphemeralMessage, MockAsyncAgent
 
 
 class FunctionCallCompletion(BaseModel):
@@ -63,7 +63,7 @@ class TestPrepareAsyncCall:
     @pytest.mark.asyncio
     async def test_create_message(self):
         llegos = [
-            AsyncAgent(),
+            MockAsyncAgent(),
             ChatMessage,
         ]
         schemas, function_call = prepare_functions(llegos)
@@ -145,4 +145,5 @@ class TestPrepareAsyncCall:
             }
         )
         with pytest.raises(KeyError):
+            function_call(completion)
             function_call(completion)

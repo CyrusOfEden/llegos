@@ -1,7 +1,8 @@
 from collections.abc import AsyncGenerator, AsyncIterable, Awaitable, Iterable
 from functools import partial
-from typing import Callable, Optional, TypeVar
 
+from beartype import beartype
+from beartype.typing import Callable, Optional, TypeVar
 from networkx import DiGraph
 from pyee.asyncio import AsyncIOEventEmitter
 
@@ -35,18 +36,18 @@ class AsyncAgent(EphemeralAgent):
         response = getattr(self, message.intent)(message)
 
         match response:
-            case AsyncIterable():
-                async for reply in response:
-                    yield reply
-            case Iterable():
-                for reply in response:
-                    yield reply
             case Awaitable():
                 reply = await response
                 if reply:
                     yield reply
             case EphemeralMessage():
                 yield response
+            case AsyncIterable():
+                async for reply in response:
+                    yield reply
+            case Iterable():
+                for reply in response:
+                    yield reply
 
 
 AsyncApplicator = Callable[[EphemeralMessage], AsyncIterable[EphemeralMessage]]
@@ -57,6 +58,7 @@ async def async_drain(messages: AsyncIterable[EphemeralMessage]):
         ...
 
 
+@beartype
 async def async_apply(message: EphemeralMessage) -> AsyncIterable[EphemeralMessage]:
     agent: Optional[AsyncAgent] = message.receiver
     if not agent:
@@ -65,6 +67,7 @@ async def async_apply(message: EphemeralMessage) -> AsyncIterable[EphemeralMessa
         yield reply
 
 
+@beartype
 async def async_propogate(
     message: EphemeralMessage, applicator: AsyncApplicator = async_apply
 ) -> AsyncIterable[EphemeralMessage]:
@@ -74,6 +77,7 @@ async def async_propogate(
             yield reply_l2
 
 
+@beartype
 async def async_propogate_all(
     messages: Iterable[EphemeralMessage] | AsyncIterable[EphemeralMessage],
     applicator: AsyncApplicator = async_apply,
@@ -87,6 +91,7 @@ async def async_propogate_all(
             yield reply
 
 
+@beartype
 async def async_message_graph(messages: AsyncIterable[EphemeralMessage]) -> DiGraph:
     g = DiGraph()
     async for message in messages:
