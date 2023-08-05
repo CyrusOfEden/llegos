@@ -4,7 +4,7 @@ from llegos.openai import OpenAIAgent
 
 
 class Observation(EphemeralMessage):
-    ...
+    content: str
 
 
 class Knowledge(EphemeralMessage):
@@ -15,7 +15,7 @@ class Insight(Knowledge):
     ...
 
 
-class Learner(NetworkAgent, OpenAIAgent):
+class LearningAgent(NetworkAgent, OpenAIAgent):
     def knowledge(self, message: Knowledge):
         ...
 
@@ -23,14 +23,14 @@ class Learner(NetworkAgent, OpenAIAgent):
         ...
 
 
-class Guide(Learner):
+class GuidingAgent(LearningAgent):
     def observation(self, message: Observation):
         ...
 
 
 class KnowledgeNetwork(AgentNetwork):
-    guide: Guide
-    learners: list[Learner] = Field(min_items=1)
+    guide: GuidingAgent
+    learners: list[LearningAgent] = Field(min_items=1)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -38,5 +38,5 @@ class KnowledgeNetwork(AgentNetwork):
         for learner in enumerate(self.learners):
             self.graph.add_edge(self.guide, learner)
 
-    def knowledge(self, message: Knowledge):
-        return message.forward_to(self.guide)
+    def knowledge(self, k: Knowledge):
+        return k.forward_to(self.guide)

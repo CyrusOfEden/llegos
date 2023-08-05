@@ -20,31 +20,35 @@ class AbstractDurableObject(SQLModel, EphemeralObject):
         default_factory=uuid4,
         primary_key=True,
         nullable=False,
+        include=True,
         sa_column_kwargs={"server_default": text("gen_random_uuid()"), "unique": True},
     )
     created_at: datetime = Field(
         default_factory=datetime.utcnow,
         nullable=False,
+        include=True,
         sa_column_kwargs={"server_default": text("now()")},
     )
     updated_at: datetime = Field(
         default_factory=datetime.utcnow,
         nullable=False,
+        include=True,
         sa_column_kwargs={"server_default": text("now()"), "onupdate": text("now()")},
     )
-
-    def __hash__(self):
-        return hash(self.id)
 
 
 class DurableMessage(AbstractDurableObject, EphemeralMessage, table=True):
     __tablename__ = "messages"
 
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    sender_id: Optional[uuid4] = Field(default=None, index=True, nullable=True)
-    receiver_id: Optional[uuid4] = Field(default=None, index=True, nullable=True)
+    intent: str = Field(index=True, nullable=False, include=True)
+    sender_id: Optional[uuid4] = Field(
+        default=None, index=True, nullable=True, include=True
+    )
+    receiver_id: Optional[uuid4] = Field(
+        default=None, index=True, nullable=True, include=True
+    )
     parent_id: Optional[uuid4] = Field(
-        default=None, index=True, nullable=True, foreign_key="messages.id"
+        default=None, index=True, nullable=True, foreign_key="messages.id", include=True
     )
     role = delegate_to_attr("sender")
 
@@ -81,17 +85,17 @@ class DurableAgent(AbstractDurableObject, EphemeralAgent):
     cognition: DurableCognition = Relationship(
         foreign_key="cognition.agent_id",
         back_populates="agent",
-        sa_relationship_kwargs={"lazy": "join"},
+        sa_relationship_args={"lazy": "join"},
     )
     messages_sent: list[DurableMessage] = Relationship(
         foreign_key="messages.sender_id",
         back_populates="sender",
-        sa_relationship_kwargs={"lazy": "select"},
+        sa_relationship_args={"lazy": "select"},
     )
     messages_received: list[DurableMessage] = Relationship(
         foreign_key="messages.receiver_id",
         back_populates="receiver",
-        sa_relationship_kwargs={"lazy": "select"},
+        sa_relationship_args={"lazy": "select"},
     )
 
 

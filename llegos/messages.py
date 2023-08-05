@@ -2,48 +2,30 @@ from beartype import beartype
 from beartype.typing import Iterable, Sequence, Union
 from networkx import DiGraph
 
-from llegos.ephemeral import EphemeralMessage
-
-
-class UserMessage(EphemeralMessage):
-    @property
-    def role(self):
-        return "user"
-
-
-class SystemMessage(EphemeralMessage):
-    @property
-    def role(self):
-        return "system"
-
-
-class AssistantMessage(EphemeralMessage):
-    @property
-    def role(self):
-        return "assistant"
+from llegos.ephemeral import EphemeralMessage, Field
 
 
 class Chat(EphemeralMessage):
-    content: str
+    message: str = Field()
 
 
 class Ack(EphemeralMessage):
-    ...
+    content: str = Field(default="")
 
 
 @beartype
 def message_chain(
-    message: "EphemeralMessage", height: int = 12
-) -> Iterable["EphemeralMessage"]:
-    if message.parent and height > 1:
+    message: EphemeralMessage | None, height: int = 12
+) -> Iterable[EphemeralMessage]:
+    if message is None:
+        return []
+    elif height > 1:
         yield from message_chain(message.parent, height - 1)
     yield message
 
 
 @beartype
-def message_list(
-    message: "EphemeralMessage", height: int = 12
-) -> list["EphemeralMessage"]:
+def message_list(message: EphemeralMessage, height: int = 12) -> list[EphemeralMessage]:
     return list(message_chain(message, height))
 
 

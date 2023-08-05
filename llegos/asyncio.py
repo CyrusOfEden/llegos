@@ -15,23 +15,14 @@ AsyncReply = Optional[T] | AsyncIterable[T]
 class AsyncAgent(EphemeralAgent):
     event_emitter: AsyncIOEventEmitter = Field(
         default_factory=AsyncIOEventEmitter,
-        exclude=True,
         description="emitting events is non-blocking",
+        exclude=True,
     )
-
-    def __or__(self, other: "AsyncAgent") -> "AsyncAgent":
-        async def async_generator(message: EphemeralMessage):
-            async for reply_l1 in self.receive(message):
-                yield reply_l1
-                async for reply_l2 in other.receive(reply_l1):
-                    yield reply_l2
-
-        return async_generator
 
     async def receive(
         self, message: EphemeralMessage
     ) -> AsyncIterable[EphemeralMessage]:
-        self.emit(message.intent, message)
+        self.emit("receive", message)
 
         response = getattr(self, message.intent)(message)
 
@@ -73,7 +64,7 @@ async def async_propogate(
 ) -> AsyncIterable[EphemeralMessage]:
     async for reply_l1 in applicator(message):
         yield reply_l1
-        async for reply_l2 in async_propogate(reply_l1):
+        async for reply_l2 in async_propogate(reply_l1, applicator=applicator):
             yield reply_l2
 
 

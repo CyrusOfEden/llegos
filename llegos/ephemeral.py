@@ -3,135 +3,155 @@ from abc import ABC
 from collections.abc import Iterable
 from datetime import datetime
 from functools import partial
+from textwrap import dedent
+from typing import Any
 from uuid import uuid4
 
-import deepmerge
-import yaml
 from beartype import beartype
 from beartype.typing import Callable, Optional, TypeVar
+from deepmerge import always_merger
 from pydantic import UUID4, BaseModel, Field
 from pyee import EventEmitter
-from sorcery import delegate_to_attr
+from sorcery import delegate_to_attr, maybe
 
 
 class EphemeralObject(BaseModel, ABC):
     class Config:
         arbitrary_types_allowed = True
+        deepmerge = always_merger.merge
         extra = "allow"
 
-    id: UUID4 = Field(default_factory=uuid4)
+    id: UUID4 = Field(default_factory=uuid4, include=True)
     metadata: dict = Field(default_factory=dict, exclude=True)
 
-    def __str__(self):
-        return yaml.dump(self.dict(), sort_keys=False)
-
     def __hash__(self):
-        return hash(self.id)
+        return hash(self.id.bytes)
+
+    def dict(self, *args, exclude_none: bool = True, **kwargs):
+        return super().dict(*args, exclude_none=exclude_none, **kwargs)
+
+    def __str__(self):
+        return self.json()
+
+    @classmethod
+    def lift(cls, instance: "EphemeralObject", **kwargs):
+        attrs = instance.dict()
+
+        cls.Config.deepmerge(attrs, kwargs)
+
+        return cls(**attrs)
 
 
-_camel_case_pattern = re.compile(r"(?<!^)(?=[A-Z])")
+EphemeralObject.Config.json_encoders = {
+    EphemeralObject: lambda o: {"cls": o.__class__.__name__, "id": o.id}
+}
 
 
-class EphemeralCognition(EphemeralObject, ABC):
-    ...
+agent_lookup: dict[UUID4, "EphemeralAgent"] = {}
+message_lookup: dict[UUID4, "EphemeralMessage"] = {}
+
+
+def message_hydrator(m: "EphemeralMessage"):
+    match m.parent:
+        case EphemeralMessage() as m:
+            message_lookup[m.id] = m
+        case EphemeralObject() as o:
+            m.parent = message_lookup[o.id]
+
+    match m.sender:
+        case EphemeralAgent() as a:
+            agent_lookup[a.id] = a
+        case EphemeralObject() as o:
+            m.sender = agent_lookup[o.id]
+
+    match m.receiver:
+        case EphemeralAgent() as a:
+            agent_lookup[a.id] = a
+        case EphemeralObject() as o:
+            m.receiver = agent_lookup[o.id]
+
+    return m
 
 
 class EphemeralMessage(EphemeralObject):
-    """
-    Messages are used to send messages between nodes.
-    """
-
     class Config(EphemeralObject.Config):
-        arbitrary_types_allowed = True
-        deepmerge = deepmerge.always_merger.merge
-        json_encoders = {
-            EphemeralObject: lambda a: a.id,
-        }
-
-    intent: str = Field(
-        description="the method to call on the receiver",
-    )
-    context: dict = Field(
-        default_factory=dict,
-        description="data to pass through the message chain",
-    )
-
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    sender: Optional[EphemeralObject] = Field(
-        default=None, serialization_alias="sender_id"
-    )
-    receiver: Optional[EphemeralObject] = Field(
-        default=None, serialization_alias="receiver_id"
-    )
-    parent: Optional["EphemeralMessage"] = Field(
-        default=None, serialization_alias="parent_id"
-    )
-
-    def __init__(self, **kwargs):
-        if "intent" not in kwargs:
-            kwargs["intent"] = re.sub(
-                _camel_case_pattern, "_", self.__class__.__name__
-            ).lower()
-        super().__init__(**kwargs)
-
-    @property
-    def role(self):
-        return self.sender.role
-
-    def forward_to(self, receiver: EphemeralObject):
-        return self.__class__.forward(self, to=receiver)
+        hydrator = message_hydrator
 
     @classmethod
-    def lift(cls, message: "EphemeralMessage", **kwargs):
-        attrs = message.dict(exclude={"id", "created_at"})
-
-        for field in cls.__fields__.values():
-            if field.default is not None:
-                attrs[field.name] = field.default
-
-        cls.Config.deepmerge(attrs, kwargs)
-        return cls(**attrs)
+    def infer_intent(cls, _pattern=re.compile(r"(?<!^)(?=[A-Z])")):
+        return re.sub(_pattern, "_", cls.__name__).lower()
 
     @classmethod
     def reply_to(cls, message: "EphemeralMessage", **kwargs):
-        attrs = dict(
-            parent=message,
-            sender=message.receiver,
-            receiver=message.sender,
-            context=message.context,
-        )
-
-        cls.Config.deepmerge(attrs, kwargs)
-        return cls(**attrs)
+        attrs = {
+            "sender": message.receiver,
+            "receiver": message.sender,
+            "parent": message,
+        }
+        attrs.update(kwargs)
+        return cls.lift(message, **attrs)
 
     @classmethod
     def forward(
         cls, message: "EphemeralMessage", to: Optional[EphemeralObject] = None, **kwargs
     ) -> "EphemeralMessage":
-        attrs = dict(
-            parent=message,
-            sender=message.receiver,
-            reciever=to,
-            context=message.context,
-        )
+        attrs = {"sender": message.receiver, "receiver": to, "parent": message}
+        attrs.update(kwargs)
+        return cls.lift(message, **attrs)
 
-        cls.Config.deepmerge(attrs, kwargs)
-        return cls(**attrs)
+    intent: str = Field(include=True)
+    context: dict = Field(
+        default_factory=dict,
+        description="data to pass through the message chain",
+        include=True,
+    )
+
+    created_at: datetime = Field(default_factory=datetime.utcnow, include=True)
+    sender: Optional["EphemeralObject"] = Field(default=None, include=True)
+    receiver: Optional["EphemeralObject"] = Field(default=None, include=True)
+    parent: Optional["EphemeralMessage"] = Field(default=None, include=True)
+
+    def __init__(self, **kwargs):
+        kwargs["intent"] = self.infer_intent()
+        super().__init__(**kwargs)
+        self.__class__.Config.hydrator(self)
+
+    @property
+    def sender_id(self) -> Optional[UUID4]:
+        return maybe(self.sender).id
+
+    @property
+    def receiver_id(self) -> Optional[UUID4]:
+        return maybe(self.receiver).id
+
+    @property
+    def parent_id(self) -> Optional[UUID4]:
+        return maybe(self.parent).id
+
+    def __str__(self):
+        return self.json(exclude={"parent"})
+
+    def forward_to(self, to: Optional[EphemeralObject] = None, **kwargs):
+        return self.forward(self, to=to, **kwargs)
 
 
 T = TypeVar("T", bound=EphemeralMessage)
 Reply = Optional[T] | Iterable[T]
 
 
+class EphemeralCognition(EphemeralObject, ABC):
+    language: Callable = Field(description="the language model", exclude=True)
+    short_term_memory: Any = Field(description="volatile, short-term memory")
+    long_term_memory: Any = Field(description="durable, long-term memory")
+
+
 class EphemeralAgent(EphemeralObject):
-    cognition: EphemeralCognition = Field()
-    role: str = Field(
-        default="user", description="used to set the role for messages from this node"
-    )
+    description: str = Field(default="", include=True)
+    cognition: Optional[EphemeralCognition] = Field(exclude=True)
     event_emitter: EventEmitter = Field(
         default_factory=EventEmitter,
+        description="emitting events blocks until all listeners have executed",
         exclude=True,
-        description="emitting events is blocking",
     )
     (
         add_listener,
@@ -148,13 +168,34 @@ class EphemeralAgent(EphemeralObject):
     receivable_messages: set[type[EphemeralMessage]] = Field(
         default_factory=set,
         description="set of intents that this agent can receive",
+        exclude=True,
     )
+
+    @classmethod
+    def inherited_receivable_messages(cls):
+        messages = set()
+        for base in cls.__bases__:
+            if issubclass(base, EphemeralAgent):
+                if base_messages := base.__fields__["receivable_messages"].default:
+                    messages = messages.union(base_messages)
+                messages = messages.union(base.inherited_receivable_messages())
+        return messages
+
+    def __init_subclass__(cls):
+        super().__init_subclass__()
+        f = cls.__fields__["receivable_messages"]
+        if f.default:
+            f.default = f.default.union(cls.inherited_receivable_messages())
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.description = dedent(self.description) or self.__class__.__doc__ or ""
 
     def __call__(self, message: EphemeralMessage) -> Reply[EphemeralMessage]:
         return self.receive(message)
 
     def receive(self, message: EphemeralMessage) -> Reply[EphemeralMessage]:
-        self.emit(message.intent, message)
+        self.emit("receive", message)
 
         response = getattr(self, message.intent)(message)
 
@@ -164,10 +205,9 @@ class EphemeralAgent(EphemeralObject):
             case Iterable():
                 yield from response
 
-    @property
-    def public_description(self) -> str:
-        return self.__class__.__doc__ or ""
 
+EphemeralObject.update_forward_refs()
+EphemeralMessage.update_forward_refs()
 
 Applicator = Callable[[EphemeralMessage], Iterable[EphemeralMessage]]
 

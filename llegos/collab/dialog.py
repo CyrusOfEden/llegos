@@ -1,27 +1,32 @@
 from abc import ABC, abstractmethod
 from itertools import permutations
 
-from llegos.asyncio import AsyncReply
-from llegos.ephemeral import EphemeralMessage
+from llegos.ephemeral import EphemeralMessage, Reply
+from llegos.messages import Chat
 from llegos.networks import AgentNetwork, Field, NetworkAgent
 
 
-class Dialog(EphemeralMessage):
-    message: str
+class Dialog(Chat):
+    ...
 
 
 class DialogAgent(NetworkAgent, ABC):
+    receivable_messages: set[type[EphemeralMessage]] = Field(
+        default={Dialog}, exclude=True
+    )
+
     @property
-    def dialog_agents(self):
-        return self.receptive_agents(Dialog)
+    def dialog_partners(self):
+        return [
+            agent for agent in self.relationships if Dialog in agent.receivable_messages
+        ]
 
     @abstractmethod
-    async def dialog(self, d: Dialog) -> AsyncReply[Dialog]:
-        "Yield 0 or more messages"
+    def dialog(self, d: Dialog) -> Reply[Dialog]:
         ...
 
 
-class AgentDialogNetwork(AgentNetwork):
+class DialogNetwork(AgentNetwork):
     agents: set[DialogAgent] = Field(min_items=2, allow_mutation=False)
 
     def __init__(self, **kwargs):

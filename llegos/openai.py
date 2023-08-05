@@ -1,105 +1,166 @@
 import json
+from textwrap import dedent
+from typing import Callable, Iterable
 
-from beartype import beartype
-from beartype.typing import Iterable
 from openai import ChatCompletion
 from openai.openai_object import OpenAIObject
-from pydantic import BaseModel
+from pydantic import UUID4
 
-from llegos.asyncio import AsyncAgent
-from llegos.ephemeral import EphemeralAgent, EphemeralMessage, EphemeralObject, Field
-from llegos.messages import SystemMessage, message_chain
-
-
-class OpenAIAgent(AsyncAgent):
-    completion: ChatCompletion = Field()
+from llegos.ephemeral import EphemeralAgent, EphemeralCognition, EphemeralMessage
+from llegos.messages import Chat, message_chain
 
 
-def message_dict(message: EphemeralMessage):
-    return {"role": message.role, "content": str(message)}
+class OpenAICognition(EphemeralCognition):
+    language: ChatCompletion
 
 
-def message_dicts(message: EphemeralMessage, history: int = 12):
-    return [message_dict(m) for m in message_chain(message, height=history)]
+def function_schema(exclude_keys={"title"}, **schema):
+    for key, value in list(schema.items()):
+        if key in exclude_keys:
+            del schema[key]
+        elif isinstance(value, dict):
+            schema[key] = function_schema(exclude_keys=exclude_keys, **value)
+    return schema
 
 
-@beartype
-def schema_init(cls: type[BaseModel]):
-    schema = cls.schema()
-    if "properties" not in schema:
-        schema = schema["definitions"][cls.__name__]
-
-    parameters = {}
-    for key, value in schema["properties"].items():
-        if key == "id":
-            continue
-        elif value.get("serialization_alias", "").endswith("_id"):
-            parameters[f"{key}_id"] = {
-                "title": value["title"],
-                "type": "string",
-            }
-        else:
-            parameters[key] = value
-
-    return {
-        "name": cls.__name__,
-        "description": cls.__doc__,
-        "parameters": parameters,
-        "required": schema.get("required", []),
-    }
-
-
-@beartype
-def schema_receive(agent: EphemeralAgent):
-    return {
-        "name": str(agent.id),
-        "description": agent.public_description,
-        "parameters": {
-            "message": {"oneOf": map(schema_init, agent.receivable_messages)},
-        },
-        "required": ["message"],
-    }
-
-
-@beartype
-def callable_schemas(
-    llegos: Iterable[EphemeralAgent | AsyncAgent | type[EphemeralMessage]],
-) -> tuple[dict[str, callable], list[dict]]:
-    "Returns a lookup dictionary of callables and a list of schemas"
-    schemas = []
-    callables = {}
-    for llego in llegos:
-        schema = (
-            schema_init(llego) if isinstance(llego, type) else schema_receive(llego)
-        )
-        schemas.append(schema)
-        callables[schema["name"]] = llego
-    return callables, schemas
-
-
-def parse_function_call(completion: OpenAIObject):
-    call = completion.choices[0].content["function_call"]
-    return call["name"], json.loads(call["arguments"])
-
-
-def prepare_messages(system: SystemMessage, prompt: EphemeralMessage):
-    return [message_dict(system), *message_dicts(prompt)]
-
-
-def prepare_functions(
-    llegos: Iterable[EphemeralAgent | type[EphemeralMessage]],
+def message_schema(
+    cls: type[EphemeralMessage],
+    remove_keys: set[str] = {
+        "id",
+        "created_at",
+        "sender",
+        "receiver",
+        "parent",
+        "context",
+    },
 ):
-    callables, schemas = callable_schemas(llegos)
+    schema = cls.schema()
+    intent = cls.infer_intent()
+
+    params = schema["properties"]
+    params["intent"]["enum"] = [intent]
+    for key in remove_keys:
+        params.pop(key, None)
+
+    reqs = schema.get("required", [])
+
+    defs = schema.get("definitions", {})
+    defs.pop("EphemeralMessage", None)
+    defs.pop("EphemeralObject", None)
+
+    return function_schema(
+        name=intent,
+        description=cls.__doc__,
+        parameters={
+            "type": "object",
+            "properties": params,
+        },
+        required=reqs,
+        definitions=defs,
+    )
+
+
+def receive_schema(agent: EphemeralAgent, messages: set[type[EphemeralMessage]] = None):
+    defs = []
+
+    for m in agent.receivable_messages:
+        if messages and m not in messages:
+            continue
+        schema = message_schema(m)
+        schema.update(schema.pop("parameters"))  # since it is being nested
+        # defs.update(schema.pop("definitions", {}))
+        defs.append(schema)
+        # refs.append({"$ref": f"#/definitions/{clsname}"})
+
+    return function_schema(
+        name=str(agent.id),
+        description=agent.description,
+        parameters={
+            "type": "object",
+            "properties": {"message": {"oneOf": defs}},
+        },
+        required=["message"],
+    )
+
+
+def standard_context_transformer(messages: Iterable[EphemeralMessage]) -> list[dict]:
+    return [{"content": str(message), "role": "user"} for message in messages]
+
+
+def use_messages(
+    system: str,
+    prompt: str,
+    context: EphemeralMessage | None = None,
+    context_history: int = 8,
+    context_transformer: Callable[
+        [Iterable[EphemeralMessage]], list[dict]
+    ] = standard_context_transformer,
+):
+    return [
+        {"content": dedent(system), "role": "system"},
+        *context_transformer(message_chain(context, height=context_history)),
+        {"content": dedent(prompt), "role": "user"},
+    ]
+
+
+def use_write_message(messages: Iterable[type[EphemeralMessage]], **kwargs):
+    schemas = []
+    message_lookup = {}
+
+    for cls in messages:
+        schema: dict = message_schema(cls)
+        schemas.append(schema)
+        message_lookup[schema["name"]] = cls
 
     def function_call(completion: OpenAIObject):
-        name, kwargs = parse_function_call(completion)
-        callable = callables[name]
+        response = completion.choices[0].message
+        if call := response.get("function_call", None):
+            cls = message_lookup[call.name]
+            genargs = json.loads(call.arguments)
+            genargs.update(kwargs)
 
-        if isinstance(callable, type) and issubclass(callable, EphemeralObject):
-            init_object = callable
-            return init_object(**kwargs)
+            yield cls(**genargs)
+        if content := response.get("content", None):
+            yield Chat(**kwargs, message=content)
 
-        agent_receive = callable(EphemeralMessage(**kwargs))
-        return agent_receive
+    create_kwargs = {
+        "functions": schemas,
+    }
 
-    return schemas, function_call
+    return create_kwargs, function_call
+
+
+def use_agent_message(
+    messages: set[type[EphemeralMessage]],
+    agents: Iterable[EphemeralAgent],
+    **kwargs,
+):
+    schemas = []
+    agent_lookup: dict[UUID4, EphemeralAgent] = {}
+    message_lookup: dict[str, EphemeralMessage] = {}
+
+    for agent in agents:
+        schema: dict = receive_schema(agent, messages=messages)
+        schemas.append(schema)
+        agent_lookup[schema["name"]] = agent
+
+        for cls in agent.receivable_messages:
+            if (intent := cls.infer_intent()) and intent not in message_lookup:
+                message_lookup[intent] = cls
+
+    def function_call(completion: OpenAIObject):
+        response = completion.choices[0].message
+        if call := response.get("function_call", None):
+            agent = agent_lookup[call.name]
+            raw = json.loads(call.arguments)
+            genargs = raw.pop("message", raw)
+            cls = message_lookup[genargs.pop("intent")]
+            yield cls(**genargs, **kwargs, receiver=agent)
+        if content := response.get("content", None):
+            yield Chat(**kwargs, message=content)
+
+    create_kwargs = {
+        "functions": schemas,
+    }
+
+    return create_kwargs, function_call

@@ -1,13 +1,11 @@
+from contextlib import contextmanager
 from contextvars import ContextVar
-from operator import itemgetter
 
-from beartype.typing import AsyncIterable
 from networkx import MultiGraph
 from sorcery import delegate_to_attr
 
-from llegos.asyncio import AsyncAgent, EphemeralMessage, async_propogate
-from llegos.ephemeral import Field
-from llegos.roles import SystemAgent
+from llegos.asyncio import AsyncAgent, async_propogate
+from llegos.ephemeral import EphemeralMessage, Field
 
 
 class NetworkAgent(AsyncAgent):
@@ -17,10 +15,16 @@ class NetworkAgent(AsyncAgent):
 
     @property
     def relationships(self):
-        return sorted(self.network.edges(self), key=itemgetter("weight"))
+        edges = [
+            (neighbor, key, data)
+            for (node, neighbor, key, data) in self.network.edges(keys=True, data=True)
+            if node == self
+        ]
+        edges.sort(key=lambda edge: edge[2].get("weight", 1))
+        return [agent for (agent, _, _) in edges]
 
 
-class AgentNetwork(NetworkAgent, SystemAgent):
+class AgentNetwork(NetworkAgent):
     graph: MultiGraph = Field(default_factory=MultiGraph, include=False, exclude=True)
 
     def __contains__(self, key: str | NetworkAgent) -> bool:
@@ -50,16 +54,18 @@ class AgentNetwork(NetworkAgent, SystemAgent):
     def directory(self):
         return {a.id: a for a in self.graph.nodes}
 
-    async def receive(
-        self, message: EphemeralMessage
-    ) -> AsyncIterable[EphemeralMessage]:
-        self.emit(message.intent, message)
+    async def propogate(self, message: EphemeralMessage):
+        with self.context():
+            async for message in async_propogate(message):
+                yield message
 
-        previous_network = network_context.set(self)
+    @contextmanager
+    def context(self):
         try:
-            return async_propogate(message)
+            rollback = network_context.set(self)
+            yield self
         finally:
-            network_context.reset(previous_network)
+            network_context.reset(rollback)
 
 
-network_context = ContextVar("llegos.networks.context")
+network_context = ContextVar[AgentNetwork]("llegos.networks.context")
