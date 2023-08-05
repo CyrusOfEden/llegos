@@ -15,12 +15,6 @@ class DialogActor(NetworkActor, ABC):
         default={Dialog}, exclude=True
     )
 
-    @property
-    def dialog_partners(self):
-        return [
-            agent for agent in self.relationships if Dialog in agent.receivable_messages
-        ]
-
     @abstractmethod
     def dialog(self, d: Dialog) -> Reply[Dialog]:
         ...
