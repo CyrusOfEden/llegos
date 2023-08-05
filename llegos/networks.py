@@ -4,11 +4,11 @@ from contextvars import ContextVar
 from networkx import MultiGraph
 from sorcery import delegate_to_attr
 
-from llegos.asyncio import AsyncAgent, async_propogate
+from llegos.asyncio import AsyncActor, async_propogate
 from llegos.ephemeral import EphemeralMessage, Field
 
 
-class NetworkAgent(AsyncAgent):
+class NetworkActor(AsyncActor):
     @property
     def network(self):
         return network_context.get()
@@ -23,15 +23,22 @@ class NetworkAgent(AsyncAgent):
         edges.sort(key=lambda edge: edge[2].get("weight", 1))
         return [agent for (agent, _, _) in edges]
 
+    def receivers(self, message: type[EphemeralMessage]):
+        return [
+            agent
+            for agent in self.relationships
+            if message in agent.receivable_messages
+        ]
 
-class AgentNetwork(NetworkAgent):
+
+class ActorNetwork(NetworkActor):
     graph: MultiGraph = Field(default_factory=MultiGraph, include=False, exclude=True)
 
-    def __contains__(self, key: str | NetworkAgent) -> bool:
+    def __contains__(self, key: str | NetworkActor) -> bool:
         match key:
             case str():
                 return key in self.directory
-            case NetworkAgent():
+            case NetworkActor():
                 return key in self.graph
             case _:
                 raise TypeError(
@@ -68,4 +75,4 @@ class AgentNetwork(NetworkAgent):
             network_context.reset(rollback)
 
 
-network_context = ContextVar[AgentNetwork]("llegos.networks.context")
+network_context = ContextVar[ActorNetwork]("llegos.networks.context")

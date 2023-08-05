@@ -5,7 +5,7 @@ from beartype.typing import AsyncIterable
 from networkx import DiGraph
 from pydantic import Field
 
-from llegos.asyncio import AsyncAgent
+from llegos.asyncio import AsyncActor
 from llegos.messages import Action, Inform, Step, find_ancestor, message_path
 
 
@@ -13,7 +13,7 @@ class Loss(Inform):
     value: float = Field(gte=0)
 
 
-class LossAgent(AsyncAgent, ABC):
+class LossAgent(AsyncActor, ABC):
     loss_landscape: DiGraph = Field(
         default_factory=DiGraph, include=False, exclude=True
     )
@@ -46,7 +46,7 @@ class Reward(Inform):
     value: float = Field(default=0)
 
 
-class RewardAgent(AsyncAgent, ABC):
+class RewardAgent(AsyncActor, ABC):
     reward_path: DiGraph = Field(default_factory=DiGraph, include=False, exclude=True)
 
     @abstractmethod
@@ -70,7 +70,7 @@ class RewardAgent(AsyncAgent, ABC):
         return reward
 
 
-class ActionAgent(AsyncAgent, ABC):
+class ActionAgent(AsyncActor, ABC):
     @abstractmethod
     async def forward(self, current_step: Step) -> AsyncIterable[Action]:
         "Predict possible actions from a given step."
@@ -84,7 +84,7 @@ class ActionAgent(AsyncAgent, ABC):
         ...
 
 
-class WorldModelAgent(AsyncAgent, ABC):
+class WorldModelAgent(AsyncActor, ABC):
     @abstractmethod
     async def forward(self, action: Action) -> Step:
         "Predict the next step of the world based on the action."
@@ -97,7 +97,7 @@ class WorldModelAgent(AsyncAgent, ABC):
         find_ancestor(realized_step, Action)
 
 
-class ReinforcementAgent(AsyncAgent, ABC):
+class ReinforcementAgent(AsyncActor, ABC):
     loss: LossAgent = Field(exclude=True)
     rewarder: RewardAgent = Field(exclude=True)
     action: ActionAgent = Field(exclude=True)

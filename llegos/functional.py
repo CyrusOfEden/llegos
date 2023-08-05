@@ -6,11 +6,11 @@ from openai import ChatCompletion
 from openai.openai_object import OpenAIObject
 from pydantic import UUID4
 
-from llegos.ephemeral import EphemeralAgent, EphemeralCognition, EphemeralMessage
+from llegos.ephemeral import EphemeralActor, EphemeralAgent, EphemeralMessage
 from llegos.messages import Chat, message_chain
 
 
-class OpenAICognition(EphemeralCognition):
+class OpenAICognition(EphemeralAgent):
     language: ChatCompletion
 
 
@@ -60,7 +60,7 @@ def message_schema(
     )
 
 
-def receive_schema(agent: EphemeralAgent, messages: set[type[EphemeralMessage]] = None):
+def receive_schema(agent: EphemeralActor, messages: set[type[EphemeralMessage]] = None):
     defs = []
 
     for m in agent.receivable_messages:
@@ -74,7 +74,7 @@ def receive_schema(agent: EphemeralAgent, messages: set[type[EphemeralMessage]] 
 
     return function_schema(
         name=str(agent.id),
-        description=agent.description,
+        description=agent.system,
         parameters={
             "type": "object",
             "properties": {"message": {"oneOf": defs}},
@@ -87,7 +87,7 @@ def standard_context_transformer(messages: Iterable[EphemeralMessage]) -> list[d
     return [{"content": str(message), "role": "user"} for message in messages]
 
 
-def use_messages(
+def use_message_list(
     system: str,
     prompt: str,
     context: EphemeralMessage | None = None,
@@ -103,7 +103,7 @@ def use_messages(
     ]
 
 
-def use_write_message(messages: Iterable[type[EphemeralMessage]], **kwargs):
+def use_gen_message(messages: Iterable[type[EphemeralMessage]], **kwargs):
     schemas = []
     message_lookup = {}
 
@@ -112,31 +112,35 @@ def use_write_message(messages: Iterable[type[EphemeralMessage]], **kwargs):
         schemas.append(schema)
         message_lookup[schema["name"]] = cls
 
+    create_kwargs = {"functions": schemas}
+
     def function_call(completion: OpenAIObject):
         response = completion.choices[0].message
+        if content := response.get("content", None):
+            try:
+                call = json.loads(content)["function_call"]
+                genargs = call["args"]["message"]
+                genargs.update(kwargs)
+                cls = message_lookup[genargs["intent"]]
+                yield cls(**genargs)
+            except json.JSONDecodeError or KeyError:
+                yield Chat(**kwargs, message=content)
         if call := response.get("function_call", None):
             cls = message_lookup[call.name]
             genargs = json.loads(call.arguments)
             genargs.update(kwargs)
-
             yield cls(**genargs)
-        if content := response.get("content", None):
-            yield Chat(**kwargs, message=content)
-
-    create_kwargs = {
-        "functions": schemas,
-    }
 
     return create_kwargs, function_call
 
 
-def use_agent_message(
+def use_message_agent(
+    agents: Iterable[EphemeralActor],
     messages: set[type[EphemeralMessage]],
-    agents: Iterable[EphemeralAgent],
     **kwargs,
 ):
     schemas = []
-    agent_lookup: dict[UUID4, EphemeralAgent] = {}
+    agent_lookup: dict[UUID4, EphemeralActor] = {}
     message_lookup: dict[str, EphemeralMessage] = {}
 
     for agent in agents:
@@ -148,19 +152,41 @@ def use_agent_message(
             if (intent := cls.infer_intent()) and intent not in message_lookup:
                 message_lookup[intent] = cls
 
+    create_kwargs = {"functions": schemas}
+
     def function_call(completion: OpenAIObject):
         response = completion.choices[0].message
+        if content := response.get("content", None):
+            try:
+                call = json.loads(content)["function_call"]
+                genargs = call["args"]["message"]
+                genargs.update(kwargs)
+
+                agent = agent_lookup[call["function"].split(".")[1]]
+                genargs["receiver"] = agent
+
+                cls = message_lookup[genargs["intent"]]
+                yield cls(**genargs)
+            except json.JSONDecodeError or KeyError:
+                yield Chat(**kwargs, message=content)
         if call := response.get("function_call", None):
-            agent = agent_lookup[call.name]
             raw = json.loads(call.arguments)
             genargs = raw.pop("message", raw)
-            cls = message_lookup[genargs.pop("intent")]
-            yield cls(**genargs, **kwargs, receiver=agent)
-        if content := response.get("content", None):
-            yield Chat(**kwargs, message=content)
+            genargs.update(kwargs)
 
-    create_kwargs = {
-        "functions": schemas,
-    }
+            agent = agent_lookup[call.name]
+            genargs["receiver"] = agent
+
+            cls = message_lookup[genargs.pop("intent")]
+            yield cls(**genargs)
 
     return create_kwargs, function_call
+
+
+def use_reply_to(m: EphemeralMessage, ms: set[type[EphemeralMessage]], **kwargs):
+    if not m.sender_id:
+        raise ValueError("message must have a sender to generate a reply")
+
+    return use_message_agent(
+        [m.sender], ms, parent=m, sender=m.receiver, receiver=m.sender, **kwargs
+    )

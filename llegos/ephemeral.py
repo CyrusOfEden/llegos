@@ -47,7 +47,7 @@ EphemeralObject.Config.json_encoders = {
 }
 
 
-agent_lookup: dict[UUID4, "EphemeralAgent"] = {}
+agent_lookup: dict[UUID4, "EphemeralActor"] = {}
 message_lookup: dict[UUID4, "EphemeralMessage"] = {}
 
 
@@ -59,13 +59,13 @@ def message_hydrator(m: "EphemeralMessage"):
             m.parent = message_lookup[o.id]
 
     match m.sender:
-        case EphemeralAgent() as a:
+        case EphemeralActor() as a:
             agent_lookup[a.id] = a
         case EphemeralObject() as o:
             m.sender = agent_lookup[o.id]
 
     match m.receiver:
-        case EphemeralAgent() as a:
+        case EphemeralActor() as a:
             agent_lookup[a.id] = a
         case EphemeralObject() as o:
             m.receiver = agent_lookup[o.id]
@@ -129,7 +129,7 @@ class EphemeralMessage(EphemeralObject):
         return maybe(self.parent).id
 
     def __str__(self):
-        return self.json(exclude={"parent"})
+        return self.json(exclude={"parent"}, sorted_keys=False)
 
     def forward_to(self, to: Optional[EphemeralObject] = None, **kwargs):
         return self.forward(self, to=to, **kwargs)
@@ -139,15 +139,15 @@ T = TypeVar("T", bound=EphemeralMessage)
 Reply = Optional[T] | Iterable[T]
 
 
-class EphemeralCognition(EphemeralObject, ABC):
+class EphemeralAgent(EphemeralObject, ABC):
     language: Callable = Field(description="the language model", exclude=True)
     short_term_memory: Any = Field(description="volatile, short-term memory")
     long_term_memory: Any = Field(description="durable, long-term memory")
 
 
-class EphemeralAgent(EphemeralObject):
-    description: str = Field(default="", include=True)
-    cognition: Optional[EphemeralCognition] = Field(exclude=True)
+class EphemeralActor(EphemeralObject):
+    system: str = Field(default="", include=True)
+    cognition: Optional[EphemeralAgent] = Field(exclude=True)
     event_emitter: EventEmitter = Field(
         default_factory=EventEmitter,
         description="emitting events blocks until all listeners have executed",
@@ -175,7 +175,7 @@ class EphemeralAgent(EphemeralObject):
     def inherited_receivable_messages(cls):
         messages = set()
         for base in cls.__bases__:
-            if issubclass(base, EphemeralAgent):
+            if issubclass(base, EphemeralActor):
                 if base_messages := base.__fields__["receivable_messages"].default:
                     messages = messages.union(base_messages)
                 messages = messages.union(base.inherited_receivable_messages())
@@ -189,7 +189,7 @@ class EphemeralAgent(EphemeralObject):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.description = dedent(self.description) or self.__class__.__doc__ or ""
+        self.system = dedent(self.system) or self.__class__.__doc__ or ""
 
     def __call__(self, message: EphemeralMessage) -> Reply[EphemeralMessage]:
         return self.receive(message)
@@ -214,7 +214,7 @@ Applicator = Callable[[EphemeralMessage], Iterable[EphemeralMessage]]
 
 @beartype
 def apply(message: EphemeralMessage) -> Iterable[EphemeralMessage]:
-    agent: Optional[EphemeralAgent] = message.receiver
+    agent: Optional[EphemeralActor] = message.receiver
     if not agent:
         return []
     yield from agent.receive(message)

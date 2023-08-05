@@ -1,6 +1,5 @@
 from llegos.ephemeral import EphemeralMessage, Field
-from llegos.networks import AgentNetwork, NetworkAgent
-from llegos.openai import OpenAIAgent
+from llegos.networks import ActorNetwork, NetworkActor
 
 
 class Observation(EphemeralMessage):
@@ -15,7 +14,7 @@ class Insight(Knowledge):
     ...
 
 
-class LearningAgent(NetworkAgent, OpenAIAgent):
+class LearningAgent(NetworkActor):
     def knowledge(self, message: Knowledge):
         ...
 
@@ -28,7 +27,7 @@ class GuidingAgent(LearningAgent):
         ...
 
 
-class KnowledgeNetwork(AgentNetwork):
+class KnowledgeNetwork(ActorNetwork):
     guide: GuidingAgent
     learners: list[LearningAgent] = Field(min_items=1)
 

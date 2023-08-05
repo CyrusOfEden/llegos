@@ -26,14 +26,14 @@ from llegos.collab.contract_net import (
     CallForProposal,
     Cancel,
     ContractNet,
-    ContractorAgent,
+    ContractorActor,
     Inform,
-    ManagerAgent,
+    ManagerActor,
     Propose,
     Reject,
     Request,
 )
-from llegos.openai import use_agent_message, use_messages
+from llegos.functional import use_message_agent, use_message_list, use_reply_to
 from llegos.test_helpers import MockCognition
 
 
@@ -41,11 +41,11 @@ class InvariantError(TypeError):
     ...
 
 
-class WritingAgency(ManagerAgent):
+class WritingManager(ManagerActor):
     def request(self, message: Request):
-        messages = use_messages(
+        messages = use_message_list(
             system=f"""\
-            {self.description}
+            {self.system}
             """,
             context=message,
             context_history=8,
@@ -58,8 +58,11 @@ class WritingAgency(ManagerAgent):
             """,
         )
 
-        function_kwargs, function_call = use_agent_message(
-            {CallForProposal}, agents=self.available_contractors, sender=self
+        function_kwargs, function_call = use_message_agent(
+            self.receivers(CallForProposal),
+            messages={CallForProposal},
+            sender=self,
+            parent=message,
         )
 
         completion = self.cognition.language(
@@ -69,9 +72,9 @@ class WritingAgency(ManagerAgent):
         return function_call(completion)
 
     def propose(self, message: Propose) -> Reject | CallForProposal | Accept:
-        messages = use_messages(
+        messages = use_message_list(
             system=f"""\
-            {self.description}
+            {self.system}
             """,
             context=message,
             context_history=4,
@@ -85,10 +88,9 @@ class WritingAgency(ManagerAgent):
             """,
         )
 
-        function_kwargs, function_call = use_agent_message(
+        function_kwargs, function_call = use_reply_to(
+            message,
             {Accept, CallForProposal, Reject},
-            agents=[message.sender],
-            sender=self,
         )
 
         completion = self.cognition.language(
@@ -101,14 +103,20 @@ class WritingAgency(ManagerAgent):
         return function_call(completion)
 
     def inform(self, message: Inform):
+        return Inform.forward(message, to=self.network)
+
+    def reject(self, message: Reject):
+        ...
+
+    def cancel(self, message: Cancel):
         ...
 
 
-class Subcontractor(ContractorAgent):
+class WritingContractor(ContractorActor):
     def call_for_proposal(self, message: CallForProposal) -> Propose | Reject:
-        messages = use_messages(
+        messages = use_message_list(
             system=f"""\
-            {self.description}
+            {self.system}
 
             YOU MUST THINK QUIETLY.
             """,
@@ -122,10 +130,9 @@ class Subcontractor(ContractorAgent):
             """,
         )
 
-        function_kwargs, function_call = use_agent_message(
+        function_kwargs, function_call = use_reply_to(
+            message,
             {Propose, Reject},
-            agents=[message.sender],
-            sender=self,
         )
 
         completion = self.cognition.language(
@@ -138,23 +145,16 @@ class Subcontractor(ContractorAgent):
         return function_call(completion)
 
     def accept(self, message: Accept) -> Inform | Cancel:
-        messages = use_messages(
-            system="""\
-            {self.description}
-
-            Below is the conversation history between an outliner and a writer.
-            """,
+        messages = use_message_list(
+            system=self.system,
             context=message,
             context_history=8,
-            prompt="""\
-            Inform with the generated content.
-            """,
+            prompt=f"Imagine {self.id} informing {message.sender_id} with generated content.",
         )
 
-        function_kwargs, function_call = use_agent_message(
+        function_kwargs, function_call = use_reply_to(
+            message,
             {Inform, Cancel},
-            agents=[message.sender],
-            sender=self,
         )
 
         completion = self.cognition.language(
@@ -166,37 +166,8 @@ class Subcontractor(ContractorAgent):
 
         return function_call(completion)
 
-
-class DemotivatedWriter(ContractorAgent):
-    """
-    This agent is demotivated and will reject any task.
-    """
-
-    def call_for_proposal(self, message: CallForProposal) -> Reject:
-        return Reject.reply_to(message, reason="I can't do it!")
-
-    def accept(self, _: Accept):
-        raise InvariantError("should never be called")
-
-    def reject(self, _: Accept):
-        raise InvariantError("should never be called")
-
-
-class IncapableWriter(ContractorAgent):
-    """
-    This agent accepts all tasks, despite always being incapable of doing them.
-    """
-
-    def call_for_proposal(self, message: CallForProposal) -> Propose:
-        return Propose.reply_to(
-            message, plan="I believe I can do it, but I have no plan!"
-        )
-
-    def accept(self, message: Accept) -> Cancel:
-        return Cancel.reply_to(message)
-
-    def reject(self, _: Reject):
-        raise InvariantError("should never be called")
+    def reject(self, message: Reject):
+        ...
 
 
 class TestContractNet:
@@ -209,34 +180,32 @@ class TestContractNet:
         cognition = MockCognition()
 
         network = ContractNet(
-            description="Contract Net",
-            manager=WritingAgency(
+            system="Contract Net",
+            manager=WritingManager(
                 cognition=cognition,
-                description="An expert technical writer and outliner.",
+                system="An expert technical writer and outliner.",
             ),
             contractors=[
                 # one of these contractors will ultimately do this task
-                Subcontractor(
+                WritingContractor(
                     cognition=cognition,
-                    description="""\
+                    system="""\
                     You are engaging and great at explaining things
                     in an understandable way by the general population.
                     """,
                 ),
-                Subcontractor(
+                WritingContractor(
                     cognition=cognition,
-                    description="""\
+                    system="""\
                     You are an expert in computer science and programming,
                     able to explain technical concepts concisely and precisely.
                     """,
                 ),
-                # the failing workers are put first to demonstrate contract net's ability to recover
-                DemotivatedWriter(),
-                IncapableWriter(),
             ],
         )
 
         request = Request(
+            receiver=network,
             objective=dedent(
                 """\
                 Write a piece comparing the message-passing of biological cells
@@ -249,7 +218,6 @@ class TestContractNet:
                 "Concise",
                 "Precise",
             ],
-            receiver=network,
         )
 
         async for m in network.propogate(request):

@@ -2,8 +2,8 @@ from typing import Callable
 
 from openai import ChatCompletion
 
-from llegos.asyncio import AsyncAgent
-from llegos.ephemeral import EphemeralAgent, EphemeralCognition, EphemeralMessage, Field
+from llegos.asyncio import AsyncActor
+from llegos.ephemeral import EphemeralActor, EphemeralAgent, EphemeralMessage, Field
 from llegos.messages import Ack
 
 
@@ -11,14 +11,14 @@ class ChatMessage(EphemeralMessage):
     body: str
 
 
-class MockCognition(EphemeralCognition):
+class MockCognition(EphemeralAgent):
     language: Callable = Field(default=ChatCompletion.create, exclude=True)
     working_memory: list[EphemeralMessage] = Field(default_factory=list)
     short_term_memory: list[EphemeralMessage] = Field(default_factory=list)
     long_term_memory: list[EphemeralMessage] = Field(default_factory=list)
 
 
-class MockAgent(EphemeralAgent):
+class MockAgent(EphemeralActor):
     cognition: MockCognition = Field(default_factory=MockCognition)
     receivable_messages: set[type[EphemeralMessage]] = Field(
         default={Ack}, exclude=True
@@ -28,7 +28,7 @@ class MockAgent(EphemeralAgent):
         return Ack.reply_to(message)
 
 
-class MockAsyncAgent(AsyncAgent):
+class MockAsyncAgent(AsyncActor):
     cognition: MockCognition = Field(default_factory=MockCognition)
     receivable_messages: set[type[EphemeralMessage]] = Field(
         default={Ack}, exclude=True

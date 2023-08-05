@@ -5,11 +5,10 @@ There's probably better ways to do this, but here's an implementation for now
 from janus import Queue
 from sorcery import delegate_to_attr
 
-from llegos.asyncio import AsyncAgent
-from llegos.ephemeral import EphemeralMessage, Field, SystemAgent
+from llegos.asyncio import AsyncActor, EphemeralActor, EphemeralMessage, Field
 
 
-class Channel(SystemAgent):
+class Channel(EphemeralActor):
     _queue: Queue[EphemeralMessage] = Field(default_factory=Queue, exclude=True)
 
     @property
@@ -35,7 +34,7 @@ class Channel(SystemAgent):
     ) = delegate_to_attr("queue")
 
 
-class AsyncChannel(AsyncAgent, Channel):
+class AsyncChannel(AsyncActor, Channel):
     @property
     def queue(self):
         return self._queue.async_q

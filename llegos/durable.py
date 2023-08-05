@@ -7,12 +7,8 @@ from sorcery import delegate_to_attr
 from sqlalchemy import text
 from sqlmodel import Field, Relationship, SQLModel
 
-from llegos.ephemeral import (
-    EphemeralAgent,
-    EphemeralCognition,
-    EphemeralMessage,
-    EphemeralObject,
-)
+from llegos.ephemeral import (EphemeralActor, EphemeralAgent, EphemeralMessage,
+                              EphemeralObject)
 
 
 class AbstractDurableObject(SQLModel, EphemeralObject):
@@ -69,20 +65,21 @@ class DurableMessage(AbstractDurableObject, EphemeralMessage, table=True):
     )
 
 
-class DurableCognition(AbstractDurableObject, EphemeralCognition):
-    __tablename__ = "cognition"
+class DurableAgent(AbstractDurableObject, EphemeralAgent):
+    __tablename__ = "agents"
 
-    agent_id: UUID4 = Field(nullable=False, index=True)
-    agent: "DurableAgent" = Relationship(
-        back_populates="cognition",
+    actors: "DurableAgent" = Relationship(
+        foreign_key="actors.agent_id",
+        back_populates="agent",
         sa_relationship_kwargs={"lazy": "join"},
     )
 
 
-class DurableAgent(AbstractDurableObject, EphemeralAgent):
-    __tablename__ = "agents"
+class DurableActor(AbstractDurableObject, EphemeralActor):
+    __tablename__ = "actors"
 
-    cognition: DurableCognition = Relationship(
+    agent_id: UUID4 = Field(nullable=False, index=True)
+    agent: DurableAgent = Relationship(
         foreign_key="cognition.agent_id",
         back_populates="agent",
         sa_relationship_args={"lazy": "join"},

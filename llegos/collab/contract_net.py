@@ -7,7 +7,7 @@ https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Icnp.svg/880px-Icnp.sv
 from abc import ABC, abstractmethod
 
 from llegos.messages import EphemeralMessage, find_closest
-from llegos.networks import AgentNetwork, Field, NetworkAgent
+from llegos.networks import ActorNetwork, Field, NetworkActor
 
 
 class Request(EphemeralMessage):
@@ -25,6 +25,7 @@ class CallForProposal(Request):
 class Reject(EphemeralMessage):
     "Reject a request with a reason"
     reason: str = Field(include=True)
+    feedback: str = Field(include=True)
 
 
 class Propose(EphemeralMessage):
@@ -34,6 +35,7 @@ class Propose(EphemeralMessage):
 
 class Accept(EphemeralMessage):
     "Accept the proposal from the contractor"
+    feedback: str = Field(include=True)
 
 
 class Cancel(EphemeralMessage):
@@ -51,7 +53,7 @@ class Response(EphemeralMessage):
     content: str = Field(include=True)
 
 
-class ContractorAgent(NetworkAgent):
+class ContractorActor(NetworkActor):
     receivable_messages: set[type[EphemeralMessage]] = Field(
         default={
             CallForProposal,
@@ -79,7 +81,7 @@ class ContractorAgent(NetworkAgent):
         ...
 
 
-class ManagerAgent(NetworkAgent, ABC):
+class ManagerActor(NetworkActor, ABC):
     receivable_messages: set[type[EphemeralMessage]] = Field(
         default={
             Request,
@@ -90,12 +92,6 @@ class ManagerAgent(NetworkAgent, ABC):
         },
         exclude=True,
     )
-
-    @property
-    def available_contractors(self):
-        return [
-            a for a in self.relationships if CallForProposal in a.receivable_messages
-        ]
 
     @abstractmethod
     def request(self, message: Request):
@@ -116,9 +112,9 @@ class ManagerAgent(NetworkAgent, ABC):
         ...
 
 
-class ContractNet(AgentNetwork):
-    manager: ManagerAgent = Field()
-    contractors: list[ContractorAgent] = Field(min_items=2)
+class ContractNet(ActorNetwork):
+    manager: ManagerActor = Field()
+    contractors: list[ContractorActor] = Field(min_items=2)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -130,6 +126,6 @@ class ContractNet(AgentNetwork):
     def request(self, req: Request):
         return Request.forward(req, to=self.manager, sender=self)
 
-    def inform(self, result: Inform):
-        request = find_closest(Request, of_message=result)
-        return Response.forward(result, to=request.sender)
+    def inform(self, message: Inform):
+        request = find_closest(Request, of_message=message)
+        return Response.forward(message, to=request.sender)
