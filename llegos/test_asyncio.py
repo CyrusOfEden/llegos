@@ -27,15 +27,15 @@ class TestAsyncAgent:
     @pytest.mark.asyncio
     async def test_agent_can_emit_events(self):
         agent = MockAsyncAgent()
-        event_emitted = False
+        emitted_message = None
 
         def event_handler(message):
-            nonlocal event_emitted
-            event_emitted = True
+            nonlocal emitted_message
+            emitted_message = message
 
-        agent.on("ack", event_handler)
+        agent.on("receive", event_handler)
         message = Ack(receiver=agent)
 
         await async_drain(async_propogate(message))
 
-        assert event_emitted
+        assert message == emitted_message

@@ -1,3 +1,4 @@
+import json
 from pprint import pprint
 
 import pytest
@@ -6,7 +7,7 @@ from dotenv import load_dotenv
 from llegos.collaborative.dialog import Dialog, DialogActor, DialogNetwork, StartDialog
 from llegos.ephemeral import EphemeralMessage, Field
 from llegos.functional import use_actor_message, use_gen_model, use_reply_to
-from llegos.messages import Ack
+from llegos.messages import Ack, Chat
 from llegos.networks import Propogate
 from llegos.test_helpers import MockCognition
 
@@ -20,10 +21,10 @@ class Consider(StartDialog):
 
 
 class Refine(Dialog):
-    "Think, reason, and form an improved version."
+    "Think, reason, and refine a response."
     thought: str = Field(include=True, description="think about how we can refine this")
     reasoning: str = Field(include=True, description="explain your reasoning")
-    form: str = Field(include=True, description="generate the refined form")
+    response: str = Field(include=True)
 
 
 class RefiningActor(DialogActor):
@@ -40,7 +41,8 @@ class RefiningActor(DialogActor):
             context_history=8,
             prompt="""\
             First, review and analyze the information.
-            Then, decide who to talk to about it to refine it into a more elegant form.
+            Then, decide who to talk to about it to.
+            Use Refine to think, reason, and form an initial response.
             """,
         )
         function_kwargs, function_call = use_actor_message(
@@ -62,7 +64,7 @@ class RefiningActor(DialogActor):
             First, review the material.
             If you are satisfied with its quality, elegance and insight,
             then return Quality.
-            Else, use Refine to think, reason, and form an improved version.
+            Else, use Refine to think, reason, and refine the response.
             """,
         )
         function_kwargs, function_call = use_reply_to(r, {Quality, Refine})
@@ -70,6 +72,9 @@ class RefiningActor(DialogActor):
         completion = self.cognition.language(**model_kwargs, **function_kwargs)
 
         return function_call(completion)
+
+    def chat(self, c: Chat):
+        "Sometimes GPT returns an assistant Chat message, handle it here."
 
 
 class Prompt(StartDialog):
@@ -109,6 +114,6 @@ class TestDialogNetwork:
         )
         message = Propogate(message=question)
 
-        async for message in ensemble.receive(message):
-            pprint(message.dict())
+        async for m in ensemble.receive(message):
+            pprint(json.loads(str(m)))
             print("\n\n")

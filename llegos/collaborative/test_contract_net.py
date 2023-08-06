@@ -15,6 +15,7 @@ communication protocol.
 https://en.m.wikipedia.org/wiki/Contract_Net_Protocol
 """
 
+import json
 from pprint import pprint
 from textwrap import dedent
 
@@ -219,5 +220,5 @@ class TestContractNet:
         )
 
         async for m in network.receive(Propogate(message=request)):
-            pprint(m.dict())
+            pprint(json.loads(str(m)))
             print("\n\n")

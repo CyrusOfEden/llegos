@@ -7,7 +7,7 @@ from openai.openai_object import OpenAIObject
 from pydantic import UUID4
 
 from llegos.ephemeral import EphemeralActor, EphemeralAgent, EphemeralMessage
-from llegos.messages import GenAssistant, message_chain
+from llegos.messages import Chat, message_chain
 
 
 class OpenAICognition(EphemeralAgent):
@@ -129,7 +129,7 @@ def use_gen_message(messages: Iterable[type[EphemeralMessage]], **kwargs):
                 import ipdb
 
                 ipdb.set_trace()
-                yield GenAssistant(**kwargs, message=content)
+                yield Chat(**kwargs, message=content)
         if call := response.get("function_call", None):
             cls = message_lookup[call.name]
             genargs = json.loads(call.arguments)
@@ -162,21 +162,7 @@ def use_actor_message(
     def function_call(completion: OpenAIObject):
         response = completion.choices[0].message
         if content := response.get("content", None):
-            try:
-                call = json.loads(content)["function_call"]
-                genargs = call["args"]["message"]
-                genargs.update(kwargs)
-
-                agent = agent_lookup[call["function"].split(".")[1]]
-                genargs["receiver"] = agent
-
-                cls = message_lookup[genargs["intent"]]
-                yield cls(**genargs)
-            except json.JSONDecodeError or KeyError:
-                import ipdb
-
-                ipdb.set_trace()
-                yield GenAssistant(**kwargs, message=content)
+            yield Chat(**kwargs, message=content)
         if call := response.get("function_call", None):
             raw = json.loads(call.arguments)
             genargs = raw.pop("message", raw)

@@ -5,12 +5,12 @@ from networkx import DiGraph
 from llegos.ephemeral import EphemeralMessage, Field
 
 
-class GenAssistant(EphemeralMessage):
-    message: str = Field()
+class Chat(EphemeralMessage):
+    message: str = Field(include=True)
 
 
 class Ack(EphemeralMessage):
-    content: str = Field(default="")
+    message: str = Field(default="", include=True)
 
 
 @beartype

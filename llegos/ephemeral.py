@@ -31,13 +31,17 @@ class EphemeralObject(BaseModel, ABC):
         return super().dict(*args, exclude_none=exclude_none, **kwargs)
 
     def __str__(self):
-        return self.json()
+        return self.json(sort_keys=False)
 
     @classmethod
     def lift(cls, instance: "EphemeralObject", **kwargs):
         attrs = instance.dict()
 
         cls.Config.deepmerge(attrs, kwargs)
+
+        for field in cls.__fields__.values():
+            if field.default:
+                attrs[field.name] = field.default
 
         return cls(**attrs)
 
@@ -130,7 +134,7 @@ class EphemeralMessage(EphemeralObject):
         return maybe(self.parent).id
 
     def __str__(self):
-        return self.json(exclude={"parent"})
+        return self.json(exclude={"parent"}, sort_keys=False)
 
     def forward_to(self, to: Optional[EphemeralObject] = None, **kwargs):
         return self.forward(self, to=to, **kwargs)
