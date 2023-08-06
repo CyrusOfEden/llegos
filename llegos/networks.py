@@ -8,6 +8,10 @@ from llegos.asyncio import AsyncActor, async_propogate
 from llegos.ephemeral import EphemeralMessage, Field
 
 
+class Propogate(EphemeralMessage):
+    message: EphemeralMessage = Field()
+
+
 class NetworkActor(AsyncActor):
     @property
     def network(self):
@@ -23,11 +27,11 @@ class NetworkActor(AsyncActor):
         edges.sort(key=lambda edge: edge[2].get("weight", 1))
         return [agent for (agent, _, _) in edges]
 
-    def receivers(self, message: type[EphemeralMessage]):
+    def receivers(self, *messages: type[EphemeralMessage]):
         return [
             agent
             for agent in self.relationships
-            if message in agent.receivable_messages
+            if any(m in agent.receivable_messages for m in messages)
         ]
 
 
@@ -61,9 +65,9 @@ class ActorNetwork(NetworkActor):
     def directory(self):
         return {a.id: a for a in self.graph.nodes}
 
-    async def propogate(self, message: EphemeralMessage):
+    async def propogate(self, p: Propogate):
         with self.context():
-            async for message in async_propogate(message):
+            async for message in async_propogate(p.message):
                 yield message
 
     @contextmanager

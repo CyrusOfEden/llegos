@@ -7,7 +7,7 @@ from openai.openai_object import OpenAIObject
 from pydantic import UUID4
 
 from llegos.ephemeral import EphemeralActor, EphemeralAgent, EphemeralMessage
-from llegos.messages import Chat, message_chain
+from llegos.messages import GenAssistant, message_chain
 
 
 class OpenAICognition(EphemeralAgent):
@@ -87,7 +87,7 @@ def standard_context_transformer(messages: Iterable[EphemeralMessage]) -> list[d
     return [{"content": str(message), "role": "user"} for message in messages]
 
 
-def use_message_list(
+def use_gen_model(
     system: str,
     prompt: str,
     context: EphemeralMessage | None = None,
@@ -95,12 +95,14 @@ def use_message_list(
     context_transformer: Callable[
         [Iterable[EphemeralMessage]], list[dict]
     ] = standard_context_transformer,
+    **kwargs,
 ):
-    return [
+    kwargs["messages"] = [
         {"content": dedent(system), "role": "system"},
         *context_transformer(message_chain(context, height=context_history)),
         {"content": dedent(prompt), "role": "user"},
     ]
+    return kwargs
 
 
 def use_gen_message(messages: Iterable[type[EphemeralMessage]], **kwargs):
@@ -124,7 +126,10 @@ def use_gen_message(messages: Iterable[type[EphemeralMessage]], **kwargs):
                 cls = message_lookup[genargs["intent"]]
                 yield cls(**genargs)
             except json.JSONDecodeError or KeyError:
-                yield Chat(**kwargs, message=content)
+                import ipdb
+
+                ipdb.set_trace()
+                yield GenAssistant(**kwargs, message=content)
         if call := response.get("function_call", None):
             cls = message_lookup[call.name]
             genargs = json.loads(call.arguments)
@@ -134,7 +139,7 @@ def use_gen_message(messages: Iterable[type[EphemeralMessage]], **kwargs):
     return create_kwargs, function_call
 
 
-def use_message_agent(
+def use_actor_message(
     agents: Iterable[EphemeralActor],
     messages: set[type[EphemeralMessage]],
     **kwargs,
@@ -168,7 +173,10 @@ def use_message_agent(
                 cls = message_lookup[genargs["intent"]]
                 yield cls(**genargs)
             except json.JSONDecodeError or KeyError:
-                yield Chat(**kwargs, message=content)
+                import ipdb
+
+                ipdb.set_trace()
+                yield GenAssistant(**kwargs, message=content)
         if call := response.get("function_call", None):
             raw = json.loads(call.arguments)
             genargs = raw.pop("message", raw)
@@ -187,6 +195,6 @@ def use_reply_to(m: EphemeralMessage, ms: set[type[EphemeralMessage]], **kwargs)
     if not m.sender_id:
         raise ValueError("message must have a sender to generate a reply")
 
-    return use_message_agent(
+    return use_actor_message(
         [m.sender], ms, parent=m, sender=m.receiver, receiver=m.sender, **kwargs
     )

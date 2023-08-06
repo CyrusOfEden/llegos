@@ -5,7 +5,7 @@ from networkx import DiGraph
 from llegos.ephemeral import EphemeralMessage, Field
 
 
-class Chat(EphemeralMessage):
+class GenAssistant(EphemeralMessage):
     message: str = Field()
 
 

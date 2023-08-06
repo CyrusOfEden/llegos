@@ -113,6 +113,7 @@ class EphemeralMessage(EphemeralObject):
 
     def __init__(self, **kwargs):
         kwargs["intent"] = self.infer_intent()
+        kwargs["system"] = kwargs.pop("system", self.__class__.__doc__) or ""
         super().__init__(**kwargs)
         self.__class__.Config.hydrator(self)
 
@@ -129,7 +130,7 @@ class EphemeralMessage(EphemeralObject):
         return maybe(self.parent).id
 
     def __str__(self):
-        return self.json(exclude={"parent"}, sorted_keys=False)
+        return self.json(exclude={"parent"})
 
     def forward_to(self, to: Optional[EphemeralObject] = None, **kwargs):
         return self.forward(self, to=to, **kwargs)

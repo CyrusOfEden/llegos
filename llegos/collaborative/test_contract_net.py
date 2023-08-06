@@ -21,7 +21,7 @@ from textwrap import dedent
 import pytest
 from dotenv import load_dotenv
 
-from llegos.collab.contract_net import (
+from llegos.collaborative.contract_net import (
     Accept,
     CallForProposal,
     Cancel,
@@ -33,7 +33,8 @@ from llegos.collab.contract_net import (
     Reject,
     Request,
 )
-from llegos.functional import use_message_agent, use_message_list, use_reply_to
+from llegos.functional import use_actor_message, use_gen_model, use_reply_to
+from llegos.networks import Propogate
 from llegos.test_helpers import MockCognition
 
 
@@ -43,7 +44,10 @@ class InvariantError(TypeError):
 
 class WritingManager(ManagerActor):
     def request(self, message: Request):
-        messages = use_message_list(
+        model_kwargs = use_gen_model(
+            model="gpt-4-0613",
+            max_tokens=4096,
+            # these are special llegos params that are used to generate a list[dict] of messages
             system=f"""\
             {self.system}
             """,
@@ -58,21 +62,21 @@ class WritingManager(ManagerActor):
             """,
         )
 
-        function_kwargs, function_call = use_message_agent(
+        function_kwargs, function_call = use_actor_message(
             self.receivers(CallForProposal),
             messages={CallForProposal},
             sender=self,
             parent=message,
         )
 
-        completion = self.cognition.language(
-            model="gpt-4-0613", messages=messages, max_tokens=4096, **function_kwargs
-        )
+        completion = self.cognition.language(**model_kwargs, **function_kwargs)
 
         return function_call(completion)
 
     def propose(self, message: Propose) -> Reject | CallForProposal | Accept:
-        messages = use_message_list(
+        model_args = use_gen_model(
+            model="gpt-4-0613",
+            max_tokens=4096,
             system=f"""\
             {self.system}
             """,
@@ -93,12 +97,7 @@ class WritingManager(ManagerActor):
             {Accept, CallForProposal, Reject},
         )
 
-        completion = self.cognition.language(
-            model="gpt-4-0613",
-            messages=messages,
-            max_tokens=4096,
-            **function_kwargs,
-        )
+        completion = self.cognition.language(**model_args, **function_kwargs)
 
         return function_call(completion)
 
@@ -114,7 +113,9 @@ class WritingManager(ManagerActor):
 
 class WritingContractor(ContractorActor):
     def call_for_proposal(self, message: CallForProposal) -> Propose | Reject:
-        messages = use_message_list(
+        model_kwargs = use_gen_model(
+            model="gpt-4-0613",
+            max_tokens=4096,
             system=f"""\
             {self.system}
 
@@ -135,17 +136,14 @@ class WritingContractor(ContractorActor):
             {Propose, Reject},
         )
 
-        completion = self.cognition.language(
-            model="gpt-4-0613",
-            messages=messages,
-            max_tokens=4096,
-            **function_kwargs,
-        )
+        completion = self.cognition.language(**model_kwargs, **function_kwargs)
 
         return function_call(completion)
 
     def accept(self, message: Accept) -> Inform | Cancel:
-        messages = use_message_list(
+        model_kwargs = use_gen_model(
+            model="gpt-4-0613",
+            max_tokens=4096,
             system=self.system,
             context=message,
             context_history=8,
@@ -157,17 +155,17 @@ class WritingContractor(ContractorActor):
             {Inform, Cancel},
         )
 
-        completion = self.cognition.language(
-            model="gpt-4-0613",
-            messages=messages,
-            max_tokens=4096,
-            **function_kwargs,
-        )
+        completion = self.cognition.language(**model_kwargs, **function_kwargs)
 
         return function_call(completion)
 
     def reject(self, message: Reject):
         ...
+
+
+class WritingAgency(ContractNet):
+    def request(self, message: Request):
+        return Request.forward(message, to=self.manager)
 
 
 class TestContractNet:
@@ -179,11 +177,11 @@ class TestContractNet:
     async def test_receiving_response(self):
         cognition = MockCognition()
 
-        network = ContractNet(
-            system="Contract Net",
+        network = WritingAgency(
+            system="Writing Agency",
             manager=WritingManager(
                 cognition=cognition,
-                system="An expert technical writer and outliner.",
+                system="Writing manager",
             ),
             contractors=[
                 # one of these contractors will ultimately do this task
@@ -220,6 +218,6 @@ class TestContractNet:
             ],
         )
 
-        async for m in network.propogate(request):
+        async for m in network.receive(Propogate(message=request)):
             pprint(m.dict())
             print("\n\n")
