@@ -1,12 +1,12 @@
 from beartype.typing import Iterable
 
 from llegos.messages import Ack
-from llegos.test_helpers import MockAgent
+from llegos.test_helpers import AckAgent
 
 
 class TestMockAgent:
     def test_agent_can_emit_event(self):
-        agent = MockAgent()
+        agent = AckAgent()
         event_emitted = False
 
         def event_handler(message):
@@ -19,7 +19,7 @@ class TestMockAgent:
         assert event_emitted
 
     def test_remove_listener(self):
-        agent = MockAgent()
+        agent = AckAgent()
         event_name = "test_event"
 
         def listener():
@@ -31,7 +31,7 @@ class TestMockAgent:
         assert listener not in agent.listeners(event_name)
 
     def test_agent_receive_message(self):
-        agent = MockAgent()
+        agent = AckAgent()
         assert agent.receivable_messages == {Ack}
 
         message = Ack()

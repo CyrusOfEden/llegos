@@ -1,33 +1,33 @@
+import asyncio
 import json
 from pprint import pprint
 
-import pytest
 from dotenv import load_dotenv
 
-from llegos.collaborative.dialog import Dialog, DialogActor, DialogNetwork, StartDialog
+from llegos.collaborative.abstract.pairwise import PairwiseNetwork
 from llegos.ephemeral import EphemeralMessage, Field
 from llegos.functional import use_actor_message, use_gen_model, use_reply_to
 from llegos.messages import Ack, Chat
-from llegos.networks import Propogate
-from llegos.test_helpers import MockCognition
+from llegos.networks import NetworkActor, Propogate
+from llegos.test_helpers import SimpleGPTCognition
 
 
 class Quality(Ack):
     "Quality is good, no further refinement is needed."
 
 
-class Consider(StartDialog):
+class Consider(EphemeralMessage):
     "Consider the material."
 
 
-class Refine(Dialog):
+class Refine(EphemeralMessage):
     "Think, reason, and refine a response."
     thought: str = Field(include=True, description="think about how we can refine this")
     reasoning: str = Field(include=True, description="explain your reasoning")
     response: str = Field(include=True)
 
 
-class RefiningActor(DialogActor):
+class Philosopher(NetworkActor):
     receivable_messages: set[type[EphemeralMessage]] = Field(
         default={Consider, Refine}, exclude=True
     )
@@ -77,43 +77,43 @@ class RefiningActor(DialogActor):
         "Sometimes GPT returns an assistant Chat message, handle it here."
 
 
-class Prompt(StartDialog):
+class PhilosophicalInquiry(EphemeralMessage):
     content: str = Field(include=True)
 
 
-class PhilosophicalEnsemble(DialogNetwork):
-    def prompt(self, message: Prompt):
+class DidacticNetwork(PairwiseNetwork):
+    def prompt(self, message: PhilosophicalInquiry):
         for agent in self.agents:
             yield Consider.forward(message, to=agent)
 
 
-class TestDialogNetwork:
-    @classmethod
-    def setup_class(cls):
-        load_dotenv()
+if __name__ == "__main__":
+    load_dotenv()
 
-    @pytest.mark.asyncio
-    async def test_dialog_network(self):
-        cognition = MockCognition()
+    cognition = SimpleGPTCognition()
 
-        ensemble = PhilosophicalEnsemble(
-            cognition=cognition,
-            system="ensemble",
-            agents={
-                RefiningActor(cognition=cognition, system="Kieerkegard"),
-                RefiningActor(cognition=cognition, system="Rumi"),
-                RefiningActor(cognition=cognition, system="Laotzu"),
-                RefiningActor(cognition=cognition, system="Buddha"),
-                RefiningActor(cognition=cognition, system="Alan Watts"),
-            },
-        )
+    ensemble = DidacticNetwork(
+        cognition=cognition,
+        system="ensemble",
+        agents={
+            Philosopher(cognition=cognition, system="Kieerkegard"),
+            Philosopher(cognition=cognition, system="Rumi"),
+            Philosopher(cognition=cognition, system="Laotzu"),
+            Philosopher(cognition=cognition, system="Buddha"),
+            Philosopher(cognition=cognition, system="Alan Watts"),
+        },
+    )
 
-        question = Prompt(
-            content="How can one channel love into the world?",
-            receiver=ensemble,
-        )
-        message = Propogate(message=question)
-
-        async for m in ensemble.receive(message):
+    async def run(message: EphemeralMessage):
+        async for m in ensemble.receive(Propogate(message=message)):
             pprint(json.loads(str(m)))
             print("\n\n")
+
+    question = PhilosophicalInquiry(
+        content="How can one channel love into the world?",
+        receiver=ensemble,
+    )
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(run(question))
+    loop.close()

@@ -2,14 +2,14 @@
 import pytest
 
 from llegos.asyncio import async_drain, async_propogate, async_propogate_all
-from llegos.test_helpers import Ack, MockAsyncAgent
+from llegos.test_helpers import Ack, AsyncAckAgent
 
 
 class TestAsyncAgent:
     # Tests that the AsyncAgent can handle multiple messages at once
     @pytest.mark.asyncio
     async def test_handle_messages(self):
-        agent = MockAsyncAgent()
+        agent = AsyncAckAgent()
         m1 = Ack(receiver=agent)
         m2 = Ack(receiver=agent)
 
@@ -26,7 +26,7 @@ class TestAsyncAgent:
     # Tests that the agent can emit events
     @pytest.mark.asyncio
     async def test_agent_can_emit_events(self):
-        agent = MockAsyncAgent()
+        agent = AsyncAckAgent()
         emitted_message = None
 
         def event_handler(message):

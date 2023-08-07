@@ -1,24 +1,24 @@
 import pytest
 
 from llegos.messages import message_list
-from llegos.test_helpers import Ack, ChatMessage, MockAgent
+from llegos.test_helpers import Ack, AckAgent, ChatMessage
 
 
 class MessagesTest:
     def test_message_init(self):
         message = Ack(
-            sender=MockAgent(),
-            receiver=MockAgent(),
+            sender=AckAgent(),
+            receiver=AckAgent(),
         )
         assert message.intent == "ack"
-        assert isinstance(message.sender, MockAgent)
-        assert isinstance(message.receiver, MockAgent)
+        assert isinstance(message.sender, AckAgent)
+        assert isinstance(message.receiver, AckAgent)
         assert message.parent is None
 
     def test_message_reply_to(self):
         message = Ack(
-            sender=MockAgent(),
-            receiver=MockAgent(),
+            sender=AckAgent(),
+            receiver=AckAgent(),
         )
         reply = Ack.reply_to(message)
         assert reply.intent == "ack"
@@ -28,10 +28,10 @@ class MessagesTest:
 
     def test_message_forward(self):
         message = Ack(
-            sender=MockAgent(),
-            receiver=MockAgent(),
+            sender=AckAgent(),
+            receiver=AckAgent(),
         )
-        new_receiver = MockAgent()
+        new_receiver = AckAgent()
         fwd = Ack.forward(message, to=new_receiver)
 
         assert fwd.intent == "ack"
@@ -40,7 +40,7 @@ class MessagesTest:
         assert fwd.parent == message
 
     def test_message_role_derived_from_sender_role(self):
-        sender = MockAgent(role="system")
+        sender = AckAgent(role="system")
         message = Ack(
             body="Hello, world!",
             sender=sender,
@@ -51,29 +51,29 @@ class MessagesTest:
         with pytest.raises(ValueError):
             Ack(
                 sender="invalid sender",
-                receiver=MockAgent(),
+                receiver=AckAgent(),
             )
 
     def test_invalid_receiver(self):
         with pytest.raises(ValueError):
             Ack(
-                sender=MockAgent(),
+                sender=AckAgent(),
                 receiver="invalid_receiver",
             )
 
     def test_invalid_parent(self):
         with pytest.raises(ValueError):
             Ack(
-                sender=MockAgent(),
-                receiver=MockAgent(),
+                sender=AckAgent(),
+                receiver=AckAgent(),
                 parent="invalid",
             )
 
     def test_invalid_created_at(self):
         with pytest.raises(ValueError):
             Ack(
-                sender=MockAgent(),
-                receiver=MockAgent(),
+                sender=AckAgent(),
+                receiver=AckAgent(),
                 created_at="invalid",
             )
 

@@ -1,28 +1,11 @@
-"""
-Contract Net is a task-sharing protocol developed by Reid G. Smith in 1980.
-
-This protocol can be used to implement hierarchical organizations, where a manager
-assigns tasks to contractors, who in turn decompose into lower level task and
-assign them to the lower level. This kind of organization can be used when agents
-are cooperative, i.e. when their objectives are identical. In this situation, it is
-possible to make sure that the contractors do not lie to the manager when they make
-their proposal. When the agents are competitive, the protocol ends up in a marketplace
-organization, very similar to auctions.
-
-It was standardized by the Foundation for Intelligent Physical Agents as a multi-agent
-communication protocol.
-
-https://en.m.wikipedia.org/wiki/Contract_Net_Protocol
-"""
-
+import asyncio
 import json
 from pprint import pprint
 from textwrap import dedent
 
-import pytest
 from dotenv import load_dotenv
 
-from llegos.collaborative.contract_net import (
+from llegos.collaborative.abstract.contract_net import (
     Accept,
     CallForProposal,
     Cancel,
@@ -34,9 +17,10 @@ from llegos.collaborative.contract_net import (
     Reject,
     Request,
 )
+from llegos.ephemeral import EphemeralMessage
 from llegos.functional import use_actor_message, use_gen_model, use_reply_to
 from llegos.networks import Propogate
-from llegos.test_helpers import MockCognition
+from llegos.test_helpers import SimpleGPTCognition
 
 
 class InvariantError(TypeError):
@@ -169,56 +153,56 @@ class WritingAgency(ContractNet):
         return Request.forward(message, to=self.manager)
 
 
-class TestContractNet:
-    @classmethod
-    def setup_class(cls):
-        load_dotenv()
+if __name__ == "__main__":
+    load_dotenv()
+    cognition = SimpleGPTCognition()
 
-    @pytest.mark.asyncio
-    async def test_receiving_response(self):
-        cognition = MockCognition()
-
-        network = WritingAgency(
-            system="Writing Agency",
-            manager=WritingManager(
+    network = WritingAgency(
+        system="Writing Agency",
+        manager=WritingManager(
+            cognition=cognition,
+            system="Writing manager",
+        ),
+        contractors=[
+            # one of these contractors will ultimately do this task
+            WritingContractor(
                 cognition=cognition,
-                system="Writing manager",
-            ),
-            contractors=[
-                # one of these contractors will ultimately do this task
-                WritingContractor(
-                    cognition=cognition,
-                    system="""\
+                system="""\
                     You are engaging and great at explaining things
                     in an understandable way by the general population.
                     """,
-                ),
-                WritingContractor(
-                    cognition=cognition,
-                    system="""\
+            ),
+            WritingContractor(
+                cognition=cognition,
+                system="""\
                     You are an expert in computer science and programming,
                     able to explain technical concepts concisely and precisely.
                     """,
-                ),
-            ],
-        )
+            ),
+        ],
+    )
 
-        request = Request(
-            receiver=network,
-            objective=dedent(
-                """\
+    async def run(message: EphemeralMessage):
+        async for m in network.receive(Propogate(message=message)):
+            pprint(json.loads(str(m)))
+            print("\n\n")
+
+    request = Request(
+        receiver=network,
+        objective=dedent(
+            """\
                 Write a piece comparing the message-passing of biological cells
                 to message-passing in multi-agent networks.
                 """
-            ),
-            requirements=[
-                "Engaging",
-                "Intuitive",
-                "Concise",
-                "Precise",
-            ],
-        )
+        ),
+        requirements=[
+            "Engaging",
+            "Intuitive",
+            "Concise",
+            "Precise",
+        ],
+    )
 
-        async for m in network.receive(Propogate(message=request)):
-            pprint(json.loads(str(m)))
-            print("\n\n")
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(run(request))
+    loop.close()

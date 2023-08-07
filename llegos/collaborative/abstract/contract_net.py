@@ -1,5 +1,20 @@
 """
-Implements the Iterative Contract Net protocol as depicted in this diagram:
+Contract Net is a task-sharing protocol developed by Reid G. Smith in 1980.
+
+This protocol can be used to implement hierarchical organizations, where a manager
+assigns tasks to contractors, who in turn decompose into lower level task and
+assign them to the lower level. This kind of organization can be used when agents
+are cooperative, i.e. when their objectives are identical. In this situation, it is
+possible to make sure that the contractors do not lie to the manager when they make
+their proposal. When the agents are competitive, the protocol ends up in a marketplace
+organization, very similar to auctions.
+
+It was standardized by the Foundation for Intelligent Physical Agents as a multi-agent
+communication protocol.
+
+https://en.m.wikipedia.org/wiki/Contract_Net_Protocol
+
+This implements the Iterative Contract Net protocol as depicted in this diagram:
 https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Icnp.svg/880px-Icnp.svg.png
 """
 

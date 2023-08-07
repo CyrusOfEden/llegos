@@ -6,30 +6,43 @@ from networkx import DiGraph
 from pydantic import Field
 
 from llegos.asyncio import AsyncActor
-from llegos.messages import Action, Inform, Step, find_ancestor, message_path
+from llegos.ephemeral import EphemeralMessage
+from llegos.messages import find_closest, message_path
 
 
-class Loss(Inform):
+class Percept(EphemeralMessage):
+    ...
+
+
+class PerceptionActor(AsyncActor, ABC):
+    ...
+
+
+class Action(EphemeralMessage):
+    ...
+
+
+class Cost(EphemeralMessage):
     value: float = Field(gte=0)
 
 
-class LossAgent(AsyncActor, ABC):
+class CostActor(AsyncActor, ABC):
     loss_landscape: DiGraph = Field(
         default_factory=DiGraph, include=False, exclude=True
     )
 
     @abstractmethod
-    async def forward(self, predicted_step: Step) -> Loss:
+    async def forward(self, predicted_step: Percept) -> Cost:
         action: Action = predicted_step.parent
-        previous_step: Step = action.parent
-        loss = Loss.reply_to(action, value=0)
+        previous_step: Percept = action.parent
+        loss = Cost.reply_to(action, value=0)
 
         self.loss_landscape.add_edge(previous_step, predicted_step, weight=loss.value)
 
         return loss
 
     @abstractmethod
-    async def backward(self, realized_step: Step) -> Loss:
+    async def backward(self, realized_step: Percept) -> Cost:
         action: Action = realized_step.parent
 
         edge = self.loss_landscape[action][realized_step]
@@ -39,18 +52,18 @@ class LossAgent(AsyncActor, ABC):
         edge["weight"] = actual_loss
         edge["error"] = predicted_loss - actual_loss
 
-        return Loss.reply_to(realized_step, value=actual_loss)
+        return Cost.reply_to(realized_step, value=actual_loss)
 
 
-class Reward(Inform):
+class Reward(EphemeralMessage):
     value: float = Field(default=0)
 
 
-class RewardAgent(AsyncActor, ABC):
+class RewardActor(AsyncActor, ABC):
     reward_path: DiGraph = Field(default_factory=DiGraph, include=False, exclude=True)
 
     @abstractmethod
-    async def forward(self, message: Loss) -> Reward:
+    async def forward(self, message: Cost) -> Reward:
         reward = Reward.reply_to(message, value=0)
 
         gen = message.parent
@@ -60,7 +73,7 @@ class RewardAgent(AsyncActor, ABC):
         return reward
 
     @abstractmethod
-    async def backward(self, message: Loss) -> Reward:
+    async def backward(self, message: Cost) -> Reward:
         reward = Reward.reply_to(message, value=1)
 
         gen = message.parent
@@ -70,53 +83,53 @@ class RewardAgent(AsyncActor, ABC):
         return reward
 
 
-class ActionAgent(AsyncActor, ABC):
+class ActionActor(AsyncActor, ABC):
     @abstractmethod
-    async def forward(self, current_step: Step) -> AsyncIterable[Action]:
+    async def forward(self, current_step: Percept) -> AsyncIterable[Action]:
         "Predict possible actions from a given step."
         yield Action.reply_to(current_step, text="Possible Action #1")
         yield Action.reply_to(current_step, text="Possible Action #2")
         yield Action.reply_to(current_step, text="Possible Action #3")
 
     @abstractmethod
-    async def backward(self, realized_step: Step):
+    async def backward(self, realized_step: Percept):
         "Update the model based on the material step."
         ...
 
 
-class WorldModelAgent(AsyncActor, ABC):
+class WorldModelActor(AsyncActor, ABC):
     @abstractmethod
-    async def forward(self, action: Action) -> Step:
+    async def forward(self, action: Action) -> Percept:
         "Predict the next step of the world based on the action."
-        predicted_step = Step.reply_to(action)
+        predicted_step = Percept.reply_to(action)
         return predicted_step
 
     @abstractmethod
-    async def backward(self, realized_step: Step):
+    async def backward(self, realized_step: Percept):
         "Update the model based on the material step."
-        find_ancestor(realized_step, Action)
+        find_closest(realized_step, Action)
 
 
-class ReinforcementAgent(AsyncActor, ABC):
-    loss: LossAgent = Field(exclude=True)
-    rewarder: RewardAgent = Field(exclude=True)
-    action: ActionAgent = Field(exclude=True)
-    world_model: WorldModelAgent = Field(exclude=True)
+class ExecutiveAgent(AsyncActor, ABC):
+    cost: CostActor = Field(exclude=True)
+    reward: RewardActor = Field(exclude=True)
+    action: ActionActor = Field(exclude=True)
+    world_model: WorldModelActor = Field(exclude=True)
 
-    async def forward(self, step: Step, action_lookahead: int) -> Action:
+    async def forward(self, step: Percept, action_lookahead: int) -> Action:
         if action_lookahead <= 0:
             raise ValueError("search_depth must be greater than 0")
 
         predicted_actions: list[tuple[Action, float]] = []
 
-        prior_loss = await self.loss.forward(step)
-        prior_reward = await self.rewarder.forward(prior_loss)
+        prior_cost = await self.cost.forward(step)
+        prior_reward = await self.reward.forward(prior_cost)
 
         async for action in self.action.forward(prior_reward):
             print(action)
 
             predicted_step = await self.world_model.forward(action)
-            predicted_loss = await self.loss.forward(predicted_step)
+            predicted_loss = await self.cost.forward(predicted_step)
 
             predicted_actions.append((action, predicted_loss.value))
 
@@ -129,8 +142,8 @@ class ReinforcementAgent(AsyncActor, ABC):
         next_action = next(p for p in predictions if isinstance(p, Action))
         return next_action
 
-    async def backward(self, step: Step):
-        loss = await self.loss.backward(step)
-        reward = await self.rewarder.backward(loss)
+    async def backward(self, step: Percept):
+        loss = await self.cost.backward(step)
+        reward = await self.reward.backward(loss)
         await self.action.backward(reward)
         await self.world_model.backward(reward)
