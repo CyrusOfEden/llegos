@@ -1,7 +1,7 @@
 import pytest
 
-from llegos.messages import message_list
-from llegos.test_helpers import Ack, AckAgent, ChatMessage
+from llegos.messages import Chat, message_list
+from llegos.test_helpers import Ack, AckAgent
 
 
 class MessagesTest:
@@ -80,10 +80,10 @@ class MessagesTest:
 
 class TestMessageList:
     def test_replies(self):
-        m1 = ChatMessage(body="Initial message", intent="chat")
-        m2 = ChatMessage(body="First reply", parent=m1, intent="chat")
-        m2_1 = ChatMessage(body="Second reply", parent=m2, intent="chat")
-        m2_2 = ChatMessage(body="Third reply", parent=m2, intent="chat")
+        m1 = Chat(message="Initial message", intent="chat")
+        m2 = Chat(message="First reply", parent=m1, intent="chat")
+        m2_1 = Chat(message="Second reply", parent=m2, intent="chat")
+        m2_2 = Chat(message="Third reply", parent=m2, intent="chat")
 
         assert message_list(m2_1) == [m1, m2, m2_1]
         assert message_list(m2_2, height=2) == [m2, m2_2]

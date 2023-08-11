@@ -1,10 +1,10 @@
 from itertools import permutations
 
-from llegos.networks import ActorNetwork, Field, NetworkActor
+from llegos.contexts import BehaviorContext, Field, ContextualBehavior
 
 
-class PairwiseNetwork(ActorNetwork):
-    agents: set[NetworkActor] = Field(min_items=2)
+class PairwiseContext(BehaviorContext):
+    agents: set[ContextualBehavior] = Field(min_items=2)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

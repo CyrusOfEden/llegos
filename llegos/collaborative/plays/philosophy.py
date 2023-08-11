@@ -4,12 +4,12 @@ from pprint import pprint
 
 from dotenv import load_dotenv
 
-from llegos.collaborative.abstract.pairwise import PairwiseNetwork
+from llegos.collaborative.abstract.pairwise import PairwiseContext
+from llegos.contexts import ContextualBehavior, Propogate
 from llegos.ephemeral import EphemeralMessage, Field
 from llegos.functional import use_actor_message, use_gen_model, use_reply_to
 from llegos.messages import Ack, Chat
-from llegos.networks import NetworkActor, Propogate
-from llegos.test_helpers import SimpleGPTCognition
+from llegos.test_helpers import SimpleGPTAgent
 
 
 class Quality(Ack):
@@ -27,7 +27,7 @@ class Refine(EphemeralMessage):
     response: str = Field(include=True)
 
 
-class Philosopher(NetworkActor):
+class Philosopher(ContextualBehavior):
     receivable_messages: set[type[EphemeralMessage]] = Field(
         default={Consider, Refine}, exclude=True
     )
@@ -51,7 +51,8 @@ class Philosopher(NetworkActor):
 
         completion = self.cognition.language(**model_kwargs, **function_kwargs)
 
-        return function_call(completion)
+        message: Refine = function_call(completion)  # to another agent
+        return message
 
     def refine(self, r: Refine):
         model_kwargs = use_gen_model(
@@ -71,7 +72,8 @@ class Philosopher(NetworkActor):
 
         completion = self.cognition.language(**model_kwargs, **function_kwargs)
 
-        return function_call(completion)
+        message: Quality | Refine = function_call(completion)
+        return message
 
     def chat(self, c: Chat):
         "Sometimes GPT returns an assistant Chat message, handle it here."
@@ -81,7 +83,7 @@ class PhilosophicalInquiry(EphemeralMessage):
     content: str = Field(include=True)
 
 
-class DidacticNetwork(PairwiseNetwork):
+class DidacticContext(PairwiseContext):
     def prompt(self, message: PhilosophicalInquiry):
         for agent in self.agents:
             yield Consider.forward(message, to=agent)
@@ -90,9 +92,9 @@ class DidacticNetwork(PairwiseNetwork):
 if __name__ == "__main__":
     load_dotenv()
 
-    cognition = SimpleGPTCognition()
+    cognition = SimpleGPTAgent()
 
-    ensemble = DidacticNetwork(
+    ensemble = DidacticContext(
         cognition=cognition,
         system="ensemble",
         agents={
@@ -114,6 +116,4 @@ if __name__ == "__main__":
         receiver=ensemble,
     )
 
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(run(question))
-    loop.close()
+    asyncio.run(run(question))

@@ -5,7 +5,7 @@ from beartype.typing import AsyncIterable
 from networkx import DiGraph
 from pydantic import Field
 
-from llegos.asyncio import AsyncActor
+from llegos.asyncio import AsyncBehavior
 from llegos.ephemeral import EphemeralMessage
 from llegos.messages import find_closest, message_path
 
@@ -14,7 +14,7 @@ class Percept(EphemeralMessage):
     ...
 
 
-class PerceptionActor(AsyncActor, ABC):
+class PerceptionBehavior(AsyncBehavior, ABC):
     ...
 
 
@@ -26,7 +26,7 @@ class Cost(EphemeralMessage):
     value: float = Field(gte=0)
 
 
-class CostActor(AsyncActor, ABC):
+class CostBehavior(AsyncBehavior, ABC):
     loss_landscape: DiGraph = Field(
         default_factory=DiGraph, include=False, exclude=True
     )
@@ -59,7 +59,7 @@ class Reward(EphemeralMessage):
     value: float = Field(default=0)
 
 
-class RewardActor(AsyncActor, ABC):
+class RewardBehavior(AsyncBehavior, ABC):
     reward_path: DiGraph = Field(default_factory=DiGraph, include=False, exclude=True)
 
     @abstractmethod
@@ -83,7 +83,7 @@ class RewardActor(AsyncActor, ABC):
         return reward
 
 
-class ActionActor(AsyncActor, ABC):
+class ActionBehavior(AsyncBehavior, ABC):
     @abstractmethod
     async def forward(self, current_step: Percept) -> AsyncIterable[Action]:
         "Predict possible actions from a given step."
@@ -97,7 +97,7 @@ class ActionActor(AsyncActor, ABC):
         ...
 
 
-class WorldModelActor(AsyncActor, ABC):
+class WorldModelBehavior(AsyncBehavior, ABC):
     @abstractmethod
     async def forward(self, action: Action) -> Percept:
         "Predict the next step of the world based on the action."
@@ -110,11 +110,11 @@ class WorldModelActor(AsyncActor, ABC):
         find_closest(realized_step, Action)
 
 
-class ExecutiveAgent(AsyncActor, ABC):
-    cost: CostActor = Field(exclude=True)
-    reward: RewardActor = Field(exclude=True)
-    action: ActionActor = Field(exclude=True)
-    world_model: WorldModelActor = Field(exclude=True)
+class ExecutiveBehavior(AsyncBehavior, ABC):
+    cost: CostBehavior = Field(exclude=True)
+    reward: RewardBehavior = Field(exclude=True)
+    action: ActionBehavior = Field(exclude=True)
+    world_model: WorldModelBehavior = Field(exclude=True)
 
     async def forward(self, step: Percept, action_lookahead: int) -> Action:
         if action_lookahead <= 0:

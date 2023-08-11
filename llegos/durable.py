@@ -7,8 +7,12 @@ from sorcery import delegate_to_attr
 from sqlalchemy import text
 from sqlmodel import Field, Relationship, SQLModel
 
-from llegos.ephemeral import (EphemeralActor, EphemeralAgent, EphemeralMessage,
-                              EphemeralObject)
+from llegos.ephemeral import (
+    EphemeralBehavior,
+    EphemeralAgent,
+    EphemeralMessage,
+    EphemeralObject,
+)
 
 
 class AbstractDurableObject(SQLModel, EphemeralObject):
@@ -75,7 +79,7 @@ class DurableAgent(AbstractDurableObject, EphemeralAgent):
     )
 
 
-class DurableActor(AbstractDurableObject, EphemeralActor):
+class DurableBehavior(AbstractDurableObject, EphemeralBehavior):
     __tablename__ = "actors"
 
     agent_id: UUID4 = Field(nullable=False, index=True)

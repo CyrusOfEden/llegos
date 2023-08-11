@@ -10,24 +10,24 @@ from llegos.collaborative.abstract.contract_net import (
     CallForProposal,
     Cancel,
     ContractNet,
-    ContractorActor,
+    ContractorBehavior,
     Inform,
-    ManagerActor,
+    ManagerBehavior,
     Propose,
     Reject,
     Request,
 )
+from llegos.contexts import Propogate
 from llegos.ephemeral import EphemeralMessage
 from llegos.functional import use_actor_message, use_gen_model, use_reply_to
-from llegos.networks import Propogate
-from llegos.test_helpers import SimpleGPTCognition
+from llegos.test_helpers import SimpleGPTAgent
 
 
 class InvariantError(TypeError):
     ...
 
 
-class WritingManager(ManagerActor):
+class Manager(ManagerBehavior):
     def request(self, message: Request):
         model_kwargs = use_gen_model(
             model="gpt-4-0613",
@@ -84,7 +84,8 @@ class WritingManager(ManagerActor):
 
         completion = self.cognition.language(**model_args, **function_kwargs)
 
-        return function_call(completion)
+        message: Accept | CallForProposal | Reject = function_call(completion)
+        return message
 
     def inform(self, message: Inform):
         return Inform.forward(message, to=self.network)
@@ -96,7 +97,7 @@ class WritingManager(ManagerActor):
         ...
 
 
-class WritingContractor(ContractorActor):
+class Writer(ContractorBehavior):
     def call_for_proposal(self, message: CallForProposal) -> Propose | Reject:
         model_kwargs = use_gen_model(
             model="gpt-4-0613",
@@ -142,7 +143,8 @@ class WritingContractor(ContractorActor):
 
         completion = self.cognition.language(**model_kwargs, **function_kwargs)
 
-        return function_call(completion)
+        message: Inform | Cancel = function_call(completion)
+        return message
 
     def reject(self, message: Reject):
         ...
@@ -155,24 +157,24 @@ class WritingAgency(ContractNet):
 
 if __name__ == "__main__":
     load_dotenv()
-    cognition = SimpleGPTCognition()
+    cognition = SimpleGPTAgent()
 
     network = WritingAgency(
         system="Writing Agency",
-        manager=WritingManager(
+        manager=Manager(
             cognition=cognition,
             system="Writing manager",
         ),
         contractors=[
             # one of these contractors will ultimately do this task
-            WritingContractor(
+            Writer(
                 cognition=cognition,
                 system="""\
                     You are engaging and great at explaining things
                     in an understandable way by the general population.
                     """,
             ),
-            WritingContractor(
+            Writer(
                 cognition=cognition,
                 system="""\
                     You are an expert in computer science and programming,
@@ -203,6 +205,4 @@ if __name__ == "__main__":
         ],
     )
 
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(run(request))
-    loop.close()
+    asyncio.run(run(request))

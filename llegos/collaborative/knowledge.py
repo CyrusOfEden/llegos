@@ -1,5 +1,5 @@
 from llegos.ephemeral import EphemeralMessage, Field
-from llegos.networks import ActorNetwork, NetworkActor
+from llegos.contexts import BehaviorContext, ContextualBehavior
 
 
 class Observation(EphemeralMessage):
@@ -14,7 +14,7 @@ class Insight(Knowledge):
     ...
 
 
-class LearningAgent(NetworkActor):
+class LearningAgent(ContextualBehavior):
     def knowledge(self, message: Knowledge):
         ...
 
@@ -27,7 +27,7 @@ class GuidingAgent(LearningAgent):
         ...
 
 
-class KnowledgeNetwork(ActorNetwork):
+class KnowledgeContext(BehaviorContext):
     guide: GuidingAgent
     learners: list[LearningAgent] = Field(min_items=1)
 

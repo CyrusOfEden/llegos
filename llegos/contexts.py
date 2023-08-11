@@ -4,7 +4,7 @@ from contextvars import ContextVar
 from networkx import MultiGraph
 from sorcery import delegate_to_attr
 
-from llegos.asyncio import AsyncActor, async_propogate
+from llegos.asyncio import AsyncBehavior, async_propogate
 from llegos.ephemeral import EphemeralMessage, Field
 
 
@@ -12,7 +12,7 @@ class Propogate(EphemeralMessage):
     message: EphemeralMessage = Field()
 
 
-class NetworkActor(AsyncActor):
+class ContextualBehavior(AsyncBehavior):
     @property
     def network(self):
         return network_context.get()
@@ -35,18 +35,18 @@ class NetworkActor(AsyncActor):
         ]
 
 
-class ActorNetwork(NetworkActor):
+class BehaviorContext(ContextualBehavior):
     graph: MultiGraph = Field(default_factory=MultiGraph, include=False, exclude=True)
 
-    def __contains__(self, key: str | NetworkActor) -> bool:
+    def __contains__(self, key: str | ContextualBehavior) -> bool:
         match key:
             case str():
                 return key in self.directory
-            case NetworkActor():
+            case ContextualBehavior():
                 return key in self.graph
             case _:
                 raise TypeError(
-                    f"lookup key must be str or AsyncGenAgent, not {type(key)}"
+                    f"lookup key must be str or AsyncBehavior, not {type(key)}"
                 )
 
     (
@@ -79,4 +79,4 @@ class ActorNetwork(NetworkActor):
             network_context.reset(rollback)
 
 
-network_context = ContextVar[ActorNetwork]("llegos.networks.context")
+network_context = ContextVar[BehaviorContext]("llegos.networks.context")

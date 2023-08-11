@@ -11,11 +11,11 @@ That's where Llegos comes in. With Llegos, you can create, manage, and simulate 
 1. **Multi-Agent Systems:** With Llegos, you can create systems composed of multiple autonomous agents, enabling rich and intricate behaviors and interactions.
 2. **Concurrent Message-Passing:** Communication between agents in Llegos is facilitated through a flexible message-passing paradigm, allowing for efficient and versatile inter-agent dialogue. Agents and/or process-based concurrency.
 4. **Event-Driven Architecture:** Llegos embraces an event-driven programming approach, allowing agents to dynamically respond to events occurring within the system.
-5. **Flexibility:** The toolkit provides foundational structures, namely GenAgent and GenNetwork, for you to develop and customize your own autonomous agents and networks. This flexibility allows you to tailor Llegos to suit your unique requirements and use cases.
+5. **Flexibility:** The toolkit provides foundational structures, namely Behavior and Context, for you to develop and customize your own autonomous agents and networks. This flexibility allows you to tailor Llegos to suit your unique requirements and use cases.
 
 ## Elegant Abstractions
 
-Llegos centers around three abstractions: Messages, Generative Agents, and Generative Networks. These elements work together to facilitate complex interactions and behaviors in your multi-agent systems.
+Llegos centers around three abstractions: Messages, Generative Agents, and Generative Contexts. These elements work together to facilitate complex interactions and behaviors in your multi-agent systems.
 
 ## Messages
 
@@ -27,8 +27,8 @@ Messages have the following attributes:
 2. **role**: This is of type `Role`, and it is used to categorize the sender of the message. The sender can be an assistant, user, or system. This is useful for serializing to chat endpoints.
 3. **body**: This is a string that contains the actual content of the message.
 4. **created_at**: This is a datetime object that indicates when the message was created. It is automatically set to the current time when the message is instantiated.
-5. **sender**: This is an `AbstractObject` (which could be a `GenAgent`) that sent the message. It is set to None by default, and can be set when the message is created.
-6. **receiver**: This is an `AbstractObject` (which could be a `GenAgent`) that is the intended recipient of the message. Like `sender`, it is also set to None by default, and can be set when the message is created.
+5. **sender**: This is an `AbstractObject` (which could be a `Behavior`) that sent the message. It is set to None by default, and can be set when the message is created.
+6. **receiver**: This is an `AbstractObject` (which could be a `Behavior`) that is the intended recipient of the message. Like `sender`, it is also set to None by default, and can be set when the message is created.
 7. **parent**: This is a reference to another `Message` object. It is used when a message is a reply to a previous message. This allows for the creation of message threads and is useful for maintaining context in conversations.
 
 The `Message` class also includes a couple of class methods:
@@ -38,40 +38,33 @@ The `Message` class also includes a couple of class methods:
 
 ### Generative Agents
 
-At the heart of Llegos are the Generative Agents, or GenAgents. A [GenAgent](./Llegos/base.py) represents an individual autonomous agent in your system. These agents can be customized to suit a wide range of use cases, allowing you to implement your own unique agent behaviors.
+At the heart of Llegos are the Generative Agents, or Behaviors. A [Behavior](./llegos/ephemeral.py) represents an individual autonomous agent in your system. These agents can be customized to suit a wide range of use cases, allowing you to implement your own unique agent behaviors.
 
-The GenAgent class in Llegos provides a foundation for creating these agents. It includes built-in methods for receiving and handling messages, emitting events, and listening to events from other agents. This event-driven architecture allows for a reactive programming paradigm where agents can dynamically respond to events occurring within the system.
+The Behavior class in Llegos provides a foundation for creating these agents. It includes built-in methods for receiving and handling messages, emitting events, and listening to events from other agents. This event-driven architecture allows for a reactive programming paradigm where agents can dynamically respond to events occurring within the system.
 
-GenAgents can be used to model:
+Behaviors can be used to model:
 
 1. Stateful Agent: An agent maintains some internal state that is updated each time it receives a message.
 2. Decision-Making Agent: An agent receives a message, makes a decision based on the content of the message, and then sends a message with its decision.
 3. Task-Performing Agent: An agent receives a message instructing it to perform a certain task, such as making an API call or computing a result, and then sends a message with the result of the task.
 4. Listening Agent: An agent listens for certain events from other agents and reacts when those events occur.
 
-## Generative Networks
+## Generative Contexts
 
-Llegos also introduces the concept of Generative Networks, or GenNetworks.  GenNetworks provide a way to pass events up the agent network without having to pass intermediate results up manually at every level.
+Llegos also introduces the concept of Contexts.  Contexts provide a way to pass events up the agent network without having to pass intermediate results up manually at every level.
 
-A GenNetwork a higher-level structure that represents a network of GenAgents. A GenNetwork is a multi-graph where nodes represent GenAgents and edges point to other GenAgents listening to emitted Messages. This EventEmitter edge forms a communication channel, where an emitted Message is received by a listening GenAgent. This graph-based structure supports a broad spectrum of multi-agent architectures, from simple linear flows to complex network interactions.
+A Context a higher-level structure that represents a network of Behaviors. A Context is a multi-graph where nodes represent Behaviors and edges point to other Behaviors listening to emitted Messages. This EventEmitter edge forms a communication channel, where an emitted Message is received by a listening Behavior. This graph-based structure supports a broad spectrum of multi-agent architectures, from simple linear flows to complex network interactions.
 
-Moreover, GenNetworks provide a context for the agents they contain. This is particularly valuable in more complex scenarios where an agent's behavior might depend on its network context, say, by providing a directory of other agents. GenAgents can leverage their GenNetwork during message propagation. This enables more sophisticated interactions and cooperation between agents.
+Moreover, Contexts provide a context for the agents they contain. This is particularly valuable in more complex scenarios where an agent's behavior might depend on its network context, say, by providing a directory of other agents. Behaviors can leverage their Context during message propagation. This enables more sophisticated interactions and cooperation between agents.
 
-A key advantage of using GenNetworks is that it allows for encapsulation and modularity. You can design individual GenAgents with specific behaviors and then compose them into larger, more complex GenNetworks. Since GenNetworks subclass GenAgents, you can compose GenNetworks within GenNetworks! This recursive ability makes it easier to build deep multi-agent systems. In essence, GenNetworks act as a scaffolding for the structure of your multi-agent systems.
+A key advantage of using Contexts is that it allows for encapsulation and modularity. You can design individual Behaviors with specific behaviors and then compose them into larger, more complex Contexts. Since Contexts subclass Behaviors, you can compose Contexts within Contexts! This recursive ability makes it easier to build deep multi-agent systems. In essence, Contexts act as a scaffolding for the structure of your multi-agent systems.
 
-GenNetworks can be used to model:
+Contexts can be used to model:
 
 1. **Multi-Agent Coordination:** Multiple agents coordinate to solve a problem, with each agent handling a different part of the problem.
 2. **Agent Hierarchy:** Agents are organized into a hierarchy, with some agents directing the actions of others.
 3. **Feedback Loop:** Agents form a feedback loop, where the output of one agent feeds into the input of another, and so on.
 4. **Distributed System:** A complex system where tasks are distributed among multiple agents, and the results are collected and combined by another agent.
-
-
-## Examples & Quick-Start
-
-[examples/quickstart.py](./examples/quickstart.py) shows how GenAgent composes openai.ChatCompletion and agent state. If you're familiar with Langchain or other agent frameworks, then think of GenAgent as the agent that uses different sub-agents to accomplish a variety of tasks.
-
-An example of a more complex interaction can be found in [examples/contract_net.py](./examples/contract_net.py), where a Manager agents receives a task, calls for proposals from a group of Contractors, reviews them, ultimately accepting one to delegate the task to.
 
 ## Future Work
 

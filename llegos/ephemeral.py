@@ -51,7 +51,7 @@ EphemeralObject.Config.json_encoders = {
 }
 
 
-agent_lookup: dict[UUID4, "EphemeralActor"] = {}
+agent_lookup: dict[UUID4, "EphemeralBehavior"] = {}
 message_lookup: dict[UUID4, "EphemeralMessage"] = {}
 
 
@@ -63,13 +63,13 @@ def message_hydrator(m: "EphemeralMessage"):
             m.parent = message_lookup[o.id]
 
     match m.sender:
-        case EphemeralActor() as a:
+        case EphemeralBehavior() as a:
             agent_lookup[a.id] = a
         case EphemeralObject() as o:
             m.sender = agent_lookup[o.id]
 
     match m.receiver:
-        case EphemeralActor() as a:
+        case EphemeralBehavior() as a:
             agent_lookup[a.id] = a
         case EphemeralObject() as o:
             m.receiver = agent_lookup[o.id]
@@ -150,7 +150,7 @@ class EphemeralAgent(EphemeralObject, ABC):
     long_term_memory: Any = Field(description="durable, long-term memory")
 
 
-class EphemeralActor(EphemeralObject):
+class EphemeralBehavior(EphemeralObject):
     system: str = Field(default="", include=True)
     cognition: Optional[EphemeralAgent] = Field(exclude=True)
     event_emitter: EventEmitter = Field(
@@ -180,7 +180,7 @@ class EphemeralActor(EphemeralObject):
     def inherited_receivable_messages(cls):
         messages = set()
         for base in cls.__bases__:
-            if issubclass(base, EphemeralActor):
+            if issubclass(base, EphemeralBehavior):
                 if base_messages := base.__fields__["receivable_messages"].default:
                     messages = messages.union(base_messages)
                 messages = messages.union(base.inherited_receivable_messages())
@@ -219,7 +219,7 @@ Applicator = Callable[[EphemeralMessage], Iterable[EphemeralMessage]]
 
 @beartype
 def apply(message: EphemeralMessage) -> Iterable[EphemeralMessage]:
-    agent: Optional[EphemeralActor] = message.receiver
+    agent: Optional[EphemeralBehavior] = message.receiver
     if not agent:
         return []
     yield from agent.receive(message)
