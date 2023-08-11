@@ -10,14 +10,14 @@ from llegos.collaborative.abstract.contract_net import (
     CallForProposal,
     Cancel,
     ContractNet,
-    ContractorBehavior,
+    ContractorRole,
     Inform,
-    ManagerBehavior,
+    ManagerRole,
     Propose,
     Reject,
     Request,
 )
-from llegos.contexts import Propogate
+from llegos.contexts import Propagate
 from llegos.ephemeral import EphemeralMessage
 from llegos.functional import use_actor_message, use_gen_model, use_reply_to
 from llegos.test_helpers import SimpleGPTAgent
@@ -27,7 +27,7 @@ class InvariantError(TypeError):
     ...
 
 
-class Manager(ManagerBehavior):
+class Manager(ManagerRole):
     def request(self, message: Request):
         model_kwargs = use_gen_model(
             model="gpt-4-0613",
@@ -88,7 +88,7 @@ class Manager(ManagerBehavior):
         return message
 
     def inform(self, message: Inform):
-        return Inform.forward(message, to=self.network)
+        return Inform.forward(message, to=self.context)
 
     def reject(self, message: Reject):
         ...
@@ -97,7 +97,7 @@ class Manager(ManagerBehavior):
         ...
 
 
-class Writer(ContractorBehavior):
+class Writer(ContractorRole):
     def call_for_proposal(self, message: CallForProposal) -> Propose | Reject:
         model_kwargs = use_gen_model(
             model="gpt-4-0613",
@@ -185,7 +185,7 @@ if __name__ == "__main__":
     )
 
     async def run(message: EphemeralMessage):
-        async for m in network.receive(Propogate(message=message)):
+        async for m in network.send(Propagate(message=message)):
             pprint(json.loads(str(m)))
             print("\n\n")
 

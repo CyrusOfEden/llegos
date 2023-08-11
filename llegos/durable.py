@@ -8,10 +8,10 @@ from sqlalchemy import text
 from sqlmodel import Field, Relationship, SQLModel
 
 from llegos.ephemeral import (
-    EphemeralBehavior,
     EphemeralAgent,
     EphemeralMessage,
     EphemeralObject,
+    Role,
 )
 
 
@@ -79,7 +79,7 @@ class DurableAgent(AbstractDurableObject, EphemeralAgent):
     )
 
 
-class DurableBehavior(AbstractDurableObject, EphemeralBehavior):
+class DurableBehavior(AbstractDurableObject, Role):
     __tablename__ = "actors"
 
     agent_id: UUID4 = Field(nullable=False, index=True)

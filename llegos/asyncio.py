@@ -6,22 +6,20 @@ from beartype.typing import Callable, Optional, TypeVar
 from networkx import DiGraph
 from pyee.asyncio import AsyncIOEventEmitter
 
-from llegos.ephemeral import EphemeralBehavior, EphemeralMessage, Field
+from llegos.ephemeral import EphemeralMessage, EphemeralRole, Field
 
 T = TypeVar("T", bound=EphemeralMessage)
 AsyncReply = Optional[T] | AsyncIterable[T]
 
 
-class AsyncBehavior(EphemeralBehavior):
+class AsyncRole(EphemeralRole):
     event_emitter: AsyncIOEventEmitter = Field(
         default_factory=AsyncIOEventEmitter,
         description="emitting events is non-blocking",
         exclude=True,
     )
 
-    async def receive(
-        self, message: EphemeralMessage
-    ) -> AsyncIterable[EphemeralMessage]:
+    async def send(self, message: EphemeralMessage) -> AsyncIterable[EphemeralMessage]:
         self.emit("receive", message)
 
         response = getattr(self, message.intent)(message)
@@ -51,10 +49,10 @@ async def async_drain(messages: AsyncIterable[EphemeralMessage]):
 
 @beartype
 async def async_apply(message: EphemeralMessage) -> AsyncIterable[EphemeralMessage]:
-    agent: Optional[AsyncBehavior] = message.receiver
+    agent: Optional[AsyncRole] = message.receiver
     if not agent:
         return
-    async for reply in agent.receive(message):
+    async for reply in agent.send(message):
         yield reply
 
 

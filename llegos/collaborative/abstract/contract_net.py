@@ -21,8 +21,8 @@ https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Icnp.svg/880px-Icnp.sv
 
 from abc import ABC, abstractmethod
 
+from llegos.contexts import Context, ContextualRole, Field
 from llegos.messages import EphemeralMessage, find_closest
-from llegos.contexts import BehaviorContext, Field, ContextualBehavior
 
 
 class Request(EphemeralMessage):
@@ -68,7 +68,7 @@ class Response(EphemeralMessage):
     content: str = Field(include=True)
 
 
-class ContractorBehavior(ContextualBehavior):
+class ContractorRole(ContextualRole):
     receivable_messages: set[type[EphemeralMessage]] = Field(
         default={
             CallForProposal,
@@ -96,7 +96,7 @@ class ContractorBehavior(ContextualBehavior):
         ...
 
 
-class ManagerBehavior(ContextualBehavior, ABC):
+class ManagerRole(ContextualRole, ABC):
     receivable_messages: set[type[EphemeralMessage]] = Field(
         default={
             Request,
@@ -127,9 +127,9 @@ class ManagerBehavior(ContextualBehavior, ABC):
         ...
 
 
-class ContractNet(BehaviorContext):
-    manager: ManagerBehavior = Field()
-    contractors: list[ContractorBehavior] = Field(min_items=2)
+class ContractNet(Context):
+    manager: ManagerRole = Field()
+    contractors: list[ContractorRole] = Field(min_items=2)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

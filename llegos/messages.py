@@ -1,4 +1,3 @@
-from beartype import beartype
 from beartype.typing import Iterable, Sequence, Union
 from networkx import DiGraph
 
@@ -13,7 +12,6 @@ class Ack(EphemeralMessage):
     message: str = Field(default="", include=True)
 
 
-@beartype
 def message_chain(
     message: EphemeralMessage | None, height: int = 12
 ) -> Iterable[EphemeralMessage]:
@@ -24,12 +22,10 @@ def message_chain(
     yield message
 
 
-@beartype
 def message_list(message: EphemeralMessage, height: int = 12) -> list[EphemeralMessage]:
     return list(message_chain(message, height))
 
 
-@beartype
 def message_graph(messages: Iterable[EphemeralMessage]):
     g = DiGraph()
     for message in messages:
@@ -38,7 +34,6 @@ def message_graph(messages: Iterable[EphemeralMessage]):
     return g
 
 
-@beartype
 def find_closest(
     cls_or_tuple: Union[Sequence[type[EphemeralMessage]], type[EphemeralMessage]],
     of_message: EphemeralMessage,
@@ -56,7 +51,6 @@ def find_closest(
         return find_closest(of_message.parent, cls_or_tuple, max_height - 1)
 
 
-@beartype
 def message_path(
     message: EphemeralMessage, ancestor: EphemeralMessage, max_height: int = 256
 ) -> Iterable[EphemeralMessage]:

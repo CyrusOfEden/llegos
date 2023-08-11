@@ -6,7 +6,7 @@ from openai import ChatCompletion
 from openai.openai_object import OpenAIObject
 from pydantic import UUID4
 
-from llegos.ephemeral import EphemeralBehavior, EphemeralAgent, EphemeralMessage
+from llegos.ephemeral import EphemeralAgent, EphemeralMessage, EphemeralRole
 from llegos.messages import Chat, message_chain
 
 
@@ -60,7 +60,7 @@ def message_schema(
     )
 
 
-def receive_schema(agent: EphemeralBehavior, messages: set[type[EphemeralMessage]] = None):
+def receive_schema(agent: EphemeralRole, messages: set[type[EphemeralMessage]] = None):
     defs = []
 
     for m in agent.receivable_messages:
@@ -140,12 +140,12 @@ def use_gen_message(messages: Iterable[type[EphemeralMessage]], **kwargs):
 
 
 def use_actor_message(
-    agents: Iterable[EphemeralBehavior],
+    agents: Iterable[EphemeralRole],
     messages: set[type[EphemeralMessage]],
     **kwargs,
 ):
     schemas = []
-    agent_lookup: dict[UUID4, EphemeralBehavior] = {}
+    agent_lookup: dict[UUID4, EphemeralRole] = {}
     message_lookup: dict[str, EphemeralMessage] = {}
 
     for agent in agents:

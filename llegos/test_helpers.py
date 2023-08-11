@@ -2,8 +2,8 @@ from typing import Callable
 
 from openai import ChatCompletion
 
-from llegos.asyncio import AsyncBehavior
-from llegos.ephemeral import EphemeralBehavior, EphemeralAgent, EphemeralMessage, Field
+from llegos.asyncio import AsyncRole
+from llegos.ephemeral import EphemeralAgent, EphemeralMessage, EphemeralRole, Field
 from llegos.messages import Ack
 
 
@@ -14,7 +14,7 @@ class SimpleGPTAgent(EphemeralAgent):
     long_term_memory: list[EphemeralMessage] = Field(default_factory=list)
 
 
-class AckAgent(EphemeralBehavior):
+class AckAgent(EphemeralRole):
     receivable_messages: set[type[EphemeralMessage]] = Field(
         default={Ack}, exclude=True
     )
@@ -23,6 +23,6 @@ class AckAgent(EphemeralBehavior):
         return Ack.reply_to(message)
 
 
-class AsyncAckAgent(AsyncBehavior, AckAgent):
+class AsyncAckAgent(AsyncRole, AckAgent):
     async def ack(self, message: Ack):
         return Ack.reply_to(message)

@@ -4,24 +4,23 @@ from contextvars import ContextVar
 from networkx import MultiGraph
 from sorcery import delegate_to_attr
 
-from llegos.asyncio import AsyncBehavior, async_propogate
-from llegos.ephemeral import EphemeralMessage, Field
+from llegos.ephemeral import EphemeralMessage, EphemeralRole, Field, propagate
 
 
-class Propogate(EphemeralMessage):
+class Propagate(EphemeralMessage):
     message: EphemeralMessage = Field()
 
 
-class ContextualBehavior(AsyncBehavior):
+class ContextualRole(EphemeralRole):
     @property
-    def network(self):
+    def context(self):
         return network_context.get()
 
     @property
     def relationships(self):
         edges = [
             (neighbor, key, data)
-            for (node, neighbor, key, data) in self.network.edges(keys=True, data=True)
+            for (node, neighbor, key, data) in self.context.edges(keys=True, data=True)
             if node == self
         ]
         edges.sort(key=lambda edge: edge[2].get("weight", 1))
@@ -35,14 +34,14 @@ class ContextualBehavior(AsyncBehavior):
         ]
 
 
-class BehaviorContext(ContextualBehavior):
+class Context(ContextualRole):
     graph: MultiGraph = Field(default_factory=MultiGraph, include=False, exclude=True)
 
-    def __contains__(self, key: str | ContextualBehavior) -> bool:
+    def __contains__(self, key: str | ContextualRole) -> bool:
         match key:
             case str():
                 return key in self.directory
-            case ContextualBehavior():
+            case ContextualRole():
                 return key in self.graph
             case _:
                 raise TypeError(
@@ -65,9 +64,9 @@ class BehaviorContext(ContextualBehavior):
     def directory(self):
         return {a.id: a for a in self.graph.nodes}
 
-    async def propogate(self, p: Propogate):
+    def propagate(self, p: Propagate):
         with self.context():
-            async for message in async_propogate(p.message):
+            for message in propagate(p.message):
                 yield message
 
     @contextmanager
@@ -79,4 +78,4 @@ class BehaviorContext(ContextualBehavior):
             network_context.reset(rollback)
 
 
-network_context = ContextVar[BehaviorContext]("llegos.networks.context")
+network_context = ContextVar[Context]("llegos.networks.context")

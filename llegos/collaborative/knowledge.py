@@ -1,5 +1,5 @@
+from llegos.contexts import Context, ContextualRole
 from llegos.ephemeral import EphemeralMessage, Field
-from llegos.contexts import BehaviorContext, ContextualBehavior
 
 
 class Observation(EphemeralMessage):
@@ -14,7 +14,7 @@ class Insight(Knowledge):
     ...
 
 
-class LearningAgent(ContextualBehavior):
+class LearningAgent(ContextualRole):
     def knowledge(self, message: Knowledge):
         ...
 
@@ -27,7 +27,7 @@ class GuidingAgent(LearningAgent):
         ...
 
 
-class KnowledgeContext(BehaviorContext):
+class KnowledgeContext(Context):
     guide: GuidingAgent
     learners: list[LearningAgent] = Field(min_items=1)
 

@@ -1,10 +1,10 @@
 from itertools import permutations
 
-from llegos.contexts import BehaviorContext, Field, ContextualBehavior
+from llegos.contexts import Context, ContextualRole, Field
 
 
-class PairwiseContext(BehaviorContext):
-    agents: set[ContextualBehavior] = Field(min_items=2)
+class PairwiseContext(Context):
+    agents: set[ContextualRole] = Field(min_items=2)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

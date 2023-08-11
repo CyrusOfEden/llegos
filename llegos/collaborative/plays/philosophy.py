@@ -1,11 +1,10 @@
-import asyncio
 import json
 from pprint import pprint
 
 from dotenv import load_dotenv
 
 from llegos.collaborative.abstract.pairwise import PairwiseContext
-from llegos.contexts import ContextualBehavior, Propogate
+from llegos.contexts import ContextualRole, Propagate
 from llegos.ephemeral import EphemeralMessage, Field
 from llegos.functional import use_actor_message, use_gen_model, use_reply_to
 from llegos.messages import Ack, Chat
@@ -27,15 +26,15 @@ class Refine(EphemeralMessage):
     response: str = Field(include=True)
 
 
-class Philosopher(ContextualBehavior):
+class Philosopher(ContextualRole):
     receivable_messages: set[type[EphemeralMessage]] = Field(
         default={Consider, Refine}, exclude=True
     )
 
     def consider(self, c: Consider) -> Refine:
         model_kwargs = use_gen_model(
-            model="gpt-4-0613",
-            max_tokens=4096,
+            model="gpt-3.5-turbo-0613",
+            max_tokens=768,
             system=f"You are {self.system}.",
             context=c,
             context_history=8,
@@ -56,8 +55,8 @@ class Philosopher(ContextualBehavior):
 
     def refine(self, r: Refine):
         model_kwargs = use_gen_model(
-            model="gpt-4-0613",
-            max_tokens=4096,
+            model="gpt-3.5-turbo-0613",
+            max_tokens=768,
             system=f"You are {self.system}.",
             context=r,
             context_history=8,
@@ -79,12 +78,12 @@ class Philosopher(ContextualBehavior):
         "Sometimes GPT returns an assistant Chat message, handle it here."
 
 
-class PhilosophicalInquiry(EphemeralMessage):
+class Prompt(EphemeralMessage):
     content: str = Field(include=True)
 
 
 class DidacticContext(PairwiseContext):
-    def prompt(self, message: PhilosophicalInquiry):
+    def prompt(self, message: Prompt):
         for agent in self.agents:
             yield Consider.forward(message, to=agent)
 
@@ -95,7 +94,7 @@ if __name__ == "__main__":
     cognition = SimpleGPTAgent()
 
     ensemble = DidacticContext(
-        cognition=cognition,
+        agent=cognition,
         system="ensemble",
         agents={
             Philosopher(cognition=cognition, system="Kieerkegard"),
@@ -106,14 +105,11 @@ if __name__ == "__main__":
         },
     )
 
-    async def run(message: EphemeralMessage):
-        async for m in ensemble.receive(Propogate(message=message)):
-            pprint(json.loads(str(m)))
-            print("\n\n")
-
-    question = PhilosophicalInquiry(
+    question = Prompt(
         content="How can one channel love into the world?",
         receiver=ensemble,
     )
 
-    asyncio.run(run(question))
+    for m in ensemble.send(Propagate(message=question)):
+        pprint(json.loads(str(m)))
+        print("\n\n")

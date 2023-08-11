@@ -5,7 +5,7 @@ from beartype.typing import AsyncIterable
 from networkx import DiGraph
 from pydantic import Field
 
-from llegos.asyncio import AsyncBehavior
+from llegos.asyncio import AsyncRole
 from llegos.ephemeral import EphemeralMessage
 from llegos.messages import find_closest, message_path
 
@@ -14,7 +14,7 @@ class Percept(EphemeralMessage):
     ...
 
 
-class PerceptionBehavior(AsyncBehavior, ABC):
+class PerceptionBehavior(AsyncRole, ABC):
     ...
 
 
@@ -26,7 +26,7 @@ class Cost(EphemeralMessage):
     value: float = Field(gte=0)
 
 
-class CostBehavior(AsyncBehavior, ABC):
+class CostBehavior(AsyncRole, ABC):
     loss_landscape: DiGraph = Field(
         default_factory=DiGraph, include=False, exclude=True
     )
@@ -59,7 +59,7 @@ class Reward(EphemeralMessage):
     value: float = Field(default=0)
 
 
-class RewardBehavior(AsyncBehavior, ABC):
+class RewardBehavior(AsyncRole, ABC):
     reward_path: DiGraph = Field(default_factory=DiGraph, include=False, exclude=True)
 
     @abstractmethod
@@ -83,7 +83,7 @@ class RewardBehavior(AsyncBehavior, ABC):
         return reward
 
 
-class ActionBehavior(AsyncBehavior, ABC):
+class ActionBehavior(AsyncRole, ABC):
     @abstractmethod
     async def forward(self, current_step: Percept) -> AsyncIterable[Action]:
         "Predict possible actions from a given step."
@@ -97,7 +97,7 @@ class ActionBehavior(AsyncBehavior, ABC):
         ...
 
 
-class WorldModelBehavior(AsyncBehavior, ABC):
+class WorldModelBehavior(AsyncRole, ABC):
     @abstractmethod
     async def forward(self, action: Action) -> Percept:
         "Predict the next step of the world based on the action."
@@ -110,7 +110,7 @@ class WorldModelBehavior(AsyncBehavior, ABC):
         find_closest(realized_step, Action)
 
 
-class ExecutiveBehavior(AsyncBehavior, ABC):
+class ExecutiveBehavior(AsyncRole, ABC):
     cost: CostBehavior = Field(exclude=True)
     reward: RewardBehavior = Field(exclude=True)
     action: ActionBehavior = Field(exclude=True)

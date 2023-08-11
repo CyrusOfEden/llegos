@@ -28,7 +28,12 @@ class EphemeralObject(BaseModel, ABC):
         return hash(self.id.bytes)
 
     def dict(self, *args, exclude_none: bool = True, **kwargs):
-        return super().dict(*args, exclude_none=exclude_none, **kwargs)
+        try:
+            return super().dict(*args, exclude_none=exclude_none, **kwargs)
+        except:
+            import ipdb
+
+            ipdb.set_trace()
 
     def __str__(self):
         return self.json(sort_keys=False)
@@ -51,7 +56,7 @@ EphemeralObject.Config.json_encoders = {
 }
 
 
-agent_lookup: dict[UUID4, "EphemeralBehavior"] = {}
+agent_lookup: dict[UUID4, "EphemeralRole"] = {}
 message_lookup: dict[UUID4, "EphemeralMessage"] = {}
 
 
@@ -63,13 +68,13 @@ def message_hydrator(m: "EphemeralMessage"):
             m.parent = message_lookup[o.id]
 
     match m.sender:
-        case EphemeralBehavior() as a:
+        case EphemeralRole() as a:
             agent_lookup[a.id] = a
         case EphemeralObject() as o:
             m.sender = agent_lookup[o.id]
 
     match m.receiver:
-        case EphemeralBehavior() as a:
+        case EphemeralRole() as a:
             agent_lookup[a.id] = a
         case EphemeralObject() as o:
             m.receiver = agent_lookup[o.id]
@@ -86,22 +91,22 @@ class EphemeralMessage(EphemeralObject):
         return re.sub(_pattern, "_", cls.__name__).lower()
 
     @classmethod
-    def reply_to(cls, message: "EphemeralMessage", **kwargs):
+    def reply_to(cls, a: "EphemeralMessage", **kwargs):
         attrs = {
-            "sender": message.receiver,
-            "receiver": message.sender,
-            "parent": message,
+            "sender": a.receiver,
+            "receiver": a.sender,
+            "parent": a,
         }
         attrs.update(kwargs)
-        return cls.lift(message, **attrs)
+        return cls.lift(a, **attrs)
 
     @classmethod
     def forward(
-        cls, message: "EphemeralMessage", to: Optional[EphemeralObject] = None, **kwargs
+        cls, a: "EphemeralMessage", to: Optional[EphemeralObject] = None, **kwargs
     ) -> "EphemeralMessage":
-        attrs = {"sender": message.receiver, "receiver": to, "parent": message}
+        attrs = {"sender": a.receiver, "receiver": to, "parent": a}
         attrs.update(kwargs)
-        return cls.lift(message, **attrs)
+        return cls.lift(a, **attrs)
 
     intent: str = Field(include=True)
     context: dict = Field(
@@ -150,9 +155,9 @@ class EphemeralAgent(EphemeralObject, ABC):
     long_term_memory: Any = Field(description="durable, long-term memory")
 
 
-class EphemeralBehavior(EphemeralObject):
+class EphemeralRole(EphemeralObject):
     system: str = Field(default="", include=True)
-    cognition: Optional[EphemeralAgent] = Field(exclude=True)
+    agent: Optional[EphemeralAgent] = Field(exclude=True)
     event_emitter: EventEmitter = Field(
         default_factory=EventEmitter,
         description="emitting events blocks until all listeners have executed",
@@ -180,7 +185,7 @@ class EphemeralBehavior(EphemeralObject):
     def inherited_receivable_messages(cls):
         messages = set()
         for base in cls.__bases__:
-            if issubclass(base, EphemeralBehavior):
+            if issubclass(base, EphemeralRole):
                 if base_messages := base.__fields__["receivable_messages"].default:
                     messages = messages.union(base_messages)
                 messages = messages.union(base.inherited_receivable_messages())
@@ -197,9 +202,9 @@ class EphemeralBehavior(EphemeralObject):
         self.system = dedent(self.system) or self.__class__.__doc__ or ""
 
     def __call__(self, message: EphemeralMessage) -> Reply[EphemeralMessage]:
-        return self.receive(message)
+        return self.send(message)
 
-    def receive(self, message: EphemeralMessage) -> Reply[EphemeralMessage]:
+    def send(self, message: EphemeralMessage) -> Reply[EphemeralMessage]:
         self.emit("receive", message)
 
         response = getattr(self, message.intent)(message)
@@ -219,23 +224,23 @@ Applicator = Callable[[EphemeralMessage], Iterable[EphemeralMessage]]
 
 @beartype
 def apply(message: EphemeralMessage) -> Iterable[EphemeralMessage]:
-    agent: Optional[EphemeralBehavior] = message.receiver
+    agent: Optional[EphemeralRole] = message.receiver
     if not agent:
         return []
-    yield from agent.receive(message)
+    yield from agent.send(message)
 
 
 @beartype
-def propogate(
+def propagate(
     message: EphemeralMessage, applicator: Applicator = apply
 ) -> Iterable[EphemeralMessage]:
     for reply in applicator(message):
         yield reply
-        yield from propogate(reply)
+        yield from propagate(reply)
 
 
 @beartype
 def propogate_all(messages: Iterable[EphemeralMessage], applicator: Applicator = apply):
-    mapper = partial(propogate, applicator=applicator)
+    mapper = partial(propagate, applicator=applicator)
     for generator in map(mapper, messages):
         yield from generator()
