@@ -3,11 +3,10 @@ from pprint import pprint
 
 from dotenv import load_dotenv
 
-from llegos.collaborative.abstract.pairwise import PairwiseContext
-from llegos.contexts import ContextualRole, Propagate
-from llegos.ephemeral import EphemeralMessage, Field
-from llegos.functional import use_actor_message, use_gen_model, use_reply_to
+from llegos.collaborative.abstract.pairwise import Pairwise
+from llegos.functional import use_actor_message, use_model, use_reply_to
 from llegos.messages import Ack, Chat
+from llegos.research import ContextualActor, Field, Message, Propagate
 from llegos.test_helpers import SimpleGPTAgent
 
 
@@ -15,27 +14,27 @@ class Quality(Ack):
     "Quality is good, no further refinement is needed."
 
 
-class Consider(EphemeralMessage):
+class Consider(Message):
     "Consider the material."
 
 
-class Refine(EphemeralMessage):
+class Refine(Message):
     "Think, reason, and refine a response."
     thought: str = Field(include=True, description="think about how we can refine this")
     reasoning: str = Field(include=True, description="explain your reasoning")
     response: str = Field(include=True)
 
 
-class Philosopher(ContextualRole):
-    receivable_messages: set[type[EphemeralMessage]] = Field(
+class Philosopher(ContextualActor):
+    receivable_messages: set[type[Message]] = Field(
         default={Consider, Refine}, exclude=True
     )
 
     def consider(self, c: Consider) -> Refine:
-        model_kwargs = use_gen_model(
+        model_kwargs = use_model(
             model="gpt-3.5-turbo-0613",
             max_tokens=768,
-            system=f"You are {self.system}.",
+            system=f"You are {self.state.system}.",
             context=c,
             context_history=8,
             prompt="""\
@@ -45,7 +44,7 @@ class Philosopher(ContextualRole):
             """,
         )
         function_kwargs, function_call = use_actor_message(
-            self.receivers(Refine), {Refine}, sender=self, parent=c
+            self.scene_handlers(Refine), {Refine}, sender=self, parent=c
         )
 
         completion = self.cognition.language(**model_kwargs, **function_kwargs)
@@ -54,10 +53,10 @@ class Philosopher(ContextualRole):
         return message
 
     def refine(self, r: Refine):
-        model_kwargs = use_gen_model(
+        model_kwargs = use_model(
             model="gpt-3.5-turbo-0613",
             max_tokens=768,
-            system=f"You are {self.system}.",
+            system=f"You are {self.state.system}.",
             context=r,
             context_history=8,
             prompt="""\
@@ -78,11 +77,11 @@ class Philosopher(ContextualRole):
         "Sometimes GPT returns an assistant Chat message, handle it here."
 
 
-class Prompt(EphemeralMessage):
+class Prompt(Message):
     content: str = Field(include=True)
 
 
-class DidacticContext(PairwiseContext):
+class DidacticContext(Pairwise):
     def prompt(self, message: Prompt):
         for agent in self.agents:
             yield Consider.forward(message, to=agent)

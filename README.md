@@ -24,7 +24,7 @@ Communication is facilitated through the [Message](./Llegos/message.py) data mod
 Messages have the following attributes:
 
 1. **method**: This is a Union of string and `Method` type. It determines the type of operation or action that the message is meant to invoke. By default, nodes will dispatch messages to a method named after the action. For example, a message with action "step" will call the "step" method. For async nodes, the method name will be prefixed with "a", so "step" becomes "astep".
-2. **role**: This is of type `Role`, and it is used to categorize the sender of the message. The sender can be an assistant, user, or system. This is useful for serializing to chat endpoints.
+2. **role**: This is of type `Actor`, and it is used to categorize the sender of the message. The sender can be an assistant, user, or system. This is useful for serializing to chat endpoints.
 3. **body**: This is a string that contains the actual content of the message.
 4. **created_at**: This is a datetime object that indicates when the message was created. It is automatically set to the current time when the message is instantiated.
 5. **sender**: This is an `AbstractObject` (which could be a `Behavior`) that sent the message. It is set to None by default, and can be set when the message is created.

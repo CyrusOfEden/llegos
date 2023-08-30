@@ -21,11 +21,10 @@ https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Icnp.svg/880px-Icnp.sv
 
 from abc import ABC, abstractmethod
 
-from llegos.contexts import Context, ContextualRole, Field
-from llegos.messages import EphemeralMessage, find_closest
+from llegos.research import Actor, Context, Field, Message
 
 
-class Request(EphemeralMessage):
+class Request(Message):
     "A request for a particular objective to be achieved with some requirements and constraints"
     objective: str = Field(include=True)
     requirements: list[str] = Field(default_factory=list, include=True)
@@ -37,39 +36,39 @@ class CallForProposal(Request):
     task: str = Field(include=True)
 
 
-class Reject(EphemeralMessage):
+class Reject(Message):
     "Reject a request with a reason"
     reason: str = Field(include=True)
     feedback: str = Field(include=True)
 
 
-class Propose(EphemeralMessage):
+class Propose(Message):
     "Propose a plan to achieve the objective with the requirements and constraints"
     plan: str = Field(include=True)
 
 
-class Accept(EphemeralMessage):
+class Accept(Message):
     "Accept the proposal from the contractor"
     feedback: str = Field(include=True)
 
 
-class Cancel(EphemeralMessage):
+class Cancel(Message):
     "Notify the manager that the task has been cancelled"
     reason: str = Field(include=True)
 
 
-class Inform(EphemeralMessage):
+class Inform(Message):
     "Inform the manager that the task has been completed"
     content: str = Field(include=True)
 
 
-class Response(EphemeralMessage):
+class Response(Message):
     "Response from the ephemeral network"
     content: str = Field(include=True)
 
 
-class ContractorRole(ContextualRole):
-    receivable_messages: set[type[EphemeralMessage]] = Field(
+class ContractorActor(Actor):
+    receivable_messages: set[type[Message]] = Field(
         default={
             CallForProposal,
             Accept,
@@ -96,8 +95,8 @@ class ContractorRole(ContextualRole):
         ...
 
 
-class ManagerRole(ContextualRole, ABC):
-    receivable_messages: set[type[EphemeralMessage]] = Field(
+class ManagerActor(Actor, ABC):
+    receivable_messages: set[type[Message]] = Field(
         default={
             Request,
             Propose,
@@ -128,8 +127,8 @@ class ManagerRole(ContextualRole, ABC):
 
 
 class ContractNet(Context):
-    manager: ManagerRole = Field()
-    contractors: list[ContractorRole] = Field(min_items=2)
+    manager: ManagerActor = Field()
+    contractors: list[ContractorActor] = Field(min_items=2)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

@@ -1,31 +1,63 @@
 import json
 from textwrap import dedent
-from typing import Callable, Iterable
+from typing import Iterable
 
-from openai import ChatCompletion
 from openai.openai_object import OpenAIObject
 from pydantic import UUID4
 
-from llegos.ephemeral import EphemeralAgent, EphemeralMessage, EphemeralRole
-from llegos.messages import Chat, message_chain
+from llegos.research import Actor, Message, SceneObject, message_chain
 
 
-class OpenAIAgent(EphemeralAgent):
-    language: ChatCompletion
+class maxdict(dict):
+    def __init__(self, max_size=100, *args, **kwargs):
+        self.max_size = max_size
+        super().__init__(*args, **kwargs)
+
+    def __setitem__(self, key, value):
+        if len(self) == self.max_size:
+            oldest = next(iter(self))
+            del self[oldest]
+        super().__setitem__(key, value)
 
 
-def function_schema(exclude_keys={"title"}, **schema):
+actor_lookup: dict[UUID4, Actor] = {}
+message_lookup: maxdict[UUID4, Message] = maxdict(max_size=1024)
+
+
+def hydrate_message(m: Message) -> Message:
+    match m.parent:
+        case Message() as m:
+            message_lookup[m.id] = m
+        case SceneObject() as o:
+            m.parent = message_lookup[o.id]
+
+    match m.sender:
+        case Actor() as a:
+            actor_lookup[a.id] = a
+        case SceneObject() as o:
+            m.sender = actor_lookup[o.id]
+
+    match m.receiver:
+        case Actor() as a:
+            actor_lookup[a.id] = a
+        case SceneObject() as o:
+            m.receiver = actor_lookup[o.id]
+
+    return m
+
+
+def compact_schema(exclude_keys={"title"}, **schema):
     for key, value in list(schema.items()):
         if key in exclude_keys:
             del schema[key]
         elif isinstance(value, dict):
-            schema[key] = function_schema(exclude_keys=exclude_keys, **value)
+            schema[key] = compact_schema(exclude_keys, **value)
     return schema
 
 
 def message_schema(
-    cls: type[EphemeralMessage],
-    remove_keys: set[str] = {
+    cls: type[Message],
+    delete_keys: set[str] = {
         "id",
         "created_at",
         "sender",
@@ -39,16 +71,16 @@ def message_schema(
 
     params = schema["properties"]
     params["intent"]["enum"] = [intent]
-    for key in remove_keys:
+    for key in delete_keys:
         params.pop(key, None)
 
     reqs = schema.get("required", [])
 
     defs = schema.get("definitions", {})
-    defs.pop("EphemeralMessage", None)
-    defs.pop("EphemeralObject", None)
+    defs.pop(Message, None)
+    defs.pop("SceneObject", None)
 
-    return function_schema(
+    return compact_schema(
         name=intent,
         description=cls.__doc__,
         parameters={
@@ -60,7 +92,7 @@ def message_schema(
     )
 
 
-def receive_schema(agent: EphemeralRole, messages: set[type[EphemeralMessage]] = None):
+def receive_schema(agent: Actor, messages: set[type[Message]] = None):
     defs = []
 
     for m in agent.receivable_messages:
@@ -72,7 +104,7 @@ def receive_schema(agent: EphemeralRole, messages: set[type[EphemeralMessage]] =
         defs.append(schema)
         # refs.append({"$ref": f"#/definitions/{clsname}"})
 
-    return function_schema(
+    return compact_schema(
         name=str(agent.id),
         description=agent.system,
         parameters={
@@ -83,29 +115,26 @@ def receive_schema(agent: EphemeralRole, messages: set[type[EphemeralMessage]] =
     )
 
 
-def standard_context_transformer(messages: Iterable[EphemeralMessage]) -> list[dict]:
+def to_openai_json(messages: Iterable[Message]) -> list[dict]:
     return [{"content": str(message), "role": "user"} for message in messages]
 
 
-def use_gen_model(
+def use_model(
     system: str,
     prompt: str,
-    context: EphemeralMessage | None = None,
+    context: Message | None = None,
     context_history: int = 8,
-    context_transformer: Callable[
-        [Iterable[EphemeralMessage]], list[dict]
-    ] = standard_context_transformer,
     **kwargs,
 ):
     kwargs["messages"] = [
         {"content": dedent(system), "role": "system"},
-        *context_transformer(message_chain(context, height=context_history)),
+        *to_openai_json(message_chain(context, height=context_history)),
         {"content": dedent(prompt), "role": "user"},
     ]
     return kwargs
 
 
-def use_gen_message(messages: Iterable[type[EphemeralMessage]], **kwargs):
+def use_gen_message(messages: Iterable[type[Message]], **kwargs):
     schemas = []
     message_lookup = {}
 
@@ -118,42 +147,40 @@ def use_gen_message(messages: Iterable[type[EphemeralMessage]], **kwargs):
 
     def function_call(completion: OpenAIObject):
         response = completion.choices[0].message
+        if call := response.get("function_call", None):
+            cls = message_lookup[call.name]
+            genargs = json.loads(call.arguments)
+            genargs.update(kwargs)
+            return hydrate_message(cls(**genargs))
         if content := response.get("content", None):
             try:
                 call = json.loads(content)["function_call"]
                 genargs = call["args"]["message"]
                 genargs.update(kwargs)
                 cls = message_lookup[genargs["intent"]]
-                yield cls(**genargs)
+                return hydrate_message(cls(**genargs))
             except json.JSONDecodeError or KeyError:
-                import ipdb
-
-                ipdb.set_trace()
-                yield Chat(**kwargs, message=content)
-        if call := response.get("function_call", None):
-            cls = message_lookup[call.name]
-            genargs = json.loads(call.arguments)
-            genargs.update(kwargs)
-            yield cls(**genargs)
+                return hydrate_message(Message(**kwargs, content=content))
 
     return create_kwargs, function_call
 
 
 def use_actor_message(
-    agents: Iterable[EphemeralRole],
-    messages: set[type[EphemeralMessage]],
+    actors: Iterable[Actor],
+    messages: set[type[Message]],
     **kwargs,
 ):
+    global actor_lookup
+
     schemas = []
-    agent_lookup: dict[UUID4, EphemeralRole] = {}
-    message_lookup: dict[str, EphemeralMessage] = {}
+    message_lookup: dict[str, Message] = {}
 
-    for agent in agents:
-        schema: dict = receive_schema(agent, messages=messages)
+    for actor in actors:
+        schema: dict = receive_schema(actor, messages=messages)
         schemas.append(schema)
-        agent_lookup[schema["name"]] = agent
+        actor_lookup[schema["name"]] = actor
 
-        for cls in agent.receivable_messages:
+        for cls in actor.receivable_messages:
             if (intent := cls.infer_intent()) and intent not in message_lookup:
                 message_lookup[intent] = cls
 
@@ -161,23 +188,23 @@ def use_actor_message(
 
     def function_call(completion: OpenAIObject):
         response = completion.choices[0].message
-        if content := response.get("content", None):
-            yield Chat(**kwargs, message=content)
         if call := response.get("function_call", None):
             raw = json.loads(call.arguments)
             genargs = raw.pop("message", raw)
             genargs.update(kwargs)
 
-            agent = agent_lookup[call.name]
+            agent = actor_lookup[call.name]
             genargs["receiver"] = agent
 
             cls = message_lookup[genargs.pop("intent")]
-            yield cls(**genargs)
+            return hydrate_message(cls(**genargs))
+        if content := response.get("content", None):
+            return hydrate_message(Message(**kwargs, content=content))
 
     return create_kwargs, function_call
 
 
-def use_reply_to(m: EphemeralMessage, ms: set[type[EphemeralMessage]], **kwargs):
+def use_reply_to(m: Message, ms: set[type[Message]], **kwargs):
     if not m.sender_id:
         raise ValueError("message must have a sender to generate a reply")
 

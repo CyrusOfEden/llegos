@@ -1,12 +1,11 @@
-from llegos.contexts import Context, ContextualRole
-from llegos.ephemeral import EphemeralMessage, Field
+from llegos.research import ContextualActor, Field, Message, Scene
 
 
-class Observation(EphemeralMessage):
+class Observation(Message):
     content: str
 
 
-class Knowledge(EphemeralMessage):
+class Knowledge(Message):
     content: str
 
 
@@ -14,7 +13,7 @@ class Insight(Knowledge):
     ...
 
 
-class LearningAgent(ContextualRole):
+class LearningAgent(ContextualActor):
     def knowledge(self, message: Knowledge):
         ...
 
@@ -27,7 +26,7 @@ class GuidingAgent(LearningAgent):
         ...
 
 
-class KnowledgeContext(Context):
+class KnowledgeContext(Scene):
     guide: GuidingAgent
     learners: list[LearningAgent] = Field(min_items=1)
 

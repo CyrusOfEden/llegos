@@ -10,31 +10,29 @@ from llegos.collaborative.abstract.contract_net import (
     CallForProposal,
     Cancel,
     ContractNet,
-    ContractorRole,
+    ContractorActor,
     Inform,
-    ManagerRole,
+    ManagerActor,
+    Message,
     Propose,
     Reject,
     Request,
 )
-from llegos.contexts import Propagate
-from llegos.ephemeral import EphemeralMessage
-from llegos.functional import use_actor_message, use_gen_model, use_reply_to
-from llegos.test_helpers import SimpleGPTAgent
+from llegos.functional import use_actor_message, use_model, use_reply_to
 
 
 class InvariantError(TypeError):
     ...
 
 
-class Manager(ManagerRole):
+class Manager(ManagerActor):
     def request(self, message: Request):
-        model_kwargs = use_gen_model(
+        model_kwargs = use_model(
             model="gpt-4-0613",
             max_tokens=4096,
             # these are special llegos params that are used to generate a list[dict] of messages
             system=f"""\
-            {self.system}
+            {self.state.system}
             """,
             context=message,
             context_history=8,
@@ -48,22 +46,22 @@ class Manager(ManagerRole):
         )
 
         function_kwargs, function_call = use_actor_message(
-            self.receivers(CallForProposal),
+            self.scene_handlers(CallForProposal),
             messages={CallForProposal},
             sender=self,
             parent=message,
         )
 
-        completion = self.cognition.language(**model_kwargs, **function_kwargs)
+        completion = openai.ChatCompletion.create(**model_kwargs, **function_kwargs)
 
         return function_call(completion)
 
     def propose(self, message: Propose) -> Reject | CallForProposal | Accept:
-        model_args = use_gen_model(
+        model_args = use_model(
             model="gpt-4-0613",
             max_tokens=4096,
             system=f"""\
-            {self.system}
+            {self.state.system}
             """,
             context=message,
             context_history=4,
@@ -88,7 +86,7 @@ class Manager(ManagerRole):
         return message
 
     def inform(self, message: Inform):
-        return Inform.forward(message, to=self.context)
+        return Inform.forward(message, to=self.scene)
 
     def reject(self, message: Reject):
         ...
@@ -97,13 +95,13 @@ class Manager(ManagerRole):
         ...
 
 
-class Writer(ContractorRole):
+class Writer(ContractorActor):
     def call_for_proposal(self, message: CallForProposal) -> Propose | Reject:
-        model_kwargs = use_gen_model(
+        model_kwargs = use_model(
             model="gpt-4-0613",
             max_tokens=4096,
             system=f"""\
-            {self.system}
+            {self.state.system}
 
             YOU MUST THINK QUIETLY.
             """,
@@ -122,15 +120,15 @@ class Writer(ContractorRole):
             {Propose, Reject},
         )
 
-        completion = self.cognition.language(**model_kwargs, **function_kwargs)
+        completion = openai.ChatCompletion.create(**model_kwargs, **function_kwargs)
 
         return function_call(completion)
 
     def accept(self, message: Accept) -> Inform | Cancel:
-        model_kwargs = use_gen_model(
+        model_kwargs = use_model(
             model="gpt-4-0613",
             max_tokens=4096,
-            system=self.system,
+            system=self.state.system,
             context=message,
             context_history=8,
             prompt=f"Imagine {self.id} informing {message.sender_id} with generated content.",
@@ -184,7 +182,7 @@ if __name__ == "__main__":
         ],
     )
 
-    async def run(message: EphemeralMessage):
+    async def run(message: Message):
         async for m in network.send(Propagate(message=message)):
             pprint(json.loads(str(m)))
             print("\n\n")

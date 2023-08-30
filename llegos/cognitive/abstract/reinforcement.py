@@ -5,28 +5,26 @@ from beartype.typing import AsyncIterable
 from networkx import DiGraph
 from pydantic import Field
 
-from llegos.asyncio import AsyncRole
-from llegos.ephemeral import EphemeralMessage
-from llegos.messages import find_closest, message_path
+from llegos.research import Actor, Message
 
 
-class Percept(EphemeralMessage):
+class Percept(Message):
     ...
 
 
-class PerceptionBehavior(AsyncRole, ABC):
+class PerceptionBehavior(Actor, ABC):
     ...
 
 
-class Action(EphemeralMessage):
+class Action(Message):
     ...
 
 
-class Cost(EphemeralMessage):
+class Cost(Message):
     value: float = Field(gte=0)
 
 
-class CostBehavior(AsyncRole, ABC):
+class CostBehavior(Actor, ABC):
     loss_landscape: DiGraph = Field(
         default_factory=DiGraph, include=False, exclude=True
     )
@@ -55,11 +53,11 @@ class CostBehavior(AsyncRole, ABC):
         return Cost.reply_to(realized_step, value=actual_loss)
 
 
-class Reward(EphemeralMessage):
+class Reward(Message):
     value: float = Field(default=0)
 
 
-class RewardBehavior(AsyncRole, ABC):
+class RewardBehavior(Actor, ABC):
     reward_path: DiGraph = Field(default_factory=DiGraph, include=False, exclude=True)
 
     @abstractmethod
@@ -83,7 +81,7 @@ class RewardBehavior(AsyncRole, ABC):
         return reward
 
 
-class ActionBehavior(AsyncRole, ABC):
+class ActionBehavior(Actor, ABC):
     @abstractmethod
     async def forward(self, current_step: Percept) -> AsyncIterable[Action]:
         "Predict possible actions from a given step."
@@ -97,7 +95,7 @@ class ActionBehavior(AsyncRole, ABC):
         ...
 
 
-class WorldModelBehavior(AsyncRole, ABC):
+class WorldModelBehavior(Actor, ABC):
     @abstractmethod
     async def forward(self, action: Action) -> Percept:
         "Predict the next step of the world based on the action."
@@ -110,7 +108,7 @@ class WorldModelBehavior(AsyncRole, ABC):
         find_closest(realized_step, Action)
 
 
-class ExecutiveBehavior(AsyncRole, ABC):
+class ExecutiveBehavior(Actor, ABC):
     cost: CostBehavior = Field(exclude=True)
     reward: RewardBehavior = Field(exclude=True)
     action: ActionBehavior = Field(exclude=True)
