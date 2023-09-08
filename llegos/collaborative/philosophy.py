@@ -4,7 +4,7 @@ from pprint import pprint
 from dotenv import load_dotenv
 
 from llegos.collaborative.abstract.pairwise import Pairwise
-from llegos.functional import use_actor_message, use_model, use_reply_to
+from llegos.cursive import use_actor_message_fns, use_messages, use_reply_to_fns
 from llegos.messages import Ack, Chat
 from llegos.research import ContextualActor, Field, Message, Propagate
 from llegos.test_helpers import SimpleGPTAgent
@@ -31,7 +31,7 @@ class Philosopher(ContextualActor):
     )
 
     def consider(self, c: Consider) -> Refine:
-        model_kwargs = use_model(
+        model_kwargs = use_messages(
             model="gpt-3.5-turbo-0613",
             max_tokens=768,
             system=f"You are {self.state.system}.",
@@ -43,8 +43,8 @@ class Philosopher(ContextualActor):
             Use Refine to think, reason, and form an initial response.
             """,
         )
-        function_kwargs, function_call = use_actor_message(
-            self.scene_handlers(Refine), {Refine}, sender=self, parent=c
+        function_kwargs, function_call = use_actor_message_fns(
+            self.receivers(Refine), {Refine}, sender=self, parent=c
         )
 
         completion = self.cognition.language(**model_kwargs, **function_kwargs)
@@ -53,7 +53,7 @@ class Philosopher(ContextualActor):
         return message
 
     def refine(self, r: Refine):
-        model_kwargs = use_model(
+        model_kwargs = use_messages(
             model="gpt-3.5-turbo-0613",
             max_tokens=768,
             system=f"You are {self.state.system}.",
@@ -66,7 +66,7 @@ class Philosopher(ContextualActor):
             Else, use Refine to think, reason, and refine the response.
             """,
         )
-        function_kwargs, function_call = use_reply_to(r, {Quality, Refine})
+        function_kwargs, function_call = use_reply_to_fns(r, {Quality, Refine})
 
         completion = self.cognition.language(**model_kwargs, **function_kwargs)
 

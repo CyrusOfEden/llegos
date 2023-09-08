@@ -1,25 +1,12 @@
 from os import environ as env
 from random import sample
 from textwrap import dedent
-from typing import Callable
 
+from cursive import Cursive
 from dotenv import load_dotenv
 
-from llegos.functional import use_model
-from llegos.research import Actor, Context, Message, send
-
-
-def model(*args, **kwargs):
-    return openai.ChatCompletion.create(
-        model="anthropic/claude-instant-v1",
-        headers={
-            "HTTP-Referer": "https://llegos.substack.com",
-            "X-Title": "Playing with Llegos",
-        },
-        *args,
-        **kwargs,
-    )
-
+from llegos.cursive import to_openai_json
+from llegos.research import Actor, Message, Scene, message_chain, send
 
 jeremy_howard_system = """\
 You are an autoregressive language model that has been fine-tuned with
@@ -35,70 +22,65 @@ to answer a question.
 
 
 class BoardMember(Actor):
-    model: Callable = model
+    model: Cursive
     system_prompt: str  # immutable values go on the actor
 
     def on_message(self, message: Message) -> Message | None:
-        model_kwargs = use_model(
-            max_tokens=384,
-            system=f"""\
-            {jeremy_howard_system}
+        model_messages = to_openai_json(message_chain(message, height=8))
+        return self.model.ask(
+            system_message=dedent(
+                f"""\
+                {jeremy_howard_system}
 
-            {self.system_prompt}
+                {self.system_prompt}
 
-            Your ID is {self.id}.
+                Your ID is {self.id}
 
-            Be concise, and to the point. Answer in 4 sentences or less.
-            """,
-            context=message,
-            context_history=8,
-            prompt="""\
-            First, think carefully whether you have value to add to the conversation.
-            You can add value by refining a comment, criticising a comment, adding perspective,
-            or asking a question. If you find the conversation is repeating itself, return "STOP".
-
-            Your additional directives are:
-            """,
-        )
-
-        completion = self.model(**model_kwargs)
-
-        response = completion.choices[0].message.content
-        if "STOP" not in response:
-            "Sends the Message to the BoardOfDirectors"
-            return Message.reply_to(message, content=response)
+                Be concise, and to the point. Answer in 4 sentences or less.
+                """
+            ),
+            messages=model_messages,
+            prompt=dedent(
+                """\
+                First, think carefully whether you have value to add to the conversation.
+                You can add value by refining a comment, criticising a comment, adding perspective,
+                or asking a question.
+                """
+            ),
+            function_call=Message,
+        ).function_result
 
 
-class BoardOfDirectors(Context):
+class BoardOfDirectors(Scene):
     members: set[BoardMember]
 
     def on_message(self, message: Message):
         receiver = sample(self.members, 1)[0]
-        yield Message.forward(message, to=receiver)
+        return Message.forward(message, to=receiver)
 
 
 if __name__ == "__main__":
-    import openai
-
     load_dotenv()
 
-    openai.api_base = "https://openrouter.ai/api/v1"
-    openai.api_key = env["OPENAI_API_KEY"]
+    cursive = Cursive(openrouter={"api_key": env["OPENAI_API_KEY"]})
 
     board = BoardOfDirectors(
         members={
             BoardMember(
+                model=cursive,
                 system_prompt="You are Sam Altman; pragmatic, lean, and action-oriented.",
             ),
             BoardMember(
-                name="Paul Graham",
+                model=cursive,
                 system_prompt="You're are Paul Graham, quite insightful, and poetic.",
             ),
             BoardMember(
+                model=cursive,
                 system_prompt="You are Simon Cowell, condescending and snarky and witty.",
             ),
             BoardMember(
-                system_prompt="You are Gordon Ramsey, and you can get angry really quickly."
+                model=cursive,
+                system_prompt="You are Gordon Ramsey, and you can get angry really quickly.",
             ),
         },
     )
@@ -113,7 +95,7 @@ if __name__ == "__main__":
             yield reply
             yield from send_and_propogate(reply)
 
-    with board.context():
+    with board.scene():
         for reply in send_and_propogate(prompt):
             print(
                 dedent(

@@ -3,9 +3,8 @@ from operator import itemgetter
 
 from beartype.typing import AsyncIterable
 from networkx import DiGraph
-from pydantic import Field
 
-from llegos.research import Actor, Message
+from llegos.research import Actor, Field, Message, find_closest, message_path
 
 
 class Percept(Message):
@@ -118,7 +117,7 @@ class ExecutiveBehavior(Actor, ABC):
         if action_lookahead <= 0:
             raise ValueError("search_depth must be greater than 0")
 
-        predicted_actions: list[tuple[Action, float]] = []
+        future_actions: list[tuple[Action, float]] = []
 
         prior_cost = await self.cost.forward(step)
         prior_reward = await self.reward.forward(prior_cost)
@@ -129,9 +128,10 @@ class ExecutiveBehavior(Actor, ABC):
             predicted_step = await self.world_model.forward(action)
             predicted_loss = await self.cost.forward(predicted_step)
 
-            predicted_actions.append((action, predicted_loss.value))
+            foresight = (action, predicted_loss.value)
+            future_actions.append(foresight)
 
-        action = sorted(predicted_actions, key=itemgetter(1))[0][0]
+        action = sorted(future_actions, key=itemgetter(1))[0][0]
         if action_lookahead == 1:
             return action
 

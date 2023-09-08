@@ -2,8 +2,8 @@ import os
 
 from dotenv import load_dotenv
 
-from llegos.functional import use_gen_message, use_model, use_reply_to
-from llegos.research import Actor, Context, Message, SceneObject, send_and_propogate
+from llegos.cursive import use_gen_message_fns, use_messages, use_reply_to_fns
+from llegos.research import Actor, Message, Object, Scene, send_and_propogate
 
 
 def model(*args, **kwargs):
@@ -25,13 +25,13 @@ to answer a question.
 """
 
 
-class CafeScene(Context):
+class CafeScene(Scene):
     customer: "Customer"
     cashier: "Cashier"
     barista: "Barista"
 
 
-class Item(SceneObject):
+class Item(Object):
     name: str
     price: float
 
@@ -45,18 +45,18 @@ class Customer(Actor):
     temperament: str
 
     def enter_cafe(self):
-        model_kwargs = use_model(
+        model_kwargs = use_messages(
             system="""\
             """,
             prompt="""\
             """,
         )
-        function_kwargs, parse_order = use_gen_message(
-            {Order}, sender=self, receiver=self.context.cashier
+        function_kwargs, parse_order = use_gen_message_fns(
+            {Order}, sender=self, receiver=self.scene.cashier
         )
 
         order = parse_order(model(**model_kwargs, **function_kwargs))
-        yield order
+        return order
 
     def on_message(self, message: Message):
         ...
@@ -68,17 +68,17 @@ class Customer(Actor):
 class Cashier(Actor):
     def on_order(self, order: Order):
         # Pass the order off to the Barista
-        yield Order.forward(order, to=self.context.barista)
+        yield Order.forward(order, to=self.scene.barista)
 
         # Respond to the Customer
-        model_kwargs = use_model(
+        model_kwargs = use_messages(
             system="""\
             """,
             prompt="""\
             """,
             context=order,
         )
-        function_kwargs, parse_message = use_reply_to(order, {Message})
+        function_kwargs, parse_message = use_reply_to_fns(order, {Message})
         message = parse_message(model(**model_kwargs, **function_kwargs))
 
         yield message
@@ -86,7 +86,7 @@ class Cashier(Actor):
 
 class Barista(Actor):
     def on_order(self, order: Order):
-        yield Order.forward(order, to=self.context.customer)
+        yield Order.forward(order, to=self.scene.customer)
 
 
 if __name__ == "__main__":
@@ -98,6 +98,6 @@ if __name__ == "__main__":
     openai.api_key = os.getenv("OPENAI_API_KEY")
 
     scene = CafeScene(customer=Customer(), cashier=Cashier(), barista=Barista())
-    with scene.context():
+    with scene.scene():
         for message in send_and_propogate(scene.customer.enter_cafe()):
             print(str(message))

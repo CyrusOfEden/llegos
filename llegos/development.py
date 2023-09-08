@@ -11,7 +11,7 @@ from sqlmodel import Field, Relationship, SQLModel
 from llegos import research
 
 
-class SceneObject(SQLModel, research.SceneObject):
+class SceneObject(SQLModel, research.Object):
     id: uuid4 = Field(
         default_factory=uuid4,
         primary_key=True,

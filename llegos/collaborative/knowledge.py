@@ -34,7 +34,7 @@ class KnowledgeContext(Scene):
         super().__init__(**kwargs)
 
         for learner in enumerate(self.learners):
-            self.graph.add_edge(self.guide, learner)
+            self.relationships.add_edge(self.guide, learner)
 
     def knowledge(self, k: Knowledge):
         return k.forward_to(self.guide)

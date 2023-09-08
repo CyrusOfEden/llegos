@@ -21,7 +21,7 @@ https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Icnp.svg/880px-Icnp.sv
 
 from abc import ABC, abstractmethod
 
-from llegos.research import Actor, Context, Field, Message
+from llegos.research import Actor, Field, Message, Scene, find_closest
 
 
 class Request(Message):
@@ -126,16 +126,16 @@ class ManagerActor(Actor, ABC):
         ...
 
 
-class ContractNet(Context):
+class ContractNet(Scene):
     manager: ManagerActor = Field()
     contractors: list[ContractorActor] = Field(min_items=2)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        self.graph.add_edge(self, self.manager)
+        self.relationships.add_edge(self, self.manager)
         for priority, contractor in enumerate(self.contractors):
-            self.graph.add_edge(self.manager, contractor, weight=priority)
+            self.relationships.add_edge(self.manager, contractor, weight=priority)
 
     def request(self, req: Request):
         return Request.forward(req, to=self.manager, sender=self)

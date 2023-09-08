@@ -7,6 +7,7 @@ from typing import Literal, Sequence
 from uuid import uuid4
 
 from beartype.typing import Callable, Optional
+from cursive import Cursive
 from deepmerge import always_merger
 from networkx import DiGraph, MultiGraph
 from pydantic import UUID4, BaseModel, Field
@@ -14,7 +15,7 @@ from pyee import EventEmitter
 from sorcery import delegate_to_attr, maybe
 
 
-class SceneObject(BaseModel):
+class Object(BaseModel):
     class Config:
         arbitrary_types_allowed = True
         deepmerge = always_merger.merge
@@ -33,7 +34,7 @@ class SceneObject(BaseModel):
         return self.json(sort_keys=False)
 
     @classmethod
-    def lift(cls, instance: "SceneObject", **kwargs):
+    def lift(cls, instance: "Object", **kwargs):
         attrs = instance.dict()
 
         cls.Config.deepmerge(attrs, kwargs)
@@ -45,17 +46,18 @@ class SceneObject(BaseModel):
         return cls(**attrs)
 
 
-SceneObject.Config.json_encoders = {
-    SceneObject: lambda o: {"cls": o.__class__.__name__, "id": o.id}
+Object.Config.json_encoders = {
+    Object: lambda o: {"cls": o.__class__.__name__, "id": o.id}
 }
-SceneObject.update_forward_refs()
+Object.update_forward_refs()
 
 
-class State(SceneObject):
+class State(Object):
     ...
 
 
-class Actor(SceneObject):
+class Actor(Object):
+    llm: Cursive = Field(exclude=True)
     event_emitter: EventEmitter = Field(
         default_factory=EventEmitter,
         description="emitting events blocks until all listeners have executed",
@@ -109,77 +111,69 @@ class Actor(SceneObject):
                 yield from response
 
     @property
-    def context(self):
-        return env_context.get()
+    def scene(self):
+        return scene_context.get()
 
     @property
-    def relationships(self):
+    def relationships(self) -> list["Actor"]:
         edges = [
             (neighbor, key, data)
-            for (node, neighbor, key, data) in self.context.edges(keys=True, data=True)
+            for (node, neighbor, key, data) in self.scene.relationships.edges(
+                keys=True, data=True
+            )
             if node == self
         ]
         edges.sort(key=lambda edge: edge[2].get("weight", 1))
-        return [agent for (agent, _, _) in edges]
+        return [actor for (actor, _, _) in edges]
 
-    def tellable(self, *messages: type["Message"]):
+    def receivers(self, *messages: type["Message"]):
         return [
             actor
             for actor in self.relationships
-            if any(m in actor.receivable_messages for m in messages)
+            if all(m in actor.receivable_messages for m in messages)
         ]
 
 
 Actor.update_forward_refs()
 
 
-class Context(Actor):
-    graph: MultiGraph = Field(default_factory=MultiGraph, include=False, exclude=True)
+class Scene(Actor):
+    relationships: MultiGraph = Field(
+        default_factory=MultiGraph, include=False, exclude=True
+    )
 
     def __contains__(self, key: str | Actor) -> bool:
         match key:
             case str():
                 return key in self.lookup
             case Actor():
-                return key in self.graph
+                return key in self.relationships
             case _:
                 raise TypeError(f"lookup key must be str or Actor, not {type(key)}")
 
-    (
-        __getitem__,
-        add_edges_from,
-        add_weighted_edges_from,
-        edges,
-        get_edge_data,
-        has_edge,
-        neighbors,
-        nodes,
-        remove_edges_from,
-    ) = delegate_to_attr("graph")
-
     @property
     def lookup(self):
-        return {a.id: a for a in self.graph.nodes}
+        return {a.id: a for a in self.relationships.nodes}
 
     @contextmanager
-    def context(self):
+    def scene(self):
         try:
-            key = env_context.set(self)
+            key = scene_context.set(self)
             yield self
         finally:
-            env_context.reset(key)
+            scene_context.reset(key)
 
 
-env_context = ContextVar[Context]("llegos.context")
+scene_context = ContextVar[Scene]("llegos.scene")
 
 
-class Message(SceneObject):
+class Message(Object):
     @classmethod
     def infer_intent(cls, _pattern=re.compile(r"(?<!^)(?=[A-Z])")):
         return re.sub(_pattern, "_", cls.__name__).lower()
 
     @classmethod
-    def to(cls, receiver: "SceneObject", **kwargs):
+    def to(cls, receiver: "Object", **kwargs):
         attrs = {"receiver": receiver}
         attrs.update(kwargs)
         return cls(**attrs)
@@ -196,7 +190,7 @@ class Message(SceneObject):
 
     @classmethod
     def forward(
-        cls, message: "Message", to: Optional[SceneObject] = None, **kwargs
+        cls, message: "Message", to: Optional[Object] = None, **kwargs
     ) -> "Message":
         attrs = {"sender": message.receiver, "receiver": to, "parent": message}
         attrs.update(kwargs)
@@ -206,8 +200,8 @@ class Message(SceneObject):
     role: Literal["user", "assistant", "system"] = Field(default="user", include=True)
 
     created_at: datetime = Field(default_factory=datetime.utcnow, include=True)
-    sender: Optional["SceneObject"] = Field(default=None, include=True)
-    receiver: Optional["SceneObject"] = Field(default=None, include=True)
+    sender: Optional["Object"] = Field(default=None, include=True)
+    receiver: Optional["Object"] = Field(default=None, include=True)
     parent: Optional["Message"] = Field(default=None, include=True)
 
     intent: str = Field(include=True)
@@ -236,7 +230,7 @@ class Message(SceneObject):
     def __str__(self):
         return self.json(exclude={"parent"}, sort_keys=False)
 
-    def forward_to(self, to: Optional[SceneObject] = None, **kwargs):
+    def forward_to(self, to: Optional[Object] = None, **kwargs):
         return self.forward(self, to=to, **kwargs)
 
 

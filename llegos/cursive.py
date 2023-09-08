@@ -1,15 +1,14 @@
-import json
 from textwrap import dedent
 from typing import Iterable
 
-from openai.openai_object import OpenAIObject
+from cursive.function import CursiveCustomFunction
 from pydantic import UUID4
 
-from llegos.research import Actor, Message, SceneObject, message_chain
+from llegos.research import Actor, Message, Object, message_chain
 
 
 class maxdict(dict):
-    def __init__(self, max_size=100, *args, **kwargs):
+    def __init__(self, max_size=128, *args, **kwargs):
         self.max_size = max_size
         super().__init__(*args, **kwargs)
 
@@ -20,27 +19,27 @@ class maxdict(dict):
         super().__setitem__(key, value)
 
 
-actor_lookup: dict[UUID4, Actor] = {}
-message_lookup: maxdict[UUID4, Message] = maxdict(max_size=1024)
+actor_lookup = maxdict[UUID4, Actor](max_size=128)
+message_lookup = dict[UUID4, type[Message]]()
 
 
 def hydrate_message(m: Message) -> Message:
     match m.parent:
         case Message() as m:
             message_lookup[m.id] = m
-        case SceneObject() as o:
+        case Object() as o:
             m.parent = message_lookup[o.id]
 
     match m.sender:
         case Actor() as a:
             actor_lookup[a.id] = a
-        case SceneObject() as o:
+        case Object() as o:
             m.sender = actor_lookup[o.id]
 
     match m.receiver:
         case Actor() as a:
             actor_lookup[a.id] = a
-        case SceneObject() as o:
+        case Object() as o:
             m.receiver = actor_lookup[o.id]
 
     return m
@@ -119,95 +118,68 @@ def to_openai_json(messages: Iterable[Message]) -> list[dict]:
     return [{"content": str(message), "role": "user"} for message in messages]
 
 
-def use_model(
+def use_messages(
     system: str,
     prompt: str,
     context: Message | None = None,
     context_history: int = 8,
     **kwargs,
 ):
-    kwargs["messages"] = [
+    return [
         {"content": dedent(system), "role": "system"},
         *to_openai_json(message_chain(context, height=context_history)),
         {"content": dedent(prompt), "role": "user"},
     ]
-    return kwargs
 
 
-def use_gen_message(messages: Iterable[type[Message]], **kwargs):
-    schemas = []
-    message_lookup = {}
+def use_gen_message_fn(message: type[Message], **kwargs):
+    global message_lookup
+    message_lookup[message.infer_intent()] = message
 
-    for cls in messages:
-        schema: dict = message_schema(cls)
-        schemas.append(schema)
-        message_lookup[schema["name"]] = cls
-
-    create_kwargs = {"functions": schemas}
-
-    def function_call(completion: OpenAIObject):
-        response = completion.choices[0].message
-        if call := response.get("function_call", None):
-            cls = message_lookup[call.name]
-            genargs = json.loads(call.arguments)
-            genargs.update(kwargs)
-            return hydrate_message(cls(**genargs))
-        if content := response.get("content", None):
-            try:
-                call = json.loads(content)["function_call"]
-                genargs = call["args"]["message"]
-                genargs.update(kwargs)
-                cls = message_lookup[genargs["intent"]]
-                return hydrate_message(cls(**genargs))
-            except json.JSONDecodeError or KeyError:
-                return hydrate_message(Message(**kwargs, content=content))
-
-    return create_kwargs, function_call
+    json_schema: dict = message_schema(message)
+    return CursiveCustomFunction(
+        definition=lambda **genargs: hydrate_message(message(**kwargs, **genargs)),
+        function_schema=json_schema,
+        pause=True,
+    )
 
 
-def use_actor_message(
+def use_gen_message_fns(messages: Iterable[type[Message]], **kwargs):
+    return [use_gen_message_fn(cls, **kwargs) for cls in messages]
+
+
+def use_actor_message_fn(actor: Actor, messages: set[type[Message]], **kwargs):
+    global actor_lookup
+    global message_lookup
+
+    actor_lookup[actor.id] = actor
+    for cls in actor.receivable_messages:
+        message_lookup[cls.infer_intent()] = cls
+
+    def actor_caller(**genargs):
+        cls = message_lookup[genargs.pop("intent")]
+        message = cls(**kwargs, **genargs)
+        return actor.instruct(message)
+
+    json_schema: dict = receive_schema(actor, messages=messages)
+
+    return CursiveCustomFunction(
+        definition=actor_caller, function_schema=json_schema, pause=True
+    )
+
+
+def use_actor_message_fns(
     actors: Iterable[Actor],
     messages: set[type[Message]],
     **kwargs,
 ):
-    global actor_lookup
-
-    schemas = []
-    message_lookup: dict[str, Message] = {}
-
-    for actor in actors:
-        schema: dict = receive_schema(actor, messages=messages)
-        schemas.append(schema)
-        actor_lookup[schema["name"]] = actor
-
-        for cls in actor.receivable_messages:
-            if (intent := cls.infer_intent()) and intent not in message_lookup:
-                message_lookup[intent] = cls
-
-    create_kwargs = {"functions": schemas}
-
-    def function_call(completion: OpenAIObject):
-        response = completion.choices[0].message
-        if call := response.get("function_call", None):
-            raw = json.loads(call.arguments)
-            genargs = raw.pop("message", raw)
-            genargs.update(kwargs)
-
-            agent = actor_lookup[call.name]
-            genargs["receiver"] = agent
-
-            cls = message_lookup[genargs.pop("intent")]
-            return hydrate_message(cls(**genargs))
-        if content := response.get("content", None):
-            return hydrate_message(Message(**kwargs, content=content))
-
-    return create_kwargs, function_call
+    return [use_actor_message_fn(actor, messages, **kwargs) for actor in actors]
 
 
-def use_reply_to(m: Message, ms: set[type[Message]], **kwargs):
+def use_reply_to_fns(m: Message, ms: set[type[Message]], **kwargs):
     if not m.sender_id:
         raise ValueError("message must have a sender to generate a reply")
 
-    return use_actor_message(
+    return use_actor_message_fns(
         [m.sender], ms, parent=m, sender=m.receiver, receiver=m.sender, **kwargs
     )

@@ -16,10 +16,9 @@ packages = [{ include = "llegos" }]
 
 [tool.poetry.dependencies]
 python = ">=3.10.9,<3.12"
-pydantic = ">=1,<=2.1"
+pydantic = ">=1,<=2"
 sorcery = "^0.2.2"
 networkx = "^3.1"
-openai = "^0.27"
 ijson = "^3.2.2"
 janus = "^1.0.0"
 aiometer = "^0.4.0"
@@ -27,6 +26,7 @@ sqlmodel = "^0.0.8"
 python-statemachine = "^2.1.0"
 beartype = "^0.15.0"
 deepmerge = "^1.1.0"
+cursivepy = { git = "https://github.com/CyrusOfEden/cursive-py.git", branch = "main" }
 
 [tool.poetry.group.dev]
 optional = true

@@ -5,7 +5,7 @@ from textwrap import dedent
 
 from dotenv import load_dotenv
 
-from llegos.collaborative.abstract.contract_net import (
+from llegos.collaborative.contract_net import (
     Accept,
     CallForProposal,
     Cancel,
@@ -18,7 +18,7 @@ from llegos.collaborative.abstract.contract_net import (
     Reject,
     Request,
 )
-from llegos.functional import use_actor_message, use_model, use_reply_to
+from llegos.cursive import use_actor_message_fns, use_messages, use_reply_to_fns
 
 
 class InvariantError(TypeError):
@@ -27,10 +27,7 @@ class InvariantError(TypeError):
 
 class Manager(ManagerActor):
     def request(self, message: Request):
-        model_kwargs = use_model(
-            model="gpt-4-0613",
-            max_tokens=4096,
-            # these are special llegos params that are used to generate a list[dict] of messages
+        messages = use_messages(
             system=f"""\
             {self.state.system}
             """,
@@ -45,21 +42,18 @@ class Manager(ManagerActor):
             """,
         )
 
-        function_kwargs, function_call = use_actor_message(
-            self.scene_handlers(CallForProposal),
+        functions = use_actor_message_fns(
+            self.receivers(CallForProposal),
             messages={CallForProposal},
             sender=self,
             parent=message,
         )
 
-        completion = openai.ChatCompletion.create(**model_kwargs, **function_kwargs)
-
-        return function_call(completion)
+        answer: CallForProposal = self.llm.ask(messages=messages, functions=functions)
+        return answer.function_result
 
     def propose(self, message: Propose) -> Reject | CallForProposal | Accept:
-        model_args = use_model(
-            model="gpt-4-0613",
-            max_tokens=4096,
+        messages = use_messages(
             system=f"""\
             {self.state.system}
             """,
@@ -75,14 +69,14 @@ class Manager(ManagerActor):
             """,
         )
 
-        function_kwargs, function_call = use_reply_to(
+        functions = use_reply_to_fns(
             message,
             {Accept, CallForProposal, Reject},
         )
 
-        completion = self.cognition.language(**model_args, **function_kwargs)
+        answer = self.llm.ask(messages=messages, functions=functions)
 
-        message: Accept | CallForProposal | Reject = function_call(completion)
+        message: Accept | CallForProposal | Reject = answer.function_result
         return message
 
     def inform(self, message: Inform):
@@ -97,7 +91,7 @@ class Manager(ManagerActor):
 
 class Writer(ContractorActor):
     def call_for_proposal(self, message: CallForProposal) -> Propose | Reject:
-        model_kwargs = use_model(
+        model_kwargs = use_messages(
             model="gpt-4-0613",
             max_tokens=4096,
             system=f"""\
@@ -115,7 +109,7 @@ class Writer(ContractorActor):
             """,
         )
 
-        function_kwargs, function_call = use_reply_to(
+        function_kwargs, function_call = use_reply_to_fns(
             message,
             {Propose, Reject},
         )
@@ -125,7 +119,7 @@ class Writer(ContractorActor):
         return function_call(completion)
 
     def accept(self, message: Accept) -> Inform | Cancel:
-        model_kwargs = use_model(
+        model_kwargs = use_messages(
             model="gpt-4-0613",
             max_tokens=4096,
             system=self.state.system,
@@ -134,7 +128,7 @@ class Writer(ContractorActor):
             prompt=f"Imagine {self.id} informing {message.sender_id} with generated content.",
         )
 
-        function_kwargs, function_call = use_reply_to(
+        function_kwargs, function_call = use_reply_to_fns(
             message,
             {Inform, Cancel},
         )
