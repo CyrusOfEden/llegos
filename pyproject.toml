@@ -27,6 +27,7 @@ python-statemachine = "^2.1.0"
 beartype = "^0.15.0"
 deepmerge = "^1.1.0"
 cursivepy = { git = "https://github.com/CyrusOfEden/cursive-py.git", branch = "main" }
+pyee = "^11.0.0"
 
 [tool.poetry.group.dev]
 optional = true
