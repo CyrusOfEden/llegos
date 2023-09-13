@@ -118,7 +118,7 @@ class Actor(Object):
     def relationships(self) -> list["Actor"]:
         edges = [
             (neighbor, key, data)
-            for (node, neighbor, key, data) in self.scene.relationships.edges(
+            for (node, neighbor, key, data) in self.env.relationships.edges(
                 keys=True, data=True
             )
             if node == self
@@ -156,7 +156,7 @@ class Scene(Actor):
         return {a.id: a for a in self.relationships.nodes}
 
     @contextmanager
-    def scene(self):
+    def env(self):
         try:
             key = scene_context.set(self)
             yield self

@@ -80,7 +80,7 @@ class Manager(ManagerActor):
         return message
 
     def inform(self, message: Inform):
-        return Inform.forward(message, to=self.scene)
+        return Inform.forward(message, to=self.env)
 
     def reject(self, message: Reject):
         ...

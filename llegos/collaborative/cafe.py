@@ -52,7 +52,7 @@ class Customer(Actor):
             """,
         )
         function_kwargs, parse_order = use_gen_message_fns(
-            {Order}, sender=self, receiver=self.scene.cashier
+            {Order}, sender=self, receiver=self.env.cashier
         )
 
         order = parse_order(model(**model_kwargs, **function_kwargs))
@@ -68,7 +68,7 @@ class Customer(Actor):
 class Cashier(Actor):
     def on_order(self, order: Order):
         # Pass the order off to the Barista
-        yield Order.forward(order, to=self.scene.barista)
+        yield Order.forward(order, to=self.env.barista)
 
         # Respond to the Customer
         model_kwargs = use_messages(
@@ -86,7 +86,7 @@ class Cashier(Actor):
 
 class Barista(Actor):
     def on_order(self, order: Order):
-        yield Order.forward(order, to=self.scene.customer)
+        yield Order.forward(order, to=self.env.customer)
 
 
 if __name__ == "__main__":
@@ -98,6 +98,6 @@ if __name__ == "__main__":
     openai.api_key = os.getenv("OPENAI_API_KEY")
 
     scene = CafeScene(customer=Customer(), cashier=Cashier(), barista=Barista())
-    with scene.scene():
+    with scene.env():
         for message in send_and_propogate(scene.customer.enter_cafe()):
             print(str(message))

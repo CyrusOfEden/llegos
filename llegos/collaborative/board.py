@@ -95,7 +95,7 @@ if __name__ == "__main__":
             yield reply
             yield from send_and_propogate(reply)
 
-    with board.scene():
+    with board.env():
         for reply in send_and_propogate(prompt):
             print(
                 dedent(
