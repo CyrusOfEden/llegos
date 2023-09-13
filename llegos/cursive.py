@@ -176,10 +176,14 @@ def use_actor_message_fns(
     return [use_actor_message_fn(actor, messages, **kwargs) for actor in actors]
 
 
-def use_reply_to_fns(m: Message, ms: set[type[Message]], **kwargs):
+def use_reply_to_fn(m: Message, ms: set[type[Message]], **kwargs):
     if not m.sender_id:
         raise ValueError("message must have a sender to generate a reply")
 
-    return use_actor_message_fns(
-        [m.sender], ms, parent=m, sender=m.receiver, receiver=m.sender, **kwargs
+    return use_actor_message_fn(
+        m.sender, ms, parent=m, sender=m.receiver, receiver=m.sender, **kwargs
     )
+
+
+def use_reply_to_fns(m: Message, ms: set[type[Message]], **kwargs):
+    return [use_reply_to_fn(m, ms, **kwargs) for m in m.sender.received_messages]
