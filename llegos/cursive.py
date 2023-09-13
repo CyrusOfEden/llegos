@@ -124,13 +124,13 @@ def use_messages(
     return (to_openai_json(message_chain(context, height=context_history)),)
 
 
-def use_gen_message_fn(message: type[Message], **kwargs):
+def use_gen_message_fn(cls: type[Message], **kwargs):
     global message_lookup
-    message_lookup[message.infer_intent()] = message
+    message_lookup[cls.infer_intent()] = cls
 
-    json_schema: dict = message_schema(message)
+    json_schema: dict = message_schema(cls)
     return CursiveCustomFunction(
-        definition=lambda **genargs: hydrate_message(message(**kwargs, **genargs)),
+        definition=lambda **genargs: hydrate_message(cls(**kwargs, **genargs)),
         function_schema=json_schema,
         pause=True,
     )
@@ -148,15 +148,15 @@ def use_actor_message_fn(actor: Actor, messages: set[type[Message]], **kwargs):
     for cls in actor.receivable_messages:
         message_lookup[cls.infer_intent()] = cls
 
-    def actor_caller(**genargs):
-        cls = message_lookup[genargs.pop("intent")]
+    def actor_message(**genargs):
+        cls = message_lookup[genargs["intent"]]
         message = cls(**kwargs, **genargs)
-        return actor.instruct(message)
+        return hydrate_message(message)
 
     json_schema: dict = receive_schema(actor, messages=messages)
 
     return CursiveCustomFunction(
-        definition=actor_caller, function_schema=json_schema, pause=True
+        definition=actor_message, function_schema=json_schema, pause=True
     )
 
 
