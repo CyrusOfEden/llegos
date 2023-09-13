@@ -1,4 +1,3 @@
-from textwrap import dedent
 from typing import Iterable
 
 from cursive.function import CursiveCustomFunction
@@ -119,17 +118,10 @@ def to_openai_json(messages: Iterable[Message]) -> list[dict]:
 
 
 def use_messages(
-    system: str,
-    prompt: str,
-    context: Message | None = None,
-    context_history: int = 8,
-    **kwargs,
+    context_history: int,
+    context: Message,
 ):
-    return [
-        {"content": dedent(system), "role": "system"},
-        *to_openai_json(message_chain(context, height=context_history)),
-        {"content": dedent(prompt), "role": "user"},
-    ]
+    return (to_openai_json(message_chain(context, height=context_history)),)
 
 
 def use_gen_message_fn(message: type[Message], **kwargs):
