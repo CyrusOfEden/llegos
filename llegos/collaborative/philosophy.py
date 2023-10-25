@@ -3,14 +3,12 @@ from pprint import pprint
 
 from dotenv import load_dotenv
 
-from llegos.collaborative.abstract.pairwise import Pairwise
+from llegos.collaborative.pairwise import Pairwise
 from llegos.cursive import use_actor_message_fns, use_messages, use_reply_to_fns
-from llegos.messages import Ack, Chat
 from llegos.research import ContextualActor, Field, Message, Propagate
-from llegos.test_helpers import SimpleGPTAgent
 
 
-class Quality(Ack):
+class Quality(Message):
     "Quality is good, no further refinement is needed."
 
 
@@ -111,4 +109,5 @@ if __name__ == "__main__":
 
     for m in ensemble.send(Propagate(message=question)):
         pprint(json.loads(str(m)))
+        print("\n\n")
         print("\n\n")

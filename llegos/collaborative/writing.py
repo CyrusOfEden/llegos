@@ -28,9 +28,7 @@ class InvariantError(TypeError):
 class Manager(ManagerActor):
     def request(self, message: Request):
         messages = use_messages(
-            system=f"""\
-            {self.state.system}
-            """,
+            system=f"{self.state.system}",
             context=message,
             context_history=8,
             prompt="""\
@@ -135,8 +133,8 @@ class Writer(ContractorActor):
 
         completion = self.cognition.language(**model_kwargs, **function_kwargs)
 
-        message: Inform | Cancel = function_call(completion)
-        return message
+        reply: Inform | Cancel = function_call(completion)
+        return reply
 
     def reject(self, message: Reject):
         ...

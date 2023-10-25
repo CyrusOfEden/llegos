@@ -11,7 +11,7 @@ from sqlmodel import Field, Relationship, SQLModel
 from llegos import research
 
 
-class SceneObject(SQLModel, research.Object):
+class Object(SQLModel, research.Object):
     id: uuid4 = Field(
         default_factory=uuid4,
         primary_key=True,
@@ -33,13 +33,13 @@ class SceneObject(SQLModel, research.Object):
     )
 
 
-class State(SceneObject):
+class State(Object):
     __tablename__ = "states"
 
     actor_id: uuid4 = Field(nullable=False, index=True)
 
 
-class Actor(SceneObject, research.Actor):
+class Actor(Object, research.Actor, table=True):
     __tablename__ = "actors"
 
     state: State = Relationship(
@@ -84,7 +84,7 @@ class Actor(SceneObject, research.Actor):
                     yield reply
 
 
-class Message(SceneObject, research.Message, table=True):
+class Message(Object, research.Message, table=True):
     __tablename__ = "messages"
 
     intent: str = Field(index=True, nullable=False, include=True)
@@ -121,11 +121,9 @@ Actor.update_forward_refs()
 
 
 async def send(message: Message) -> AsyncIterable[Message]:
-    actor: Actor | None = message.receiver
-    if not actor:
-        return
-    async for response in actor.instruct(message):
-        yield response
+    if actor := message.receiver:
+        async for response in actor.instruct(message):
+            yield response
 
 
 async def send_and_propogate(
