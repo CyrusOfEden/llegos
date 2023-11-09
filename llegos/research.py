@@ -116,7 +116,7 @@ class Actor(Object):
     def relationships(self) -> list["Actor"]:
         edges = [
             (neighbor, key, data)
-            for (node, neighbor, key, data) in self.env.relationships.edges(
+            for (node, neighbor, key, data) in self.scene.graph.edges(
                 keys=True, data=True
             )
             if node == self
@@ -136,22 +136,20 @@ Actor.update_forward_refs()
 
 
 class Scene(Actor):
-    relationships: MultiGraph = Field(
-        default_factory=MultiGraph, include=False, exclude=True
-    )
+    graph: MultiGraph = Field(default_factory=MultiGraph, include=False, exclude=True)
 
     def __contains__(self, key: str | Actor) -> bool:
         match key:
             case str():
                 return key in self.lookup
             case Actor():
-                return key in self.relationships
+                return key in self.graph
             case _:
                 raise TypeError(f"lookup key must be str or Actor, not {type(key)}")
 
     @property
     def lookup(self):
-        return {a.id: a for a in self.relationships.nodes}
+        return {a.id: a for a in self.graph.nodes}
 
     @contextmanager
     def env(self):
