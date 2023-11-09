@@ -7,7 +7,6 @@ from typing import Literal, Sequence
 from uuid import uuid4
 
 from beartype.typing import Callable, Optional
-from cursive import Cursive
 from deepmerge import always_merger
 from networkx import DiGraph, MultiGraph
 from pydantic import UUID4, BaseModel, Field
@@ -57,7 +56,6 @@ class State(Object):
 
 
 class Actor(Object):
-    llm: Cursive = Field(exclude=True)
     event_emitter: EventEmitter = Field(
         default_factory=EventEmitter,
         description="emitting events blocks until all listeners have executed",
