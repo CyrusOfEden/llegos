@@ -2,13 +2,17 @@ from typing import Iterable
 
 from cursive.function import CursiveCustomFunction
 from pydantic import UUID4
+from pyee import AsyncIOEventEmitter
 
 from llegos.research import Actor, Message, Object, message_chain
 
 
 class maxdict(dict):
+    event_emitter: AsyncIOEventEmitter
+
     def __init__(self, max_size=128, *args, **kwargs):
         self.max_size = max_size
+        self.event_emitter = AsyncIOEventEmitter()
         super().__init__(*args, **kwargs)
 
     def __setitem__(self, key, value):
@@ -19,7 +23,7 @@ class maxdict(dict):
 
 
 actor_lookup = maxdict[UUID4, Actor](max_size=128)
-message_lookup = dict[UUID4, type[Message]]()
+message_lookup = maxdict[UUID4, type[Message]](max_size=1024)
 
 
 def hydrate_message(m: Message) -> Message:

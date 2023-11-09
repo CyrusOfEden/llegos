@@ -26,7 +26,6 @@ sqlmodel = "^0.0.8"
 python-statemachine = "^2.1.0"
 beartype = "^0.15.0"
 deepmerge = "^1.1.0"
-cursivepy = { git = "https://github.com/CyrusOfEden/cursive-py.git", branch = "main" }
 pyee = "^11.0.0"
 
 [tool.poetry.group.dev]
@@ -59,3 +58,4 @@ types-pyyaml = "^6.0.12.9"
 upstash-redis = "^0.15.0"
 websockets = ">=10.3,<11.0"
 wikipedia = "^1.4.0"
+openai = "^1.2.0"
