@@ -21,108 +21,111 @@ https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Icnp.svg/880px-Icnp.sv
 
 from abc import ABC, abstractmethod
 
-from llegos.research import Actor, Field, Message, Scene, find_closest
+from pydantic import BaseModel
+
+from llegos.research import Actor, Field, Message, Scene, message_ancestor
 
 
 class Request(Message):
     "A request for a particular objective to be achieved with some requirements and constraints"
-    objective: str = Field(include=True)
+    objective: str
     requirements: list[str] = Field(default_factory=list, include=True)
     constraints: list[str] = Field(default_factory=list, include=True)
 
 
 class CallForProposal(Request):
     "Pass off a particular task to a contractor, include the context of the Request"
-    task: str = Field(include=True)
+    task: str
 
 
 class Reject(Message):
     "Reject a request with a reason"
-    reason: str = Field(include=True)
-    feedback: str = Field(include=True)
+    reason: str
+    feedback: str
+
+
+class Step(BaseModel):
+    id: int
+    action: str
+    dependencies: list[int] = Field(
+        description="A list of step ids that must be completed before this step can be started"
+    )
 
 
 class Propose(Message):
     "Propose a plan to achieve the objective with the requirements and constraints"
-    plan: str = Field(include=True)
+    plan: list[Step]
 
 
 class Accept(Message):
     "Accept the proposal from the contractor"
-    feedback: str = Field(include=True)
+    feedback: str
 
 
 class Cancel(Message):
     "Notify the manager that the task has been cancelled"
-    reason: str = Field(include=True)
+    reason: str
 
 
 class Inform(Message):
     "Inform the manager that the task has been completed"
-    content: str = Field(include=True)
+    content: str
 
 
 class Response(Message):
     "Response from the ephemeral network"
-    content: str = Field(include=True)
+    content: str
 
 
 class ContractorActor(Actor):
-    receivable_messages: set[type[Message]] = Field(
+    _receivable_messages: set[type[Message]] = Field(
         default={
             CallForProposal,
             Accept,
             Reject,
         },
-        exclude=True,
     )
 
+    @abstractmethod
     async def call_for_proposal(self, message: CallForProposal) -> Propose | Reject:
-        accept = True
-        if accept:
-            return Propose.reply_to(message, body="I can do it")
-        else:
-            return Reject.reply_to(message, reason="I can't do it")
+        ...
 
-    async def accept(self, message: Accept) -> Inform | Cancel:
-        try:
-            # Do the work
-            return Inform.reply_to(message, result="I did it!")
-        except Exception as e:
-            return Cancel.reply_to(message, reason=str(e))
+    @abstractmethod
+    async def handle_accept(self, message: Accept) -> Inform | Cancel:
+        ...
 
+    @abstractmethod
     async def reject(self, message: Reject):
         ...
 
 
 class ManagerActor(Actor, ABC):
-    receivable_messages: set[type[Message]] = Field(
+    _receivable_messages: set[type[Message]] = Field(
         default={
             Request,
             Propose,
             Reject,
             Inform,
             Cancel,
-        },
-        exclude=True,
+        }
     )
 
     @abstractmethod
-    def request(self, message: Request):
+    def handle_request(self, message: Request):
         ...
 
     @abstractmethod
-    def propose(self, message: Propose) -> Reject | CallForProposal | Accept:
+    def handle_propose(self, message: Propose) -> Reject | CallForProposal | Accept:
         ...
 
-    def reject(self, result: Reject):
+    def handle_reject(self, result: Reject):
         ...
 
     @abstractmethod
-    def inform(self, result: Inform):
+    def handle_inform(self, result: Inform):
         ...
 
-    def cancel(self, cancel: Cancel):
+    def handle_cancel(self, cancel: Cancel):
         ...
 
 
@@ -133,13 +136,13 @@ class ContractNet(Scene):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        self.relationships.add_edge(self, self.manager)
+        self._graph.add_edge(self, self.manager)
         for priority, contractor in enumerate(self.contractors):
-            self.relationships.add_edge(self.manager, contractor, weight=priority)
+            self._graph.add_edge(self.manager, contractor, weight=priority)
 
-    def request(self, req: Request):
-        return Request.forward(req, to=self.manager, sender=self)
+    def handle_request(self, req: Request):
+        return Request.forward(req, receiver=self.manager, sender=self)
 
-    def inform(self, message: Inform):
-        request = find_closest(Request, of_message=message)
-        return Response.forward(message, to=request.sender)
+    def handle_inform(self, message: Inform):
+        request = message_ancestor(Request, of_message=message)
+        return Response.forward(message, receiver=request.sender)

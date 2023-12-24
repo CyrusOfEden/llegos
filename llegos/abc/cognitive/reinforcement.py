@@ -4,7 +4,7 @@ from operator import itemgetter
 from beartype.typing import AsyncIterable
 from networkx import DiGraph
 
-from llegos.research import Actor, Field, Message, find_closest, message_path
+from llegos.research import Actor, Field, Message, message_path
 
 
 class Percept(Message):
@@ -24,9 +24,7 @@ class Cost(Message):
 
 
 class CostBehavior(Actor, ABC):
-    loss_landscape: DiGraph = Field(
-        default_factory=DiGraph, include=False, exclude=True
-    )
+    _loss_landscape: DiGraph = Field(default_factory=DiGraph)
 
     @abstractmethod
     async def forward(self, predicted_step: Percept) -> Cost:
@@ -84,34 +82,27 @@ class ActionBehavior(Actor, ABC):
     @abstractmethod
     async def forward(self, current_step: Percept) -> AsyncIterable[Action]:
         "Predict possible actions from a given step."
-        yield Action.reply_to(current_step, text="Possible Action #1")
-        yield Action.reply_to(current_step, text="Possible Action #2")
-        yield Action.reply_to(current_step, text="Possible Action #3")
 
     @abstractmethod
     async def backward(self, realized_step: Percept):
         "Update the model based on the material step."
-        ...
 
 
 class WorldModelBehavior(Actor, ABC):
     @abstractmethod
     async def forward(self, action: Action) -> Percept:
         "Predict the next step of the world based on the action."
-        predicted_step = Percept.reply_to(action)
-        return predicted_step
 
     @abstractmethod
     async def backward(self, realized_step: Percept):
         "Update the model based on the material step."
-        find_closest(realized_step, Action)
 
 
 class ExecutiveBehavior(Actor, ABC):
-    cost: CostBehavior = Field(exclude=True)
-    reward: RewardBehavior = Field(exclude=True)
-    action: ActionBehavior = Field(exclude=True)
-    world_model: WorldModelBehavior = Field(exclude=True)
+    _cost: CostBehavior
+    _reward: RewardBehavior
+    _action: ActionBehavior
+    _world_model: WorldModelBehavior
 
     async def forward(self, step: Percept, action_lookahead: int) -> Action:
         if action_lookahead <= 0:
@@ -119,14 +110,12 @@ class ExecutiveBehavior(Actor, ABC):
 
         future_actions: list[tuple[Action, float]] = []
 
-        prior_cost = await self.cost.forward(step)
-        prior_reward = await self.reward.forward(prior_cost)
+        prior_cost = await self._cost.forward(step)
+        prior_reward = await self._reward.forward(prior_cost)
 
-        async for action in self.action.forward(prior_reward):
-            print(action)
-
-            predicted_step = await self.world_model.forward(action)
-            predicted_loss = await self.cost.forward(predicted_step)
+        async for action in self._action.forward(prior_reward):
+            predicted_step = await self._world_model.forward(action)
+            predicted_loss = await self._cost.forward(predicted_step)
 
             foresight = (action, predicted_loss.value)
             future_actions.append(foresight)
@@ -141,7 +130,7 @@ class ExecutiveBehavior(Actor, ABC):
         return next_action
 
     async def backward(self, step: Percept):
-        loss = await self.cost.backward(step)
-        reward = await self.reward.backward(loss)
-        await self.action.backward(reward)
-        await self.world_model.backward(reward)
+        loss = await self._cost.backward(step)
+        reward = await self._reward.backward(loss)
+        await self._action.backward(reward)
+        await self._world_model.backward(reward)

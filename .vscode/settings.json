@@ -13,7 +13,6 @@
     ".pytest_cache/": true,
     ".ruff_cache/": true
   },
-  "python.formatting.provider": "black",
   "[python]": {
     "editor.defaultFormatter": "ms-python.black-formatter",
     "editor.formatOnSave": true,
