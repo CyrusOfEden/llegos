@@ -2,8 +2,8 @@ import typing as t
 
 from pydantic import Field
 
-from .functional import model_tool
-from .research import Message, Object
+from llegos.functional import model_tool
+from llegos.research import Message, Object
 
 
 def test_simple_message() -> None:

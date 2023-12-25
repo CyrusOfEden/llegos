@@ -1,17 +1,14 @@
-import shelve
-import signal
 import typing as t
 from collections.abc import Iterable
 from contextvars import ContextVar, Token
 from datetime import datetime
-from typing import Any
 
 from beartype import beartype
 from beartype.typing import Callable, Optional
 from deepmerge import always_merger
 from ksuid import Ksuid
 from networkx import DiGraph, MultiGraph
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 from pydash import snake_case
 from pyee import EventEmitter
 from sorcery import delegate_to_attr, maybe
@@ -26,39 +23,6 @@ def namespaced_ksuid(prefix: str):
 
 def namespaced_ksuid_generator(prefix: str):
     return lambda: namespaced_ksuid(prefix)
-
-
-class ShelfWrapper:
-    path = ".llegos.db"
-    _instance: Optional["ShelfWrapper"] = None
-    _shelf: Optional[shelve.Shelf] = None
-
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
-
-    def load(self):
-        if self._shelf is None:
-            shelf = shelve.open(self.path)
-            self._shelf = shelf
-            signal.signal(signal.SIGTERM, lambda *_: shelf.close())
-        return self._shelf
-
-    def get(self, key: str, default: Any = None) -> Any:
-        return self.load().get(key, default)
-
-    def __contains__(self, key: str) -> bool:
-        return key in self.load()
-
-    def __getitem__(self, key: str) -> Any:
-        return getattr(self.load(), key)
-
-    def __setitem__(self, key: str, value: Any):
-        self.load()[key] = value
-
-
-Shelf = ShelfWrapper()
 
 
 class Object(BaseModel):
@@ -88,27 +52,6 @@ class Object(BaseModel):
 
     id: str = Field(default_factory=namespaced_ksuid_generator("object"))
     metadata: dict = Field(default_factory=dict)
-
-    @model_validator(mode="after")
-    def hydrate(self):
-        for field in self.model_fields_set:
-            if field in {"id", "metadata"}:
-                continue
-
-            info = self.model_fields[field]
-            if not isinstance(info.annotation, type) or isinstance(
-                info.annotation, t.GenericAlias
-            ):
-                continue
-            if not issubclass(info.annotation, Object):
-                continue
-
-            if obj := getattr(self, field):
-                if shelf_obj := Shelf.get(obj.id):
-                    setattr(self, field, shelf_obj)
-                else:
-                    Shelf[obj.id] = obj
-        return self
 
     def model_dump_json(
         self,
@@ -140,6 +83,13 @@ class Object(BaseModel):
 
     def __str__(self):
         return self.model_dump_json()
+
+    def __setattr__(self, name: str, value: t.Any) -> None:
+        match value:
+            case Object():
+                object.__setattr__(self, name, value)
+            case _:
+                super().__setattr__(name, value)
 
 
 class MissingScene(ValueError):
@@ -227,33 +177,47 @@ class Actor(Object):
     ) = delegate_to_attr("_event_emitter")
 
 
-class Scene(Actor):
-    _graph = MultiGraph()
-    _context_key: Optional[Token["Scene"]]
+TActor = t.TypeVar("TActor", bound="Actor")
 
-    def __contains__(self, key: str | Actor) -> bool:
+
+class Scene(Actor, t.Generic[TActor]):
+    actors: list[TActor] = Field(default_factory=list)
+    _graph = MultiGraph()
+
+    def __getitem__(self, key: str | Actor | t.Any) -> Actor:
+        match key:
+            case str():
+                return self.lookup[key]
+            case _:
+                raise TypeError("__getitem__ accepts a key of str", key)
+
+    def __contains__(self, key: str | Actor | t.Any) -> bool:
         match key:
             case str():
                 return key in self.lookup
             case Actor():
-                return key in self._graph
+                return key in self.actors
             case _:
-                raise TypeError(f"lookup key must be str or Actor, not {type(key)}")
+                raise TypeError("__contains__ accepts a key of str or Actor", key)
 
     @property
     def lookup(self):
-        return {a.id: a for a in self._graph.nodes}
+        return {a.id: a for a in self.actors}
 
     def __enter__(self):
-        self._context_key = scene_context.set(self)
+        global scene_token, scene_context
+        scene_token = scene_context.set(self)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        scene_context.reset(self._context_key)
-        self._context_key = None
+        global scene_token, scene_context
+        if scene_token:
+            scene_context.reset(scene_token)
+            scene_token = None
 
 
 scene_context = ContextVar[Scene]("llegos.scene")
+scene_token: Optional[Token[Scene]] = None
 
 
 class Message(Object):
@@ -288,30 +252,13 @@ class Message(Object):
     def sender_id(self) -> str:
         return self.sender.id
 
-    @sender_id.setter
-    def sender_id(self, value: str):
-        Shelf[self.sender.id] = self.sender
-        self.sender = Shelf[value]
-
     @property
     def receiver_id(self) -> str:
-        Shelf[self.receiver.id] = self.receiver
         return self.receiver.id
-
-    @receiver_id.setter
-    def receiver_id(self, value: str):
-        self.receiver = Shelf[value]
 
     @property
     def parent_id(self) -> Optional[str]:
-        if parent := self.parent:
-            Shelf[parent.id] = parent
-            return maybe(parent).id
-        return None
-
-    @parent_id.setter
-    def parent_id(self, value: str):
-        self.parent = Shelf[value]
+        return maybe(self.parent).id
 
     def __str__(self):
         return self.model_dump_json(exclude={"parent"})
@@ -397,13 +344,13 @@ def send(message: Message) -> Iterable[Message]:
 
 
 @beartype
-def send_and_propogate(
+def propogate(
     message: Message, applicator: Callable[[Message], Iterable[Message]] = send
 ) -> Iterable[Message]:
     for reply in applicator(message):
         if reply:
             yield reply
-            yield from send_and_propogate(reply)
+            yield from propogate(reply)
 
 
 Object.model_rebuild()
