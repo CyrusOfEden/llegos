@@ -154,22 +154,22 @@ class Employee(Actor):
     name: str
 
 
-class Company(Scene):
-    def __init__(self, actors: list):
+class Department(Scene):
+    def __init__(self, actors: list[Employee]):
         super().__init__(actors=actors)
         for a, b in combinations(actors, 2):
             self._graph.add_edge(a, b)
 
 
-class Department(Company):
+class Company(Department):
     ...
 
 
 def test_office_scene() -> None:
     dunder_mifflin = Company(
         actors=[
-            Employee(name=cast_member)
-            for cast_member in [
+            Employee(name=name)
+            for name in [
                 "Michael Scott",
                 "Dwight Schrute",
                 "Jim Halpert",

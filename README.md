@@ -1,85 +1,54 @@
-# Llegos
+# Llegos: Advanced Toolkit for Multi-Generative-Agent Systems
 
-Welcome to Llegos, a toolkit for crafting advanced multi-generative-agent systems.
+Welcome to Llegos, the cutting-edge toolkit designed for crafting sophisticated multi-generative-agent systems. In an era where the complexity and scope of artificial intelligence are rapidly expanding, Llegos stands as a beacon for developers, researchers, and enthusiasts aiming to explore and construct dynamic multi-agent environments. Whether you're orchestrating a symphony of virtual characters, simulating complex economic models, or building cooperative robotic teams, Llegos provides the robust framework and flexible tools needed to bring your multi-agent systems to life.
 
-In the rapidly evolving field of artificial intelligence, multi-agent systems have emerged as a powerful paradigm for modeling complex behaviors and interactions. Whether it's a team of robots, a colleciton of software agents, or a group of virtual characters interacting in a video game, the frontier multi-agent systems powered by LLMs remains to be explored.
+Since its inception, Llegos has evolved significantly, incorporating feedback from a diverse community of users and adapting to the ever-changing landscape of artificial intelligence and machine learning. Today, Llegos is not just a toolkit; it's a community-driven project that reflects the collective knowledge, creativity, and aspirations of its contributors.
 
-That's where Llegos comes in. With Llegos, you can create, manage, and simulate a wide variety of multi-agent systems, from the simple to the complex. This toolkit offers a range of features designed to make it simpler to build multi-agent systems.
+**Key Highlights of Llegos:**
+- **Multi-Agent Systems:** Create intricate systems with multiple autonomous agents, each capable of complex behaviors and interactions.
+- **Flexible Communication:** Utilize advanced message-passing mechanisms for efficient and nuanced agent communication.
+- **Modular Architecture:** Enjoy the freedom to customize and extend the toolkit with your own components, behaviors, and strategies.
+- **Strongly-typed message passing:** Leverage the power of strongly-typed messages to ensure type-safety and reduce errors.
 
-## Features
+In the following sections, you'll find everything you need to get started with Llegos, understand its core concepts, leverage its features, and eventually contribute to its ever-growing ecosystem. Whether you're here to build your first simple agent system or to push the boundaries of what's possible in multi-agent intelligence, Llegos offers the tools and support you need on your journey.
 
-1. **Multi-Agent Systems:** With Llegos, you can create systems composed of multiple autonomous agents, enabling rich and intricate behaviors and interactions.
-2. **Concurrent Message-Passing:** Communication between agents in Llegos is facilitated through a flexible message-passing paradigm, allowing for efficient and versatile inter-agent dialogue. Agents and/or process-based concurrency.
-4. **Event-Driven Architecture:** Llegos embraces an event-driven programming approach, allowing agents to dynamically respond to events occurring within the system.
-5. **Flexibility:** The toolkit provides foundational structures, namely Behavior and Context, for you to develop and customize your own autonomous agents and networks. This flexibility allows you to tailor Llegos to suit your unique requirements and use cases.
+Let's embark on this exciting adventure together, and unlock the potential of multi-generative-agent systems with Llegos!
 
-## Elegant Abstractions
+### Table of Contents
 
-Llegos centers around three abstractions: Messages, Generative Agents, and Generative Contexts. These elements work together to facilitate complex interactions and behaviors in your multi-agent systems.
+1. [Core Concepts](#core-concepts)
+2. [Features](#features)
+3. [Llegos vs. X](#llegos-vs-x)
+4. [Getting Started](#getting-started)
+   - [Prerequisites](#prerequisites)
+   - [Installation](#installation)
+   - [Quick Start Guide](#quick-start-guide)
+5. [Usage and Examples](#usage-and-examples)
+6. [API Documentation](#api-documentation)
+7. [Architecture](#architecture)
+8. [Contributing](#contributing)
+9. [Testing](#testing)
+10. [FAQs/ Troubleshooting](#faqs--troubleshooting)
+11. [License](#license)
+12. [Acknowledgements](#acknowledgements)
 
-## Messages
+## Core Concepts
 
-Communication is facilitated through the [Message](./Llegos/message.py) data model. In Llegos, a Message carries various forms of information, requests, or commands, acting as the primary conduit for inter-agent communication.
+Llegos is built upon several foundational elements that work together to enable complex interactions and behaviors within multi-agent systems. Here's an overview of the key concepts that form the backbone of Llegos:
 
-Messages have the following attributes:
+### Objects
+- **Definition:** Objects are the fundamental entities in Llegos, defined using Pydantic models. They represent the base class from which other more specialized entities like Messages and Actors derive.
+- **Customization:** Users can extend the Object class to create their own scene objects, complete with validation and serialization capabilities.
 
-1. **method**: This is a Union of string and `Method` type. It determines the type of operation or action that the message is meant to invoke. By default, nodes will dispatch messages to a method named after the action. For example, a message with action "step" will call the "step" method. For async nodes, the method name will be prefixed with "a", so "step" becomes "astep".
-2. **role**: This is of type `Actor`, and it is used to categorize the sender of the message. The sender can be an assistant, user, or system. This is useful for serializing to chat endpoints.
-3. **body**: This is a string that contains the actual content of the message.
-4. **created_at**: This is a datetime object that indicates when the message was created. It is automatically set to the current time when the message is instantiated.
-5. **sender**: This is an `AbstractObject` (which could be a `Behavior`) that sent the message. It is set to None by default, and can be set when the message is created.
-6. **receiver**: This is an `AbstractObject` (which could be a `Behavior`) that is the intended recipient of the message. Like `sender`, it is also set to None by default, and can be set when the message is created.
-7. **parent**: This is a reference to another `Message` object. It is used when a message is a reply to a previous message. This allows for the creation of message threads and is useful for maintaining context in conversations.
+### Messages
+- **Purpose:** Messages serve as the primary means of communication between agents. They carry information, requests, commands, or any data that needs to be transmitted from one entity to another.
+- **Structure and Handling:** Each message has an identifiable structure and is designed to be flexible and extensible. The system provides mechanisms for message validation, forwarding, replying, and tracking within conversation threads.
+- **Tree Structure:** Messages follow email semantics. They are organized into hierarchical trees, allowing for the creation of complex communication patterns and protocols. Multiple replies can be sent to a single message, and each reply can have its own set of replies, and so on.
 
-The `Message` class also includes a couple of class methods:
+### Actors
+- **Roles:** Actors are specialized objects that represent autonomous agents within the system. Each actor has its unique behavior, state, and communication abilities.
+- **Interactions:** Actors interact with each other and the environment primarily through strongly-typed messages, responding to received information and making decisions based on their internal logic and objectives.
 
-1. **reply**: This method creates a new message that is a reply to a previous message. It automatically sets the `sender`, `receiver`, `parent`, `role`, and `method` fields appropriately.
-2. **init_fn**: This is a property that returns a dictionary representing the schema for initializing a new `Message` object. This is useful for using JSON schema function completions to generate a new Message.
-
-### Generative Agents
-
-At the heart of Llegos are the Generative Agents, or Behaviors. A [Behavior](./llegos/ephemeral.py) represents an individual autonomous agent in your system. These agents can be customized to suit a wide range of use cases, allowing you to implement your own unique agent behaviors.
-
-The Behavior class in Llegos provides a foundation for creating these agents. It includes built-in methods for receiving and handling messages, emitting events, and listening to events from other agents. This event-driven architecture allows for a reactive programming paradigm where agents can dynamically respond to events occurring within the system.
-
-Behaviors can be used to model:
-
-1. Stateful Agent: An agent maintains some internal state that is updated each time it receives a message.
-2. Decision-Making Agent: An agent receives a message, makes a decision based on the content of the message, and then sends a message with its decision.
-3. Task-Performing Agent: An agent receives a message instructing it to perform a certain task, such as making an API call or computing a result, and then sends a message with the result of the task.
-4. Listening Agent: An agent listens for certain events from other agents and reacts when those events occur.
-
-## Generative Contexts
-
-Llegos also introduces the concept of Contexts.  Contexts provide a way to pass events up the agent network without having to pass intermediate results up manually at every level.
-
-A Context a higher-level structure that represents a network of Behaviors. A Context is a multi-graph where nodes represent Behaviors and edges point to other Behaviors listening to emitted Messages. This EventEmitter edge forms a communication channel, where an emitted Message is received by a listening Behavior. This graph-based structure supports a broad spectrum of multi-agent architectures, from simple linear flows to complex network interactions.
-
-Moreover, Contexts provide a context for the agents they contain. This is particularly valuable in more complex scenarios where an agent's behavior might depend on its network context, say, by providing a directory of other agents. Behaviors can leverage their Context during message propagation. This enables more sophisticated interactions and cooperation between agents.
-
-A key advantage of using Contexts is that it allows for encapsulation and modularity. You can design individual Behaviors with specific behaviors and then compose them into larger, more complex Contexts. Since Contexts subclass Behaviors, you can compose Contexts within Contexts! This recursive ability makes it easier to build deep multi-agent systems. In essence, Contexts act as a scaffolding for the structure of your multi-agent systems.
-
-Contexts can be used to model:
-
-1. **Multi-Agent Coordination:** Multiple agents coordinate to solve a problem, with each agent handling a different part of the problem.
-2. **Agent Hierarchy:** Agents are organized into a hierarchy, with some agents directing the actions of others.
-3. **Feedback Loop:** Agents form a feedback loop, where the output of one agent feeds into the input of another, and so on.
-4. **Distributed System:** A complex system where tasks are distributed among multiple agents, and the results are collected and combined by another agent.
-
-## Future Work
-
-As Llegos is still in its early stages, there are many exciting directions for future development. Here are some areas we're particularly interested in:
-
-1. **Autonomous Agent Architectures**: We're interested in developers like you creating your own agent architectures with Llegos and are happy to feature your repository.
-1. **Expanded Communication Protocols**: While Llegos currently supports simple message passing, we're interested in adding more advanced communication protocols. This might include negotiation protocols, voting mechanisms, or more complex dialogue management strategies.
-3. **Integration with Other Libraries**: Llegos is designed to be flexible and adaptable. We're interested in making it easy to integrate Llegos with other popular machine learning, natural language processing, and agent-based modeling libraries.
-
-We're excited to see where the community takes Llegos, and we look forward to collaborating with you!
-
-## Contribution
-
-Contributions to Llegos are welcome and greatly appreciated. We believe that the community's collective wisdom and creativity will enable us to build a more powerful and flexible tool. If you're interested in contributing, here are some guidelines:
-
-1. **Issues**: Feel free to submit issues regarding bugs, feature requests, or other areas of concern. We value your feedback and will do our best to respond in a timely manner.
-2. **Code**: If you're interested in adding a feature or fixing a bug, please start by submitting an issue. Once we've had a chance to discuss your proposal, you can make a pull request with your changes.
-3. **Documentation**: Clear and comprehensive documentation makes any project more accessible. If you notice an area of the documentation that could be improved, or if you want to create new tutorials or guides, we would love your help.
+### Scenes
+- **Contextual Containers:** Scenes act as containers or contexts in which actors operate and interact. They define the boundaries and properties of the environment that the agents are situated in.
+- **Hierarchical Structure:** Scenes can be nested, allowing for the creation of complex, multi-layered environments where different groups of actors can interact within their sub-contexts.
