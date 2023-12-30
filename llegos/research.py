@@ -26,23 +26,16 @@ def namespaced_ksuid_generator(prefix: str):
 
 
 class Object(BaseModel):
-    @classmethod
-    def lift(cls, instance: "Object", **kwargs):
-        attrs = instance.model_dump()
-        always_merger.merge(attrs, kwargs)
-
-        return cls(**attrs)
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        extra="allow",
+    )
 
     def __init_subclass__(cls):
         super().__init_subclass__()
         cls.model_fields["id"].default_factory = namespaced_ksuid_generator(
             snake_case(cls.__name__)
         )
-
-    model_config = ConfigDict(
-        arbitrary_types_allowed=True,
-        extra="allow",
-    )
 
     id: str = Field(default_factory=namespaced_ksuid_generator("object"))
     metadata: dict = Field(default_factory=dict)
@@ -85,8 +78,18 @@ class Object(BaseModel):
             case _:
                 super().__setattr__(name, value)
 
+    @classmethod
+    def lift(cls, instance: "Object", **kwargs):
+        attrs = instance.model_dump()
+        always_merger.merge(attrs, kwargs)
+        return cls(**attrs)
+
 
 class MissingScene(ValueError):
+    ...
+
+
+class InvalidMessage(ValueError):
     ...
 
 
@@ -120,6 +123,9 @@ class Actor(Object):
         return self.send(message)
 
     def send(self, message: "Message") -> Iterable["Message"]:
+        if message.__class__ not in self._receivable_messages:
+            raise InvalidMessage(message)
+
         self.emit("before:receive", message)
 
         intent = snake_case(message.__class__.__name__)
@@ -171,31 +177,28 @@ class Actor(Object):
     ) = delegate_to_attr("_event_emitter")
 
 
-TActor = t.TypeVar("TActor", bound="Actor")
-
-
-class Scene(Actor, t.Generic[TActor]):
-    actors: list[TActor] = Field(default_factory=list)
+class Scene(Actor):
+    actors: list[Actor] = Field(default_factory=list)
     _graph = MultiGraph()
 
     def __getitem__(self, key: str | Actor | t.Any) -> Actor:
         match key:
             case str():
-                return self.lookup[key]
+                return self.directory[key]
             case _:
                 raise TypeError("__getitem__ accepts a key of str", key)
 
     def __contains__(self, key: str | Actor | t.Any) -> bool:
         match key:
             case str():
-                return key in self.lookup
+                return key in self.directory
             case Actor():
                 return key in self.actors
             case _:
                 raise TypeError("__contains__ accepts a key of str or Actor", key)
 
     @property
-    def lookup(self):
+    def directory(self):
         return {a.id: a for a in self.actors}
 
     def __enter__(self):
@@ -240,7 +243,7 @@ class Message(Object):
     created_at: datetime = Field(default_factory=datetime.utcnow, frozen=True)
     sender: Actor
     receiver: Actor
-    parent: Optional["Message"] = Field(default=None)
+    parent: Optional["Message"] = None
 
     @property
     def sender_id(self) -> str:
@@ -322,8 +325,8 @@ def message_path(
     yield message
 
 
-class InvalidReceiver(ValueError):
-    ...
+Object.model_rebuild()
+Message.model_rebuild()
 
 
 class MissingReceiver(ValueError):
@@ -332,9 +335,9 @@ class MissingReceiver(ValueError):
 
 @beartype
 def send(message: Message) -> Iterable[Message]:
-    if message.__class__ in message.receiver._receivable_messages:
-        yield from message.receiver.send(message)
-    raise InvalidReceiver(message)
+    if not message.receiver:
+        raise MissingReceiver(message)
+    yield from message.receiver.send(message)
 
 
 @beartype
@@ -344,8 +347,4 @@ def propogate(
     for reply in applicator(message):
         if reply:
             yield reply
-            yield from propogate(reply)
-
-
-Object.model_rebuild()
-Message.model_rebuild()
+            yield from propogate(reply, applicator)
