@@ -31,12 +31,6 @@ class Object(BaseModel):
         attrs = instance.model_dump()
         always_merger.merge(attrs, kwargs)
 
-        for field, info in cls.model_fields.items():
-            if field in attrs:
-                continue
-
-            attrs[field] = info.get_default(call_default_factory=True)
-
         return cls(**attrs)
 
     def __init_subclass__(cls):
@@ -62,7 +56,7 @@ class Object(BaseModel):
         by_alias: bool = False,
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
-        exclude_none: bool = True,  # This is the only change
+        exclude_none: bool = True,  # updated default to True to reduce JSON noise sent to the LLM
         round_trip: bool = False,
         warnings: bool = True,
     ) -> str:
