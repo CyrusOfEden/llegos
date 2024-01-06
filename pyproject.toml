@@ -18,6 +18,7 @@ python-statemachine = "^2.1.2"
 sorcery = "^0.2.2"
 pydash = "^7.0.6"
 svix-ksuid = "^0.6.2"
+match-ref = "^1.0.1"
 
 [tool.poetry.group.dev]
 optional = true

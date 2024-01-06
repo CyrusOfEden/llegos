@@ -1359,6 +1359,17 @@ slackbot = ["marvin[chromadb]", "marvin[prefect]", "numpy"]
 tests = ["pytest (>=7.3.1,<7.4.0)", "pytest-asyncio (>=0.18.2,!=0.22.0,<0.23.0)", "pytest-env (>=0.8,<2.0)", "pytest-rerunfailures (>=10,<13)", "pytest-sugar (>=0.9,<1.0)", "pytest-timeout"]
 
 [[package]]
+name = "match-ref"
+version = "1.0.1"
+description = "Use top-level variable references in match cases"
+optional = false
+python-versions = "*"
+files = [
+    {file = "match-ref-1.0.1.tar.gz", hash = "sha256:71e06d8096c12e184651353c150174c73f3bedc773fc67133cb17673f12e337e"},
+    {file = "match_ref-1.0.1-py3-none-any.whl", hash = "sha256:9d918d3f85a6cf32e392f6fb7b5324de2943f7099f7446fd9e7c70c0fd85feba"},
+]
+
+[[package]]
 name = "matplotlib-inline"
 version = "0.1.6"
 description = "Inline Matplotlib backend for Jupyter"
@@ -3169,4 +3180,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<=3.12"
-content-hash = "95894a4b60b08326b8d1d15f62dd3a578ee61ca3218eed74d22592e27cded325"
+content-hash = "b30590038db3d21078ee519430de6ef6adaca8183c59a7056d8f7c02d40a7f00"

@@ -4,7 +4,7 @@ from contextvars import ContextVar, Token
 from datetime import datetime
 
 from beartype import beartype
-from beartype.typing import Callable, Optional
+from beartype.typing import Callable, Iterator, Optional
 from deepmerge import always_merger
 from ksuid import Ksuid
 from networkx import DiGraph, MultiGraph
@@ -96,20 +96,36 @@ class InvalidMessage(ValueError):
 class Actor(Object):
     _event_emitter = EventEmitter()
 
-    def __call__(self, message: "Message") -> Iterable["Message"]:
+    def can_receive(self, message: t.Union["Message", type["Message"]]) -> bool:
+        if isinstance(message, Message):
+            return message.receiver == self and hasattr(
+                self, self.receive_method_name(message.__class__)
+            )
+        elif issubclass(message, Message):
+            return hasattr(self, self.receive_method_name(message))
+        return False
+
+    @staticmethod
+    def receive_method_name(message_class: type["Message"]):
+        intent = snake_case(message_class.__name__)
+        return f"receive_{intent}"
+
+    def receive_method(self, message: "Message"):
+        method = self.receive_method_name(message.__class__)
+        if hasattr(self, method):
+            return getattr(self, method)
+        return self.receive_missing
+
+    def receive_missing(self, message: "Message"):
+        raise InvalidMessage(message)
+
+    def __call__(self, message: "Message") -> Iterator["Message"]:
         return self.send(message)
 
-    def can_receive(self, message: "Message") -> bool:
-        return True
-
-    def send(self, message: "Message") -> Iterable["Message"]:
-        if not self.can_receive(message):
-            raise InvalidMessage(message)
-
+    def send(self, message: "Message") -> Iterator["Message"]:
         self.emit("before:receive", message)
 
-        intent = snake_case(message.__class__.__name__)
-        response = getattr(self, f"receive_{intent}")(message)
+        response = self.receive_method(message)(message)
 
         match response:
             case Message():
@@ -126,22 +142,23 @@ class Actor(Object):
         raise MissingScene(self)
 
     @property
-    def relationships(self) -> list["Actor"]:
-        edges = [
-            (neighbor, key, data)
-            for (node, neighbor, key, data) in self.scene._graph.edges(
-                keys=True,
-                data=True,
-            )
-            if node != self
-        ]
-        edges.sort(key=lambda edge: edge[2].get("weight", 1))
-        return [actor for (actor, _, _) in edges]
+    def relationships(self) -> t.Sequence["Actor"]:
+        return sorted(
+            [
+                (neighbor, key, data)
+                for (_self, neighbor, key, data) in self.scene._graph.edges(
+                    self,
+                    keys=True,
+                    data=True,
+                )
+            ],
+            key=lambda edge: edge[2].get("weight", 1),
+        )
 
     def receivers(self, *messages: type["Message"]):
         return [
             actor
-            for actor in self.relationships
+            for actor, _key, _data in self.relationships
             if all(actor.can_receive(m) for m in messages)
         ]
 
@@ -160,6 +177,11 @@ class Actor(Object):
 class Scene(Actor):
     actors: t.Sequence[Actor] = Field(default_factory=list)
     _graph = MultiGraph()
+
+    def __init__(self, actors: t.Sequence[Actor], **kwargs):
+        super().__init__(actors=actors, **kwargs)
+        for actor in actors:
+            self._graph.add_edge(self, actor)
 
     def __getitem__(self, key: str | Actor | t.Any) -> Actor:
         match key:
@@ -248,7 +270,7 @@ class Message(Object):
 
 
 @beartype
-def message_chain(message: Message | None, height: int) -> Iterable[Message]:
+def message_chain(message: Message | None, height: int) -> Iterator[Message]:
     if message is None:
         return []
     elif height > 1:
@@ -274,35 +296,22 @@ class MessageNotFound(ValueError):
     ...
 
 
+def message_ancestors(message: Message) -> Iterator[Message]:
+    while message := message.parent:
+        yield message
+
+
 @beartype
-def message_ancestor(
+def message_closest(
+    message: Message,
     cls_or_tuple: tuple[type[Message]] | type[Message],
-    of_message: Message,
-    max_height: int = 256,
-):
-    if max_height <= 0:
-        raise ValueError("max_height must be positive")
-    if max_height == 0:
+    max_search_height: int = 256,
+) -> Optional[Message]:
+    for parent, _ in zip(message_ancestors(message), range(max_search_height)):
+        if isinstance(parent, cls_or_tuple):
+            return parent
+    else:
         raise MessageNotFound(cls_or_tuple)
-    if not of_message.parent:
-        return None
-    elif isinstance(of_message.parent, cls_or_tuple):
-        return of_message.parent
-    elif parent := of_message.parent:
-        return message_ancestor(cls_or_tuple, parent, max_height - 1)
-
-
-@beartype
-def message_path(
-    message: Message, ancestor: Message, max_height: int = 256
-) -> Iterable[Message]:
-    if max_height <= 0:
-        raise ValueError("max_height most be positive")
-    if max_height == 1 and message.parent is None or message.parent != ancestor:
-        raise MessageNotFound(ancestor)
-    elif message.parent and message.parent != ancestor:
-        yield from message_path(message.parent, ancestor, max_height - 1)
-    yield message
 
 
 class MissingReceiver(ValueError):
@@ -310,20 +319,21 @@ class MissingReceiver(ValueError):
 
 
 @beartype
-def send_message(message: Message) -> Iterable[Message]:
+def message_send(message: Message) -> Iterator[Message]:
     if not message.receiver:
         raise MissingReceiver(message)
     yield from message.receiver.send(message)
 
 
 @beartype
-def propogate_message(
-    message: Message, applicator: Callable[[Message], Iterable[Message]] = send_message
-) -> Iterable[Message]:
+def message_propogate(
+    message: Message,
+    applicator: Callable[[Message], Iterator[Message]] = message_send,
+) -> Iterator[Message]:
     for reply in applicator(message):
         if reply:
             yield reply
-            yield from propogate_message(reply, applicator)
+            yield from message_propogate(reply, applicator)
 
 
 Object.model_rebuild()

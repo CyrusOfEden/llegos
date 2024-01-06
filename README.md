@@ -16,13 +16,13 @@ Let's embark on this exciting adventure together, and unlock the potential of mu
 
 ### Table of Contents
 
+0. [Quick Start Guide](#quick-start-guide)
 1. [Core Concepts](#core-concepts)
 2. [Features](#features)
 3. [Llegos vs. X](#llegos-vs-x)
 4. [Getting Started](#getting-started)
    - [Prerequisites](#prerequisites)
    - [Installation](#installation)
-   - [Quick Start Guide](#quick-start-guide)
 5. [Usage and Examples](#usage-and-examples)
 6. [API Documentation](#api-documentation)
 7. [Architecture](#architecture)
@@ -31,6 +31,10 @@ Let's embark on this exciting adventure together, and unlock the potential of mu
 10. [FAQs/ Troubleshooting](#faqs--troubleshooting)
 11. [License](#license)
 12. [Acknowledgements](#acknowledgements)
+
+## Quick Start Guide
+
+Read through the `tests/` folder, it has examples with lots of comments showcasing Llegos' flexibility.
 
 ## Core Concepts
 

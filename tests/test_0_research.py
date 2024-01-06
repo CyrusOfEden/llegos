@@ -5,7 +5,7 @@ from faker import Faker
 from pydantic import Field
 from pydash import sample
 
-from llegos.research import Actor, Message, Object, Scene, propogate_message
+from llegos.research import Actor, Message, Object, Scene, message_propogate
 
 
 def test_message_hydration() -> None:
@@ -61,7 +61,7 @@ def test_ping_pong() -> None:
     pinger = Pinger()
     ponger = Ponger()
 
-    for m, _ in zip(propogate_message(Ping(sender=ponger, receiver=pinger)), range(4)):
+    for m, _ in zip(message_propogate(Ping(sender=ponger, receiver=pinger)), range(4)):
         match m:
             case Ping(sender=ponger, receiver=pinger):
                 ...
@@ -79,7 +79,7 @@ def test_actor_inheritance() -> None:
     a = PingPonger()
     b = PingPonger()
 
-    for m, _ in zip(propogate_message(Ping(sender=a, receiver=b)), range(4)):
+    for m, _ in zip(message_propogate(Ping(sender=a, receiver=b)), range(4)):
         match m:
             case Ping():
                 ...
@@ -110,25 +110,23 @@ class SoccerPlayer(Actor):
 
 
 class SoccerGame(Scene):
-    players: list[SoccerPlayer]
-
     def reset(self):
-        for player in self.players:
+        for player in self.actors:
             player.passes = 0
 
     def play(self):
-        for a, b in combinations(self.players, 2):
+        for a, b in combinations(self.actors, 2):
             self._graph.add_edge(a, b)
 
-        return propogate_message(
-            BallPass(ball=SoccerBall(), sender=self, receiver=sample(self.players))
+        return message_propogate(
+            BallPass(ball=SoccerBall(), sender=self, receiver=sample(self.actors))
         )
 
 
 def test_soccer_scene(faker: Faker) -> None:
     total_passes = 42
     game = SoccerGame(
-        players=[SoccerPlayer(name=faker.name()) for _ in range(22)],
+        actors=[SoccerPlayer(name=faker.name()) for _ in range(22)],
     )
 
     with game:
@@ -139,7 +137,7 @@ def test_soccer_scene(faker: Faker) -> None:
                 case _:
                     assert False, message
 
-        assert total_passes == sum(p.passes for p in game.players)
+        assert total_passes == sum(p.passes for p in game.actors)
 
 
 class Employee(Actor):
@@ -152,8 +150,6 @@ class OKR(Message):
 
 
 class Company(Scene):
-    _receivable_messages = {OKR}
-
     def __init__(self, actors: t.Sequence[Employee]):
         super().__init__(actors=actors)
         for a, b in combinations(actors, 2):
@@ -165,7 +161,7 @@ class Direction(Message):
 
 
 class Department(Company):
-    _receivable_messages = {Direction}
+    ...
 
 
 def test_office_scene() -> None:
@@ -195,8 +191,6 @@ def test_office_scene() -> None:
         ]
     )
 
-    assert dunder_mifflin._receivable_messages == {OKR}
-
     for employee in dunder_mifflin.actors:
         assert employee in dunder_mifflin, "Could not find employee in scene"
 
@@ -209,7 +203,6 @@ def test_office_scene() -> None:
             in {"Jim Halpert", "Dwight Schrute", "Stanley Hudson", "Phyllis Vance"}
         ]
     )
-    assert sales._receivable_messages == {Direction}
 
     accounting = Department(
         actors=[
