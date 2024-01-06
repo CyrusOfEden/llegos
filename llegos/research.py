@@ -95,35 +95,15 @@ class InvalidMessage(ValueError):
 
 class Actor(Object):
     _event_emitter = EventEmitter()
-    _receivable_messages: set[type["Message"]] = set()
-
-    @classmethod
-    def _inherited_receivable_messages(cls):
-        messages = set()
-        for base in cls.__bases__:
-            if not issubclass(base, Actor):
-                continue
-            if base_messages := base._receivable_messages:
-                if not isinstance(base_messages, set):
-                    base_messages = base_messages.default
-                messages = messages.union(base_messages)
-        return messages
-
-    def __init_subclass__(cls):
-        super().__init_subclass__()
-        if cls_receivable_messages := cls._receivable_messages:
-            if not isinstance(cls_receivable_messages, set):
-                cls_receivable_messages = cls_receivable_messages.default
-
-            cls._receivable_messages = cls_receivable_messages.union(
-                cls._inherited_receivable_messages()
-            )
 
     def __call__(self, message: "Message") -> Iterable["Message"]:
         return self.send(message)
 
+    def can_receive(self, message: "Message") -> bool:
+        return True
+
     def send(self, message: "Message") -> Iterable["Message"]:
-        if message.__class__ not in self._receivable_messages:
+        if not self.can_receive(message):
             raise InvalidMessage(message)
 
         self.emit("before:receive", message)
@@ -162,7 +142,7 @@ class Actor(Object):
         return [
             actor
             for actor in self.relationships
-            if all(m in actor._receivable_messages for m in messages)
+            if all(actor.can_receive(m) for m in messages)
         ]
 
     (
@@ -178,7 +158,7 @@ class Actor(Object):
 
 
 class Scene(Actor):
-    actors: list[Actor] = Field(default_factory=list)
+    actors: t.Sequence[Actor] = Field(default_factory=list)
     _graph = MultiGraph()
 
     def __getitem__(self, key: str | Actor | t.Any) -> Actor:
@@ -241,9 +221,9 @@ class Message(Object):
         return cls.lift(message, **kwargs)
 
     created_at: datetime = Field(default_factory=datetime.utcnow, frozen=True)
-    sender: Actor
-    receiver: Actor
-    parent: Optional["Message"] = None
+    sender: t.ForwardRef("Actor")
+    receiver: t.ForwardRef("Actor")
+    parent: Optional[t.ForwardRef("Message")] = None
 
     @property
     def sender_id(self) -> str:
@@ -325,26 +305,28 @@ def message_path(
     yield message
 
 
-Object.model_rebuild()
-Message.model_rebuild()
-
-
 class MissingReceiver(ValueError):
     ...
 
 
 @beartype
-def send(message: Message) -> Iterable[Message]:
+def send_message(message: Message) -> Iterable[Message]:
     if not message.receiver:
         raise MissingReceiver(message)
     yield from message.receiver.send(message)
 
 
 @beartype
-def propogate(
-    message: Message, applicator: Callable[[Message], Iterable[Message]] = send
+def propogate_message(
+    message: Message, applicator: Callable[[Message], Iterable[Message]] = send_message
 ) -> Iterable[Message]:
     for reply in applicator(message):
         if reply:
             yield reply
-            yield from propogate(reply, applicator)
+            yield from propogate_message(reply, applicator)
+
+
+Object.model_rebuild()
+Message.model_rebuild()
+Actor.model_rebuild()
+Scene.model_rebuild()

@@ -1,10 +1,11 @@
+import typing as t
 from itertools import combinations
 
 from faker import Faker
 from pydantic import Field
 from pydash import sample
 
-from llegos.research import Actor, Message, Object, Scene, propogate
+from llegos.research import Actor, Message, Object, Scene, propogate_message
 
 
 def test_message_hydration() -> None:
@@ -43,8 +44,6 @@ class Ping(Message):
 
 
 class Pinger(Actor):
-    _receivable_messages = {Ping}
-
     def receive_ping(self, ping: Ping) -> "Pong":
         return Pong.reply_to(ping)
 
@@ -54,20 +53,15 @@ class Pong(Message):
 
 
 class Ponger(Actor):
-    _receivable_messages = {Pong}
-
     def receive_pong(self, pong: Pong) -> "Ping":
         return Ping.reply_to(pong)
 
 
 def test_ping_pong() -> None:
-    assert Pinger._receivable_messages == {Ping}
-    assert Ponger._receivable_messages == {Pong}
-
     pinger = Pinger()
     ponger = Ponger()
 
-    for m, _ in zip(propogate(Ping(sender=ponger, receiver=pinger)), range(4)):
+    for m, _ in zip(propogate_message(Ping(sender=ponger, receiver=pinger)), range(4)):
         match m:
             case Ping(sender=ponger, receiver=pinger):
                 ...
@@ -82,12 +76,10 @@ class PingPonger(Pinger, Ponger):
 
 
 def test_actor_inheritance() -> None:
-    assert PingPonger._receivable_messages == {Ping, Pong}
-
     a = PingPonger()
     b = PingPonger()
 
-    for m, _ in zip(propogate(Ping(sender=a, receiver=b)), range(4)):
+    for m, _ in zip(propogate_message(Ping(sender=a, receiver=b)), range(4)):
         match m:
             case Ping():
                 ...
@@ -128,7 +120,7 @@ class SoccerGame(Scene):
         for a, b in combinations(self.players, 2):
             self._graph.add_edge(a, b)
 
-        return propogate(
+        return propogate_message(
             BallPass(ball=SoccerBall(), sender=self, receiver=sample(self.players))
         )
 
@@ -154,15 +146,26 @@ class Employee(Actor):
     name: str
 
 
-class Department(Scene):
-    def __init__(self, actors: list[Employee]):
+class OKR(Message):
+    objective: str
+    key_results: list[str]
+
+
+class Company(Scene):
+    _receivable_messages = {OKR}
+
+    def __init__(self, actors: t.Sequence[Employee]):
         super().__init__(actors=actors)
         for a, b in combinations(actors, 2):
             self._graph.add_edge(a, b)
 
 
-class Company(Department):
+class Direction(Message):
     ...
+
+
+class Department(Company):
+    _receivable_messages = {Direction}
 
 
 def test_office_scene() -> None:
@@ -192,6 +195,8 @@ def test_office_scene() -> None:
         ]
     )
 
+    assert dunder_mifflin._receivable_messages == {OKR}
+
     for employee in dunder_mifflin.actors:
         assert employee in dunder_mifflin, "Could not find employee in scene"
 
@@ -204,6 +209,8 @@ def test_office_scene() -> None:
             in {"Jim Halpert", "Dwight Schrute", "Stanley Hudson", "Phyllis Vance"}
         ]
     )
+    assert sales._receivable_messages == {Direction}
+
     accounting = Department(
         actors=[
             e
