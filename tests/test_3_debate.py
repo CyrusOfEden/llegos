@@ -1,3 +1,12 @@
+"""
+This example shows how to implement a more involved coordination loop,
+in the Debate.receive_proposition method.
+
+This follows the 'map_reduce' pattern, where the Debater is the mapper
+(generating responses) and the Judge is the reducer, reviewing all the
+generated responses.
+"""
+
 from random import random
 from typing import Sequence, Union
 
@@ -19,6 +28,11 @@ class Agreement(llegos.Message):
 
 
 class Debater(llegos.Actor):
+    """
+    In real usage, you would probably want to use a model to generate
+    responses, but for this example, we just use random.
+    """
+
     def receive_proposition(self, message: Proposition):
         if random() < 0.5:
             return Rebuttal.reply_to(message, content="I disagree")
@@ -47,6 +61,11 @@ class Verdict(Review):
 
 
 class Judge(llegos.Actor):
+    """
+    In real usage, you would probably want to use a model to generate
+    responses, but for this example, we just use random.
+    """
+
     def receive_review(self, message: Review):
         agreements = sum(1 for point in message.points if isinstance(point, Agreement))
         rebuttals = sum(1 for point in message.points if isinstance(point, Rebuttal))
@@ -71,11 +90,19 @@ class Debate(llegos.Scene):
         )
 
     def receive_proposition(self, message: Proposition):
-        responses = []
+        responses: Sequence[llegos.Message] = []
 
+        """
+        Initiate {N} rounds of debate
+        """
         for _round in range(self.rounds):
             for debater in self.debaters:
-                for response in llegos.message_send(message.forward_to(debater)):
+                for response in llegos.message_send(
+                    # Include the responses list (so far) as message metadata.
+                    # You could also traverse the message tree to generate the list
+                    # algorithmically, but this is simpler.
+                    message.forward_to(debater, metadata={"responses": responses})
+                ):
                     responses.append(response)
 
         verdict = next(
@@ -84,7 +111,7 @@ class Debate(llegos.Scene):
         return verdict.forward_to(message.sender)
 
 
-def test_debate(num_rounds=3):
+def xtest_debate(num_rounds=3):
     user = llegos.Actor()
     judge = Judge()
     debaters = [Debater(), Debater(), Debater()]

@@ -1,7 +1,12 @@
+"""
+Verifying the core, conceptual functionality of the library.
+"""
+
 import typing as t
 from itertools import combinations
 
 from faker import Faker
+from matchref import ref
 from pydantic import Field
 from pydash import sample
 
@@ -21,6 +26,9 @@ def test_message_hydration() -> None:
 
 
 def test_message_reply_to() -> None:
+    """
+    Reply-to email semantics
+    """
     a1 = Actor()
     a2 = Actor()
     m1 = Message(sender=a1, receiver=a2)
@@ -30,6 +38,9 @@ def test_message_reply_to() -> None:
 
 
 def test_message_forward() -> None:
+    """
+    Forward email semantics
+    """
     a1 = Actor()
     a2 = Actor()
     a3 = Actor()
@@ -58,14 +69,28 @@ class Ponger(Actor):
 
 
 def test_ping_pong() -> None:
+    """
+    Test two actors sending messages to each other indefinitely.
+    """
+
     pinger = Pinger()
     ponger = Ponger()
 
-    for m, _ in zip(message_propogate(Ping(sender=ponger, receiver=pinger)), range(4)):
+    """
+    actor.send(message), llegos.message_send(message), and llegos.message_propogate(message)
+    all return a generator, you can iterate on it as much as you like.
+
+    This generate yields all yielded and returned messages.
+
+    In this case, we only want to iterate 4 times, so we use zip(..., range(4))
+    """
+    generated_messages = message_propogate(Ping(sender=ponger, receiver=pinger))
+
+    for m, _ in zip(generated_messages, range(4)):
         match m:
-            case Ping(sender=ponger, receiver=pinger):
+            case Ping(sender=ref.ponger, receiver=ref.pinger):
                 ...
-            case Pong(sender=pinger, receiver=ponger):
+            case Pong(sender=ref.pinger, receiver=ref.ponger):
                 ...
             case _:
                 assert False, m
@@ -152,6 +177,12 @@ class OKR(Message):
 class Company(Scene):
     def __init__(self, actors: t.Sequence[Employee]):
         super().__init__(actors=actors)
+        """
+        For systems with static relationships, you can define them in the constructor.
+
+        For dynamic systems, you can use actor.receivers(MessageClass, [*MessageClasses]) to
+        get a list of actors in the scene that can receive all the passed MessageClasses.
+        """
         for a, b in combinations(actors, 2):
             self._graph.add_edge(a, b)
 

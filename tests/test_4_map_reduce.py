@@ -49,8 +49,8 @@ class ReduceResponse(llegos.Message):
 
 class Reducer(llegos.Actor):
     """
-    This example fuser just does the set overlap of all the sources returned,
-    but you can imagine a more complex fuser that does some sort of ranking,
+    This example reducer just does the set overlap of all the sources returned,
+    but you can imagine a more complex reducer that does some sort of ranking,
     or synthesis/summarization, etc.
     """
 
@@ -73,14 +73,14 @@ class MapReducer(llegos.Scene):
     compose Scenes together to create more complex Scenes.
     """
 
-    fuser: Reducer
+    reducer: Reducer
 
-    def __init__(self, fuser: Reducer, sources: list[Mapper]):
+    def __init__(self, reducer: Reducer, sources: list[Mapper]):
         """
         The constructor accepts a list of actors which are used to initialize the
         underlying graph. This is important! Do not forget to pass actors=[a1, a2, ...]
         """
-        super().__init__(fuser=fuser, actors=[fuser, *sources])
+        super().__init__(reducer=reducer, actors=[reducer, *sources])
         for source in sources:
             """
             Here's where the magic happens. The llegos.Scene class has a private
@@ -94,7 +94,7 @@ class MapReducer(llegos.Scene):
             and the same Actor can be in both Scenes, and have different relationships
             in each Scene.
             """
-            self._graph.add_edge(fuser, source, metadata={"key": "value"})
+            self._graph.add_edge(reducer, source, metadata={"key": "value"})
 
     def receive_map_request(self, request: MapRequest):
         """
@@ -120,7 +120,9 @@ class MapReducer(llegos.Scene):
                         case MapResponse():
                             sources.extend(response.sources)
 
-            fuse_req = ReduceRequest(sources=sources, sender=self, receiver=self.fuser)
+            fuse_req = ReduceRequest(
+                sources=sources, sender=self, receiver=self.reducer
+            )
             """
             message_send returns an iterator, because a receiver can return or yield
             multiple messages in response to a single message.
@@ -136,9 +138,9 @@ class MapReducer(llegos.Scene):
             return MapResponse.reply_to(request, sources=fuse_resp.unique_sources)
 
 
-def test_sources_fuser():
+def test_map_reducer():
     test_actor = llegos.Actor()  # a simple, dummy actor with no utility
-    sources_fuser = MapReducer(
+    sources_map_reducer = MapReducer(
         Reducer(),
         [
             Mapper(sources=["The Hitchhiker's Guide to the Galaxy", "Star Wars"]),
@@ -148,7 +150,7 @@ def test_sources_fuser():
 
     request = MapRequest(
         sender=test_actor,
-        receiver=sources_fuser,
+        receiver=sources_map_reducer,
         query="Query?",
     )
 
@@ -163,17 +165,17 @@ def test_sources_fuser():
     )
 
 
-def test_nested_sources_fuser():
+def test_nested_map_reducer():
     """
     Since Scenes are Actors, you can compose Scenes together to create more complex
-    Scenes. Here, we compose two SourcesFusers together in another SourcesFuser.
+    Scenes. Here, we compose two SourcesMapReducers together in another .
 
     This works because the SourcesFuser implements the same interface as a Sources,
     so it acts as a drop-in replacement.
     """
 
     test_actor = llegos.Actor()  # a simple, dummy actor with no utility
-    root_sources_fuser = MapReducer(
+    nested_map_reducer = MapReducer(
         Reducer(),
         [
             Mapper(sources=["The Hitchhiker's Guide to the Galaxy", "Star Wars"]),
@@ -181,21 +183,21 @@ def test_nested_sources_fuser():
         ],
     )
 
-    root_sources_fuser = MapReducer(
+    root_map_reducer = MapReducer(
         Reducer(),
         [
-            root_sources_fuser,
+            nested_map_reducer,
             Mapper(sources=["Star Trek", "Star Wars"]),
         ],
     )
 
     request = MapRequest(
         sender=test_actor,
-        receiver=root_sources_fuser,
+        receiver=root_map_reducer,
         query="Query?",
     )
 
-    with root_sources_fuser:
+    with root_map_reducer:
         """
         Use 'with {scene}:' to enter the scene's context.
         Here, all relationships are scoped to that scene.
