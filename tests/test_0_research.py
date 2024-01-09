@@ -32,7 +32,7 @@ def test_message_reply_to() -> None:
     a1 = Actor()
     a2 = Actor()
     m1 = Message(sender=a1, receiver=a2)
-    m2 = m1.reply()
+    m2 = Message.reply_to(m1)
     assert m2.parent == m1
     assert Message.model_validate(m2.model_dump()).parent_id == m1.id
 

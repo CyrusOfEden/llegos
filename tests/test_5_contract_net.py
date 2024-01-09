@@ -13,6 +13,7 @@ Learn more about it here: https://en.m.wikipedia.org/wiki/Contract_Net_Protocol
 
 from typing import Sequence
 
+from matchref import ref
 from pydantic import BaseModel
 
 from llegos import research as llegos
@@ -234,11 +235,6 @@ def test_nested_contract_net():
         receiver=manager,
         task="do the thing",
     )
-
-    """
-    We can use matchref to match on the reference of the actor that sent the message.
-    """
-    from matchref import ref
 
     for msg in llegos.message_propogate(req):
         """

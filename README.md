@@ -1,3 +1,5 @@
+![An image of a techno-wizard in a flowing robe adorned with digital runes, with interconnected glowing orbs floating about. One orb contains a coiling snake, another a majestic parrot, and another a serene llama. All the orbs emit intense, glowing power. Streams of light intertwine seamlessly in front of the wizard's focused eyes, casting intricate shadows and illuminating the wizard's face with a mysterious light.](./wizard.png)
+
 ## Table of Contents
 
 - [Llegos: A strongly-typed Python DSL for multi-agent systems](#llegos-a-strongly-typed-python-dsl-for-multi-agent-systems)

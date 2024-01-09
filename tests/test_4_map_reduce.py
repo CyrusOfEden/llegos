@@ -170,7 +170,7 @@ def test_nested_map_reducer():
     Since Scenes are Actors, you can compose Scenes together to create more complex
     Scenes. Here, we compose two SourcesMapReducers together in another .
 
-    This works because the SourcesFuser implements the same interface as a Sources,
+    This works because the MapReducer implements the same interface as a Sources,
     so it acts as a drop-in replacement.
     """
 
