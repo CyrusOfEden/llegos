@@ -18,19 +18,18 @@
 
 # Llegos: A strongly-typed Python DSL for multi-agent systems
 
-> *"More of a PyTorch, less of a Keras", "More of a FastAPI, less of a Django"*
+> *"More of a PyTorch, less of a Keras"
 
 Llegos is a DSL for developing multi-agent systems in Python. It offers a set of building blocks that can be used to create complex, multi-layered environments where different groups of agents can interact within their sub-contexts. Llegos is designed to be flexible and generalizable, and it is not tied to any specific way of calling LLMs. Any logic, any combination of libraries in any order can be used in your agent implementation. Llegos elevates your agents into a multi-agent system.
 
-You only need this 1 sentence to get an intuitive understanding of Llegos:
+You only need these 2 sentences to get an intuitive understanding of Llegos:
 
-**"llegos.Actors send llegos.Messages and share llegos.Objects in llegos.Scenes."**
+1. **llegos.Actors are a container for your agents.**
+2. **"llegos.Actors send llegos.Messages and share llegos.Objects in llegos.Scenes."**
 
 ## Features
 
-0. **Simple, made easy:** The whole API can can be conceptually grokked with the mnemonic **"llegos.Actors send llegos.Messages and share llegos.Objects in llegos.Scenes."**
-
-1. **Strongly typed message passing:** At the heart of Llegos is its use of pedantic models for message passing. This ensures precision and clarity in communication, allowing for dynamically generated, well-structured messages crucial for complex multi-agent interactions.
+1. **Strongly typed message passing:** At the heart of Llegos is its use of Pydantic models for message passing. This ensures precision and clarity in communication, allowing for dynamically generated, well-structured messages crucial for complex multi-agent interactions.
 
 2. **Messaging with email semantics** Llegos introduces an intuitive, email-like messaging system. Messages have parents, enabling functionalities like replying and forwarding, which enhances clarity and traceability in the system's communication.
 
@@ -72,7 +71,7 @@ Llegos is built upon several foundational elements that work together to enable 
 
 ### Actors
 
-- **Roles:** Actors are specialized objects that represent autonomous agents within the system. Each actor has its unique behavior, state, and communication abilities.
+- **Roles:** Actors are specialized objects that encapsulate autonomous agents within the system. Each actor has its unique behavior, state, and communication abilities.
 - **Interactions:** Actors interact with each other and the environment primarily through strongly-typed messages, responding to received information and making decisions based on their internal logic and objectives.
 
 ### Scenes
@@ -85,7 +84,7 @@ Llegos is built upon several foundational elements that work together to enable 
 
 **Q: What is the difference between Llegos and other multi-agent systems like AutoGen, CamelAI, ChatDev, Agent Actors?**
 
-All those works are innovating in their own right as implementations of different interaction paradigms. Llegos is unique in that it makes it easier for you to express the design space of interaction paradigms, rather than offering you ready-built paradigms. It is a framework for building multi-agent systems, rather than configuring a specific multi-agent system.
+All those works are innovating in their own right as implementations of different interaction paradigms. Llegos is unique in that it makes it easier for you to explore the design space of interaction paradigms, rather than offering you ready-built paradigms. It is a framework for building multi-agent systems, rather than configuring a specific multi-agent system. It is paint, not a painting.
 
 **Q: How does Llegos relate to libraries like Langchain, LlamaIndex, Outlines, DSPy, Instructor?**
 

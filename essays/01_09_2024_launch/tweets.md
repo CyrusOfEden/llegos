@@ -1,10 +1,12 @@
 **Tweet 1**
 🚀 Big news! We're thrilled to unveil the alpha release of Llegos, a groundbreaking Python DSL for designing multi-agent systems. It's a whole new way to build and interact with these systems.
 
+"More of a PyTorch, less of a Keras"
+
 ![](../../wizard.png)
 
 **Tweet 2**
-The Dao of Llegos: **"llegos.Actors send llegos.Messages and share llegos.Objects in llegos.Scenes."** It's that simple.
+Here's Llegos in a nutshell: llegos.Actors are containers for your agents, and llegos.Actors send llegos.Messages and share llegos.Objects in llegos.Scenes.
 
 Here's @CyrusOfEden, the man behind Llegos, and @karan4d, cofounder of Nous, to tell you more about it.
 
