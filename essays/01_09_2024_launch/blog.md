@@ -53,3 +53,5 @@ A: Llegos is designed to be flexible and generalizable, not tied to any specific
 ## The Future of Llegos
 
 The alpha release is just the beginning of our journey with Llegos. As the community grows and the project evolves, we look forward to expanding its capabilities and integrating user feedback.
+
+We're particularly excited to work with explorers like you to discover new ways of using Llegos. We believe that Llegos can be a catalyst for innovation in multi-agent systems, and we're excited to see what you create with it. Come join us in our [Discord](https://discord.gg/jqVphNsB4H), and let's build the future of multi-agent systems together.

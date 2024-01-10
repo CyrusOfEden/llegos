@@ -41,4 +41,7 @@ https://github.com/nousresearch/llegos
 **Tweet 8**
 And we're just getting started. Join us to shape its future – your ideas, feedback, and contributions are what will drive Llegos forward. Let's build something amazing together!
 
+We're particularly excited to see what you create with Llegos. Come join us in our [Discord](https://discord.gg/jqVphNsB4H), and let's build the future of multi-agent systems together!
+
+**Tweet 9**
 The future of Llegos is bright, and with your input, it'll only get brighter. Stay tuned for updates, new features, and more as we continue this exciting journey. The best is yet to come!
