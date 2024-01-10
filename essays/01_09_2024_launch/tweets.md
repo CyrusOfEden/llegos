@@ -1,16 +1,13 @@
 **Tweet 1**
-We're thrilled to announce the alpha release of Llegos, a domain specific library for designing multi-agent systems in Python.
+We're thrilled to announce the alpha release of Llegos, a domain specific library for designing multi-agent systems in Python led by @CyrusofEden.
+
+Llegos in a nutshell: llegos.Actors are containers for your agents, and llegos.Actors send llegos.Messages and share llegos.Objects in llegos.Scenes.
 
 Described by an early contributor as "More of a PyTorch, less of a Keras"
 
-![](../../wizard.png)
-
-**Tweet 2**
-Llegos in a nutshell: llegos.Actors are containers for your agents, and llegos.Actors send llegos.Messages and share llegos.Objects in llegos.Scenes.
-
 ![](./llegos_diagram.png)
 
-**Tweet 3**
+**Tweet 2**
 Let's dive into what makes Llegos a game-changer.
 
 First, Strongly Typed Message Passing - ensuring clarity and precision in communication between your agents. Llegos focuses on making complex interactions simpler and more reliable.
