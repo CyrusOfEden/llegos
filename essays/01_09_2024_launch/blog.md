@@ -4,6 +4,8 @@
 
 > This research was spearheaded by [Cyrus](https://x.com/CyrusOfEden), our resident expert in multi-agent systems. He's been working on this project for a while now, and we're excited to share it with you.
 
+!!!!!! INTRO VIDEO !!!!!!!
+
 *"More of a PyTorch, less of a Keras", "More of a FastAPI, less of a Django"*
 
 We're excited to unveil the alpha release of Llegos, a Python DSL to catalyze innovation in multi-agent systems research and development.
