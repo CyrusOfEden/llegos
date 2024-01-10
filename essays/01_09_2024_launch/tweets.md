@@ -8,7 +8,7 @@ Described by an early contributor as "More of a PyTorch, less of a Keras"
 **Tweet 2**
 Llegos in a nutshell: llegos.Actors are containers for your agents, and llegos.Actors send llegos.Messages and share llegos.Objects in llegos.Scenes.
 
-![](./llegos_building_blocks.png)
+![](./llegos_diagram.png)
 
 **Tweet 3**
 Let's dive into what makes Llegos a game-changer.
