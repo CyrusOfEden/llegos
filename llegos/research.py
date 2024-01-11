@@ -16,6 +16,10 @@ from sorcery import delegate_to_attr, maybe
 if t.TYPE_CHECKING:
     from pydantic.main import IncEx
 
+from .logger import getLogger
+
+logger = getLogger("research")
+
 
 def namespaced_ksuid(prefix: str):
     return f"{prefix}_{Ksuid()}"
@@ -97,21 +101,19 @@ class Actor(Object):
     _event_emitter = EventEmitter()
 
     def can_receive(self, message: t.Union["Message", type["Message"]]) -> bool:
-        if isinstance(message, Message):
-            return message.receiver == self and hasattr(
-                self, self.receive_method_name(message.__class__)
-            )
-        elif issubclass(message, Message):
-            return hasattr(self, self.receive_method_name(message))
-        return False
+        if isinstance(message, Message) and message.receiver != self:
+            return False
+        return hasattr(self, self.receive_method_name(message))
 
     @staticmethod
-    def receive_method_name(message_class: type["Message"]):
-        intent = snake_case(message_class.__name__)
+    def receive_method_name(message: t.Union["Message", type["Message"]]):
+        if isinstance(message, Message) and hasattr(message, "intent"):
+            return f"receive_{message.intent}"
+        intent = snake_case(message.__class__.__name__)
         return f"receive_{intent}"
 
     def receive_method(self, message: "Message"):
-        method = self.receive_method_name(message.__class__)
+        method = self.receive_method_name(message)
         if hasattr(self, method):
             return getattr(self, method)
         return self.receive_missing
@@ -123,6 +125,7 @@ class Actor(Object):
         return self.send(message)
 
     def send(self, message: "Message") -> Iterator["Message"]:
+        logger.debug(f"{self.id} before:receive {message.id}")
         self.emit("before:receive", message)
 
         response = self.receive_method(message)(message)
@@ -134,6 +137,7 @@ class Actor(Object):
                 yield from response
 
         self.emit("after:receive", message)
+        logger.debug(f"{self.id} after:receive {message.id}")
 
     @property
     def scene(self):

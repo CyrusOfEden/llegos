@@ -18,8 +18,11 @@ class ChatMessage(llegos.Message):
 
 
 class ChatBot(llegos.Actor):
-    # Here we use response to mock the response in testing, but in a real
-    # application, you could use a model to generate a response.
+    """
+    Here we use response to mock the response in testing, but in a real
+    application, you could use a model to generate a response.
+    """
+
     response: str
 
     def receive_chat_message(self, message: ChatMessage):

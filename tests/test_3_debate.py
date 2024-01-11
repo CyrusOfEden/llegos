@@ -97,13 +97,8 @@ class Debate(llegos.Scene):
         """
         for _round in range(self.rounds):
             for debater in self.debaters:
-                for response in llegos.message_send(
-                    # Include the responses list (so far) as message metadata.
-                    # You could also traverse the message tree to generate the list
-                    # algorithmically, but this is simpler.
-                    message.forward_to(debater, metadata={"responses": responses})
-                ):
-                    responses.append(response)
+                response = next(llegos.message_send(message.forward_to(debater)))
+                responses.append(response)
 
         verdict = next(
             self.judge.send(Review(points=responses, sender=self, receiver=self.judge))
@@ -111,7 +106,7 @@ class Debate(llegos.Scene):
         return verdict.forward_to(message.sender)
 
 
-def xtest_debate(num_rounds=3):
+def test_debate(num_rounds=3):
     user = llegos.Actor()
     judge = Judge()
     debaters = [Debater(), Debater(), Debater()]

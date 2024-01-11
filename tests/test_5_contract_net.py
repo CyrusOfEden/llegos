@@ -192,8 +192,6 @@ def test_contract_net():
     """
     We can use matchref to match on the reference of the actor that sent the message.
     """
-    from matchref import ref
-
     for msg in llegos.message_propogate(req):
         """
         message_propogate that keeps calling message_send on yielded messages.
