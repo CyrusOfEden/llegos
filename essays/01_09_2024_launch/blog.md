@@ -37,7 +37,7 @@ You only need these 2 sentences to get an intuitive understanding of Llegos:
 
 ## Get Started with Llegos
 
-Eager to start your journey with Llegos? Check out our [Github repo](https://github.com/nousresearch/llegos) and begin exploring the unlimited potential of multi-agent systems. We're particularly curious to see how you'll use Llegos to explore the design space of multi-agent systems, and will be highlighting some of the most innovative projects on our [Twitter](https://twitter.com/nousresearch).
+Eager to start your journey with Llegos? Check out our [Github repo](https://github.com/CyrusOfEden/llegos) and begin exploring the unlimited potential of multi-agent systems. We're particularly curious to see how you'll use Llegos to explore the design space of multi-agent systems, and will be highlighting some of the most innovative projects on our [Twitter](https://twitter.com/CyrusOfEden).
 
 ## The Future of Llegos
 

@@ -33,7 +33,7 @@ Flexibility and generalizability are at the core of Llegos. The core primitives 
 **Tweet 7**
 Jump into our GitHub repo to start exploring. We're excited to see what incredible systems the community will create wih Llegos. Let's build the future together.
 
-https://github.com/nousresearch/llegos
+https://github.com/CyrusOfEden/llegos
 
 **Tweet 8**
 Stay tuned for updates, new features, and more as we continue this exciting journey. Come join us in our [Discord](https://discord.gg/jqVphNsB4H) to collaborate on multi-agent systems.
