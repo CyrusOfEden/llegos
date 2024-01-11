@@ -87,7 +87,7 @@ def test_ping_pong() -> None:
     ponger = Ponger()
 
     """
-    actor.send(message), llegos.message_send(message), and llegos.message_propogate(message)
+    actor.receive(message), llegos.message_send(message), and llegos.message_propogate(message)
     all return a generator, you can iterate on it as much as you like.
 
     This generate yields all yielded and returned messages.

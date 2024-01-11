@@ -97,12 +97,12 @@ def test_student_reflection() -> None:
     def teach(content: str):
         return Teaching(sender=teacher, receiver=student, content=content)
 
-    list(student.send(teach(teachings[0])))
-    list(student.send(teach(teachings[1])))
+    list(student.receive(teach(teachings[0])))
+    list(student.receive(teach(teachings[1])))
     assert len(student.state.learnings) == 2
     assert student.state.learnings == teachings[:-1]
 
-    list(student.send(teach(teachings[2])))
+    list(student.receive(teach(teachings[2])))
     assert len(student.state.learnings) == 2, "Should have trimmed learnings"
 
 

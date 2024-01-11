@@ -97,11 +97,13 @@ class Debate(llegos.Network):
         """
         for _round in range(self.rounds):
             for debater in self.debaters:
-                response = next(llegos.message_send(message.forward_to(debater)))
+                response = next(debater.receive(message.forward_to(debater)))
                 responses.append(response)
 
         verdict = next(
-            self.judge.send(Review(points=responses, sender=self, receiver=self.judge))
+            self.judge.receive(
+                Review(points=responses, sender=self, receiver=self.judge)
+            )
         )
         return verdict.forward_to(message.sender)
 
@@ -117,7 +119,7 @@ def test_debate(num_rounds=3):
         content="Apple pie is the best",
     )
 
-    verdict = next(debate.send(proposition))
+    verdict = next(debate.receive(proposition))
     assert isinstance(verdict, Verdict)
     assert verdict.content in ("I agree", "I disagree")
     assert len(verdict.points) == num_rounds * len(debaters)

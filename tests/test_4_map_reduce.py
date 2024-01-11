@@ -127,7 +127,7 @@ class MapReducer(llegos.Network):
             message_send returns an iterator, because a receiver can return or yield
             multiple messages in response to a single message.
 
-            By using llegos.message_send(message) or Actor.send(message)
+            By using llegos.message_send(message) or Actor.receive(message)
             receive_{message} methods that return a single message will be wrapped in
 
 

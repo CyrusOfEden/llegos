@@ -117,9 +117,9 @@ class Actor(Object):
         raise InvalidMessage(message)
 
     def __call__(self, message: "Message") -> Iterator["Message"]:
-        return self.send(message)
+        return self.receive(message)
 
-    def send(self, message: "Message") -> Iterator["Message"]:
+    def receive(self, message: "Message") -> Iterator["Message"]:
         logger.debug(f"{self.id} before:receive {message.id}")
         self.emit("before:receive", message)
 
@@ -318,7 +318,7 @@ class MissingReceiver(ValueError):
 def message_send(message: Message) -> Iterator[Message]:
     if not message.receiver:
         raise MissingReceiver(message)
-    yield from message.receiver.send(message)
+    yield from message.receiver.receive(message)
 
 
 @beartype
