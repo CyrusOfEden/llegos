@@ -67,10 +67,10 @@ class Reducer(llegos.Actor):
         return ReduceRequest.reply_to(request, unique_sources=unique_sources)
 
 
-class MapReducer(llegos.Scene):
+class MapReducer(llegos.Network):
     """
-    Scenes compose multiple Actors together. Scenes are also Actors, so you can
-    compose Scenes together to create more complex Scenes.
+    Networks compose multiple Actors together. Networks are also Actors, so you can
+    compose Networks together to create more complex Networks.
     """
 
     reducer: Reducer
@@ -83,27 +83,27 @@ class MapReducer(llegos.Scene):
         super().__init__(reducer=reducer, actors=[reducer, *sources])
         for source in sources:
             """
-            Here's where the magic happens. The llegos.Scene class has a private
+            Here's where the magic happens. The llegos.Network class has a private
             networkx.MultiGraph that keeps track of all the actors and their relationships.
 
             The intuition behind this is simple — as humans we have different relationships
-            in different scenes, simultaneously. For example, you might be a friend to
+            in different networks, simultaneously. For example, you might be a friend to
             someone in your family, and a sibling to someone in your friend group.
 
-            Llegos lets you model the Family as a Scene, and the Friend Group as a Scene,
-            and the same Actor can be in both Scenes, and have different relationships
-            in each Scene.
+            Llegos lets you model the Family as a Network, and the Friend Group as a Network,
+            and the same Actor can be in both Networks, and have different relationships
+            in each Network.
             """
             self._graph.add_edge(reducer, source, metadata={"key": "value"})
 
     def receive_map_request(self, request: MapRequest):
         """
-        Use 'with {scene}:' to enter the scene's context.
-        Here, all relationships are scoped to that scene.
+        Use 'with {network}:' to enter the network's context.
+        Here, all relationships are scoped to that network.
         """
         with self:
             """
-            First, we use .receivers(MessageClass) to get all the actors in the scene that
+            First, we use .receivers(MessageClass) to get all the actors in the network that
             can receive the SourcesRequest message.
             """
             sourcers = self.receivers(MapRequest)
@@ -167,8 +167,8 @@ def test_map_reducer():
 
 def test_nested_map_reducer():
     """
-    Since Scenes are Actors, you can compose Scenes together to create more complex
-    Scenes. Here, we compose two SourcesMapReducers together in another .
+    Since Networks are Actors, you can compose Networks together to create more complex
+    Networks. Here, we compose two SourcesMapReducers together in another .
 
     This works because the MapReducer implements the same interface as a Sources,
     so it acts as a drop-in replacement.
@@ -199,8 +199,8 @@ def test_nested_map_reducer():
 
     with root_map_reducer:
         """
-        Use 'with {scene}:' to enter the scene's context.
-        Here, all relationships are scoped to that scene.
+        Use 'with {network}:' to enter the network's context.
+        Here, all relationships are scoped to that network.
         """
 
         response = next(llegos.message_send(request))

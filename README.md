@@ -11,7 +11,7 @@
     - [Objects](#objects)
     - [Messages](#messages)
     - [Actors](#actors)
-    - [Scenes](#scenes)
+    - [Networks](#networks)
   - [FAQ](#faq)
   - [Contributing](#contributing)
   - [Is it any good?](#is-it-any-good)
@@ -25,7 +25,7 @@ Llegos is a DSL for developing multi-agent systems in Python. It offers a set of
 You only need these 2 sentences to get an intuitive understanding of Llegos:
 
 1. **llegos.Actors are a container for your agents.**
-2. **"llegos.Actors send llegos.Messages and share llegos.Objects in llegos.Scenes."**
+2. **"llegos.Actors send llegos.Messages and share llegos.Objects in llegos.Networks."**
 
 ## Features
 
@@ -33,9 +33,9 @@ You only need these 2 sentences to get an intuitive understanding of Llegos:
 
 2. **Messaging with email semantics** Llegos introduces an intuitive, email-like messaging system. Messages have parents, enabling functionalities like replying and forwarding, which enhances clarity and traceability in the system's communication.
 
-3. **Bring your own libraries:** Whether that's Langchain, LlamaIndex, CamelAI, transformers... use Llegos Actors to elevate your agents into a multi-agent system, and coordinate them using a Scene.
+3. **Bring your own libraries:** Whether that's Langchain, LlamaIndex, CamelAI, transformers... use Llegos Actors to elevate your agents into a multi-agent system, and coordinate them using a Network.
 
-4. **Flexibility and generalizability:** Llegos Scenes are themselves Actors, and can be nested within each other. This allows for the creation of complex, multi-layered environments where different groups of actors can interact within their sub-contexts.
+4. **Flexibility and generalizability:** Llegos Networks are themselves Actors, and can be nested within each other. This allows for the creation of complex, multi-layered environments where different groups of actors can interact within their sub-contexts.
 
 ## Quick Start Guide
 
@@ -60,7 +60,7 @@ Llegos is built upon several foundational elements that work together to enable 
 
 ### Objects
 - **Definition:** Objects are the fundamental entities in Llegos, defined using Pydantic models. They represent the base class from which other more specialized entities like Messages and Actors derive.
-- **Customization:** Users can extend the Object class to create their own scene objects, complete with validation and serialization capabilities.
+- **Customization:** Users can extend the Object class to create their own network objects, complete with validation and serialization capabilities.
 - **Dynamic Generation:** Users can dynamically generate objects using OpenAI function calling, [Instructor](https://github.com/jxnl/instructor), [Outlines](https://github.com/outlines-dev/outlines), etc.
 
 ### Messages
@@ -74,10 +74,10 @@ Llegos is built upon several foundational elements that work together to enable 
 - **Roles:** Actors are specialized objects that encapsulate autonomous agents within the system. Each actor has its unique behavior, state, and communication abilities.
 - **Interactions:** Actors interact with each other and the environment primarily through strongly-typed messages, responding to received information and making decisions based on their internal logic and objectives.
 
-### Scenes
+### Networks
 
-- **Contextual Containers:** Scenes act as containers or contexts in which actors operate and interact. They define the boundaries and properties of the environment that the agents are situated in.
-- **Hierarchical Structure:** Scenes are Actors, allowing for the creation of complex, multi-layered environments where different groups of actors can interact within their sub-contexts.
+- **Contextual Containers:** Networks act as containers or contexts in which actors operate and interact. They define the boundaries and properties of the environment that the agents are situated in.
+- **Hierarchical Structure:** Networks are Actors, allowing for the creation of complex, multi-layered environments where different groups of actors can interact within their sub-contexts.
 
 
 ## FAQ

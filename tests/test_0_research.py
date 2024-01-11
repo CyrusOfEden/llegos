@@ -7,10 +7,10 @@ from itertools import combinations
 
 from faker import Faker
 from matchref import ref
-from pydantic import Field
+from more_itertools import take
 from pydash import sample
 
-from llegos.research import Actor, Message, Object, Scene, message_propogate
+from llegos.research import Actor, Message, Network, Object, message_propogate
 
 
 def test_message_hydration() -> None:
@@ -68,6 +68,16 @@ class Ponger(Actor):
         return Ping.reply_to(pong)
 
 
+def test_actor_can_receive() -> None:
+    pinger = Pinger()
+    ponger = Ponger()
+
+    assert not pinger.can_receive(Pong)
+    assert not ponger.can_receive(Ping)
+    assert pinger.can_receive(Ping)
+    assert ponger.can_receive(Pong)
+
+
 def test_ping_pong() -> None:
     """
     Test two actors sending messages to each other indefinitely.
@@ -84,9 +94,9 @@ def test_ping_pong() -> None:
 
     In this case, we only want to iterate 4 times, so we use zip(..., range(4))
     """
-    generated_messages = message_propogate(Ping(sender=ponger, receiver=pinger))
+    messages = message_propogate(Ping(sender=ponger, receiver=pinger))
 
-    for m, _ in zip(generated_messages, range(4)):
+    for m in take(4, messages):
         match m:
             case Ping(sender=ref.ponger, receiver=ref.pinger):
                 ...
@@ -94,6 +104,30 @@ def test_ping_pong() -> None:
                 ...
             case _:
                 assert False, m
+
+
+def test_actor_callbacks() -> None:
+    counter = 0
+
+    def incr():
+        nonlocal counter
+        counter += 1
+
+    pinger = Pinger()
+    pinger.on("before:receive", lambda _: incr())
+    ponger = Ponger()
+    ponger.on("before:receive", lambda _: incr())
+
+    message_chain = message_propogate(Ping(sender=ponger, receiver=pinger))
+
+    take(2, message_chain)
+    assert counter == 2
+
+    take(1, message_chain)
+    assert counter == 3
+
+    take(7, message_chain)
+    assert counter == 10
 
 
 class PingPonger(Pinger, Ponger):
@@ -104,7 +138,7 @@ def test_actor_inheritance() -> None:
     a = PingPonger()
     b = PingPonger()
 
-    for m, _ in zip(message_propogate(Ping(sender=a, receiver=b)), range(4)):
+    for m in take(4, message_propogate(Ping(sender=a, receiver=b))):
         match m:
             case Ping():
                 ...
@@ -115,7 +149,7 @@ def test_actor_inheritance() -> None:
 
 
 class SoccerBall(Object):
-    passes: int = Field(default=0)
+    passes: int = 0
 
 
 class BallPass(Message):
@@ -123,9 +157,8 @@ class BallPass(Message):
 
 
 class SoccerPlayer(Actor):
-    _receivable_messages = {BallPass}
     name: str
-    passes: int = Field(default=0)
+    passes: int = 0
 
     def receive_ball_pass(self, message: BallPass) -> BallPass:
         receiver = sample(self.receivers(BallPass))
@@ -134,21 +167,27 @@ class SoccerPlayer(Actor):
         return message.forward_to(receiver)
 
 
-class SoccerGame(Scene):
+class SoccerGame(Network):
     def reset(self):
+        self._graph.clear()
+        for a, b in combinations(self.actors, 2):
+            self._graph.add_edge(a, b)
+
         for player in self.actors:
             player.passes = 0
 
     def play(self):
-        for a, b in combinations(self.actors, 2):
-            self._graph.add_edge(a, b)
-
+        self.reset()
         return message_propogate(
-            BallPass(ball=SoccerBall(), sender=self, receiver=sample(self.actors))
+            BallPass(
+                ball=SoccerBall(),
+                sender=self,
+                receiver=sample(self.actors),
+            )
         )
 
 
-def test_soccer_scene(faker: Faker) -> None:
+def test_soccer_network(faker: Faker) -> None:
     total_passes = 42
     game = SoccerGame(
         actors=[SoccerPlayer(name=faker.name()) for _ in range(22)],
@@ -174,14 +213,14 @@ class OKR(Message):
     key_results: list[str]
 
 
-class Company(Scene):
+class Company(Network):
     def __init__(self, actors: t.Sequence[Employee]):
         super().__init__(actors=actors)
         """
         For systems with static relationships, you can define them in the constructor.
 
         For dynamic systems, you can use actor.receivers(MessageClass, [*MessageClasses]) to
-        get a list of actors in the scene that can receive all the passed MessageClasses.
+        get a list of actors in the network that can receive all the passed MessageClasses.
         """
         for a, b in combinations(actors, 2):
             self._graph.add_edge(a, b)
@@ -195,7 +234,7 @@ class Department(Company):
     ...
 
 
-def test_office_scene() -> None:
+def test_office_network() -> None:
     dunder_mifflin = Company(
         actors=[
             Employee(name=name)
@@ -223,7 +262,7 @@ def test_office_scene() -> None:
     )
 
     for employee in dunder_mifflin.actors:
-        assert employee in dunder_mifflin, "Could not find employee in scene"
+        assert employee in dunder_mifflin, "Could not find employee in network"
 
     # Define department membership
     sales = Department(
@@ -253,13 +292,13 @@ def test_office_scene() -> None:
     # Test nested contexts
     with dunder_mifflin:
         for e in dunder_mifflin.actors:
-            assert e.scene == dunder_mifflin
+            assert e.network == dunder_mifflin
         with sales:
             for e in sales.actors:
-                assert e.scene == sales
+                assert e.network == sales
         with accounting:
             for e in accounting.actors:
-                assert e.scene == accounting
+                assert e.network == accounting
         with warehouse:
             for e in warehouse.actors:
-                assert e.scene == warehouse
+                assert e.network == warehouse

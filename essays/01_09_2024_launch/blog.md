@@ -23,7 +23,7 @@ Whether it's simulating complex ecosystems, orchestrating intricate interactions
 You only need these 2 sentences to get an intuitive understanding of Llegos:
 
 1. **llegos.Actors are a container for your agents.**
-2. **"llegos.Actors send llegos.Messages and share llegos.Objects in llegos.Scenes."**
+2. **"llegos.Actors send llegos.Messages and share llegos.Objects in llegos.Networks."**
 
 ## Key Features of Llegos
 
@@ -31,9 +31,9 @@ You only need these 2 sentences to get an intuitive understanding of Llegos:
 
 2. **Messaging with email semantics** Llegos introduces an intuitive, email-like messaging system. Messages have parents, enabling functionalities like replying and forwarding, which enhances clarity and traceability in the system's communication.
 
-3. **Bring your own libraries:** Whether that's Langchain, LlamaIndex, CamelAI, transformers... use Llegos Actors to elevate your agents into a multi-agent system, and coordinate them using a Scene.
+3. **Bring your own libraries:** Whether that's Langchain, LlamaIndex, CamelAI, transformers... use Llegos Actors to elevate your agents into a multi-agent system, and coordinate them using a Network.
 
-4. **Flexibility and generalizability:** Llegos Scenes are themselves Actors, and can be nested within each other. This allows for the creation of complex, multi-layered environments where different groups of actors can interact within their sub-contexts.
+4. **Flexibility and generalizability:** Llegos Networks are themselves Actors, and can be nested within each other. This allows for the creation of complex, multi-layered environments where different groups of actors can interact within their sub-contexts.
 
 ## Get Started with Llegos
 

@@ -97,7 +97,7 @@ class Contractor(llegos.Actor):
 
 class Manager(llegos.Actor):
     """
-    Sometimes you don't need to support 1 actor existing in multiple scenes.
+    Sometimes you don't need to support 1 actor existing in multiple networks.
     In that case, you can just store references to the relevant actors (contractors here).
     """
 
@@ -105,7 +105,7 @@ class Manager(llegos.Actor):
 
     def receive_call_for_proposal(self, message: CallForProposal) -> Propose | Reject:
         """
-        First, we gather all actors in the scene that can receive the CallForProposal message
+        First, we gather all actors in the network that can receive the CallForProposal message
         """
         for c in self.contractors:
             """

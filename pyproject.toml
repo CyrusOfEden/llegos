@@ -19,6 +19,7 @@ sorcery = "^0.2.2"
 pydash = "^7.0.6"
 svix-ksuid = "^0.6.2"
 match-ref = "^1.0.1"
+more-itertools = "^10.2.0"
 
 [tool.poetry.group.dev]
 optional = true

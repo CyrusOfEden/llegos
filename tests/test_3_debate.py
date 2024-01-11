@@ -76,7 +76,7 @@ class Judge(llegos.Actor):
         )
 
 
-class Debate(llegos.Scene):
+class Debate(llegos.Network):
     rounds: int = Field(ge=1, le=5)
     judge: Judge
     debaters: Sequence[Debater]

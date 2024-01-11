@@ -33,11 +33,11 @@ class ChatBot(llegos.Actor):
         return ChatMessage.reply_to(message, content=self.response)
 
 
-class Dialogue(llegos.Scene):
+class Dialogue(llegos.Network):
     def start(self):
         """
-        Since actors can be a part of multiple scenes, its important to
-        scope their usage within the scene by using `with {scene}:`
+        Since actors can be a part of multiple networks, its important to
+        scope their usage within the network by using `with {network}:`
         """
         return llegos.message_propogate(
             ChatMessage(
@@ -51,13 +51,13 @@ class Dialogue(llegos.Scene):
 def test_dialogue():
     a1 = ChatBot(response="Hello")
     a2 = ChatBot(response="Hi")
-    # Every scene has a list of actors
+    # Every network has a list of actors
     dialogue = Dialogue(actors=[a1, a2])
 
     with dialogue:
         # get the first 5 messages
         for msg, _ in zip(dialogue.start(), range(4)):
-            assert a1.scene == dialogue, "the actor's scene is dialogue"
+            assert a1.network == dialogue, "the actor's network is dialogue"
             match msg:
                 case ChatMessage(sender=ref.a1, receiver=ref.a2):
                     assert msg.content == a1.response

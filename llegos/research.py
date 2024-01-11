@@ -1,7 +1,9 @@
+import functools
 import typing as t
 from collections.abc import Iterable
 from contextvars import ContextVar, Token
 from datetime import datetime
+from time import time
 
 from beartype import beartype
 from beartype.typing import Callable, Iterator, Optional
@@ -30,10 +32,7 @@ def namespaced_ksuid_generator(prefix: str):
 
 
 class Object(BaseModel):
-    model_config = ConfigDict(
-        arbitrary_types_allowed=True,
-        extra="allow",
-    )
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")
 
     def __init_subclass__(cls):
         super().__init_subclass__()
@@ -75,21 +74,14 @@ class Object(BaseModel):
     def __str__(self):
         return self.model_dump_json()
 
-    def __setattr__(self, name: str, value: t.Any) -> None:
-        match value:
-            case Object():
-                object.__setattr__(self, name, value)
-            case _:
-                super().__setattr__(name, value)
-
     @classmethod
     def lift(cls, instance: "Object", **kwargs):
-        attrs = instance.model_dump()
+        attrs = instance.model_dump(exclude=["id"])
         always_merger.merge(attrs, kwargs)
         return cls(**attrs)
 
 
-class MissingScene(ValueError):
+class MissingNetwork(ValueError):
     ...
 
 
@@ -109,7 +101,10 @@ class Actor(Object):
     def receive_method_name(message: t.Union["Message", type["Message"]]):
         if isinstance(message, Message) and hasattr(message, "intent"):
             return f"receive_{message.intent}"
-        intent = snake_case(message.__class__.__name__)
+
+        intent = snake_case(
+            (message.__class__ if isinstance(message, Message) else message).__name__
+        )
         return f"receive_{intent}"
 
     def receive_method(self, message: "Message"):
@@ -136,21 +131,18 @@ class Actor(Object):
             case Iterable():
                 yield from response
 
-        self.emit("after:receive", message)
-        logger.debug(f"{self.id} after:receive {message.id}")
+    @property
+    def network(self):
+        if network := network_context.get():
+            return network
+        raise MissingNetwork(self)
 
     @property
-    def scene(self):
-        if scene := scene_context.get():
-            return scene
-        raise MissingScene(self)
-
-    @property
-    def relationships(self) -> t.Sequence["Actor"]:
+    def relationships(self) -> t.Sequence[t.Tuple["Actor", str | None, dict]]:
         return sorted(
             [
                 (neighbor, key, data)
-                for (_self, neighbor, key, data) in self.scene._graph.edges(
+                for (_self, neighbor, key, data) in self.network._graph.edges(
                     self,
                     keys=True,
                     data=True,
@@ -162,7 +154,7 @@ class Actor(Object):
     def receivers(self, *messages: type["Message"]):
         return [
             actor
-            for actor, _key, _data in self.relationships
+            for (actor, _key, _data) in self.relationships
             if all(actor.can_receive(m) for m in messages)
         ]
 
@@ -178,7 +170,7 @@ class Actor(Object):
     ) = delegate_to_attr("_event_emitter")
 
 
-class Scene(Actor):
+class Network(Actor):
     actors: t.Sequence[Actor] = Field(default_factory=list)
     _graph = MultiGraph()
 
@@ -208,19 +200,19 @@ class Scene(Actor):
         return {a.id: a for a in self.actors}
 
     def __enter__(self):
-        global scene_token, scene_context
-        scene_token = scene_context.set(self)
+        global network_token, network_context
+        network_token = network_context.set(self)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        global scene_token, scene_context
-        if scene_token:
-            scene_context.reset(scene_token)
-            scene_token = None
+        global network_token, network_context
+        if network_token:
+            network_context.reset(network_token)
+            network_token = None
 
 
-scene_context = ContextVar[Scene]("llegos.scene")
-scene_token: Optional[Token[Scene]] = None
+network_context = ContextVar[Network]("llegos.network")
+network_token: Optional[Token[Network]] = None
 
 
 class Message(Object):
@@ -332,15 +324,35 @@ def message_send(message: Message) -> Iterator[Message]:
 @beartype
 def message_propogate(
     message: Message,
-    applicator: Callable[[Message], Iterator[Message]] = message_send,
+    send_fn: Callable[[Message], Iterator[Message]] = message_send,
 ) -> Iterator[Message]:
-    for reply in applicator(message):
+    for reply in send_fn(message):
         if reply:
             yield reply
-            yield from message_propogate(reply, applicator)
+            yield from message_propogate(reply, send_fn)
+
+
+def throttle(seconds):
+    """Decorator ensures function that can only be called once every `seconds` seconds."""
+
+    def decorate(f):
+        t = None
+
+        @functools.wraps(f)
+        def wrapped(*args, **kwargs):
+            nonlocal t
+            start = time()
+            if t is None or start - t >= seconds:
+                result = f(*args, **kwargs)
+                t = start
+                return result
+
+        return wrapped
+
+    return decorate
 
 
 Object.model_rebuild()
 Message.model_rebuild()
 Actor.model_rebuild()
-Scene.model_rebuild()
+Network.model_rebuild()
