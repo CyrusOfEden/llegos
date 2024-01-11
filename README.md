@@ -76,9 +76,8 @@ Llegos is built upon several foundational elements that work together to enable 
 
 ### Networks
 
-- **Contextual Containers:** Networks act as containers or contexts in which actors operate and interact. They define the boundaries and properties of the environment that the agents are situated in.
-- **Hierarchical Structure:** Networks are Actors, allowing for the creation of complex, multi-layered environments where different groups of actors can interact within their sub-contexts.
-
+- **Dynamic Actor Graphs:** Within networks, you can dynamically manage the actors' relationships. Actors operating within the context of the network can access the network directory and discover other actors that can receive particular message types.
+- **Infinitely Nestable:** Networks are themselves Actors, allowing for the creation of complex, multi-layered environments where different groups of actors can interact within their sub-contexts.
 
 ## FAQ
 
