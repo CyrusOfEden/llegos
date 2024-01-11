@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "llegos"
-version = "0.2.0"
+version = "0.1.0"
 description = "Where we explore the future of multi-agent systems"
 authors = ["Cyrus Nouroozi, <cyrus@edendaolab.com>"]
 license = "LGPLv3"

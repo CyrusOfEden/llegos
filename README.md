@@ -46,8 +46,8 @@ Requires: `python = ">=3.10,<=3.12"`
 ### Installation
 
 ```bash
-pip install "git+https://github.com/shaman-ai/llegos.git@main"
-poetry add "git+https://github.com/shaman-ai/llegos.git#main"
+pip install llegos
+poetry add llegos
 ```
 
 ### Need help?
