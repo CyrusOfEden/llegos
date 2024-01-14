@@ -38,6 +38,7 @@ python-dotenv = "^1.0.0"
 ruff = "^0.0.261"
 setuptools = "^67.6.1"
 types-pyyaml = "^6.0.12.9"
+ray = {extras = ["default"], version = "^2.9.0"}
 
 [tool.isort]
 profile = "black"

@@ -76,7 +76,7 @@ class Object(BaseModel):
 
     @classmethod
     def lift(cls, instance: "Object", **kwargs):
-        attrs = instance.model_dump(exclude=["id"])
+        attrs = instance.model_dump(exclude={"id"})
         always_merger.merge(attrs, kwargs)
         return cls(**attrs)
 

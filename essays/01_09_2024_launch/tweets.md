@@ -31,7 +31,8 @@ Flexibility and generalizability are at the core of Llegos. The core primitives 
 ![](./nested_contract_net.png)
 
 **Tweet 7**
-Jump into our GitHub repo to start exploring. We're excited to see what incredible systems the community will create wih Llegos. Let's build the future together.
+
+Jump into the GitHub repo to start exploring. We're excited to see what incredible systems the community will create wih Llegos. Let's build the future together.
 
 https://github.com/CyrusOfEden/llegos
 

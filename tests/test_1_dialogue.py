@@ -3,6 +3,8 @@ Autogen can be implemented in Llegos, but Llegos can't be implemented in Autogen
 """
 
 
+from random import random
+
 # matchref lets use use ref.a1, ref.a2, etc. to match on patterns in case statements
 from matchref import ref
 
@@ -30,6 +32,8 @@ class ChatBot(llegos.Actor):
         `message`s of type `MessageClass` are dispatched
         to the `receive_{message_class}(message)` method.
         """
+        if random() < 0.25:
+            return None
         return ChatMessage.reply_to(message, content=self.response)
 
 
@@ -62,4 +66,5 @@ def test_dialogue():
                 case ChatMessage(sender=ref.a1, receiver=ref.a2):
                     assert msg.content == a1.response
                 case ChatMessage(sender=ref.a2, receiver=ref.a1):
+                    assert msg.content == a2.response
                     assert msg.content == a2.response

@@ -2,6 +2,14 @@
 
 ## Table of Contents
 
+### Goals
+
+1. Actors are a container for your agents that isolate state.
+2. Actors have a mailbox and process messages one by one (to prevent race conditions).
+3. Actors can load state on startup, persist state, and preserve state on shutdown.
+4. Actors can run periodic tasks.
+5. Actors can be composed into static and dynamic graphs.
+
 - [Llegos: A strongly-typed Python DSL for multi-agent systems](#llegos-a-strongly-typed-python-dsl-for-multi-agent-systems)
   - [Features](#features)
   - [Quick Start Guide](#quick-start-guide)
