@@ -17,7 +17,7 @@ class Question(llegos.Message):
 
 
 class StudentState(llegos.Object):
-    learnings: list[str] = []
+    learnings: list[str] = Field(default_factory=list)
 
 
 class Student(llegos.Actor):

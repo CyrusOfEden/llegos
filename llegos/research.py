@@ -93,8 +93,6 @@ class Actor(Object):
     _event_emitter = EventEmitter()
 
     def can_receive(self, message: t.Union["Message", type["Message"]]) -> bool:
-        if isinstance(message, Message) and message.receiver != self:
-            return False
         return hasattr(self, self.receive_method_name(message))
 
     @staticmethod
@@ -216,40 +214,38 @@ network_token: Optional[Token[Network]] = None
 
 
 class Message(Object):
+    created_at: datetime = Field(default_factory=datetime.utcnow, frozen=True)
+    sender: Optional[t.ForwardRef("Actor")] = None
+    receiver: Optional[t.ForwardRef("Actor")] = None
+    parent: Optional[t.ForwardRef("Message")] = None
+
     @classmethod
     def reply_to(cls, message: "Message", **kwargs):
-        kwargs.update(
-            {
-                "sender": message.receiver,
-                "receiver": message.sender,
-                "parent": message,
-            }
-        )
-        return cls.lift(message, **kwargs)
+        attrs = {
+            "sender": message.receiver,
+            "receiver": message.sender,
+            "parent": message,
+        }
+        attrs.update(kwargs)
+        return cls.lift(message, **attrs)
 
     @classmethod
     def forward(cls, message: "Message", receiver: Actor, **kwargs) -> "Message":
-        kwargs.update(
-            {
-                "sender": message.receiver,
-                "receiver": receiver,
-                "parent": message,
-            }
-        )
-        return cls.lift(message, **kwargs)
-
-    created_at: datetime = Field(default_factory=datetime.utcnow, frozen=True)
-    sender: t.ForwardRef("Actor")
-    receiver: t.ForwardRef("Actor")
-    parent: Optional[t.ForwardRef("Message")] = None
+        attrs = {
+            "sender": message.receiver,
+            "receiver": receiver,
+            "parent": message,
+        }
+        attrs.update(kwargs)
+        return cls.lift(message, **attrs)
 
     @property
-    def sender_id(self) -> str:
-        return self.sender.id
+    def sender_id(self) -> Optional[str]:
+        return maybe(self.sender).id
 
     @property
-    def receiver_id(self) -> str:
-        return self.receiver.id
+    def receiver_id(self) -> Optional[str]:
+        return maybe(self.receiver).id
 
     @property
     def parent_id(self) -> Optional[str]:
