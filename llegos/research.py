@@ -1,16 +1,14 @@
-import functools
 import typing as t
 from collections.abc import Iterable
 from contextvars import ContextVar, Token
 from datetime import datetime
-from time import time
 
 from beartype import beartype
 from beartype.typing import Callable, Iterator, Optional
 from deepmerge import always_merger
 from ksuid import Ksuid
 from networkx import DiGraph, MultiGraph
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 from pydash import snake_case
 from pyee import EventEmitter
 from sorcery import delegate_to_attr, maybe
@@ -90,7 +88,7 @@ class InvalidMessage(ValueError):
 
 
 class Actor(Object):
-    _event_emitter = EventEmitter()
+    _event_emitter: EventEmitter = PrivateAttr(default_factory=EventEmitter)
 
     def can_receive(self, message: t.Union["Message", type["Message"]]) -> bool:
         return hasattr(self, self.receive_method_name(message))
@@ -173,7 +171,7 @@ class Network(Actor):
     _graph = MultiGraph()
 
     def __init__(self, actors: t.Sequence[Actor], **kwargs):
-        super().__init__(actors=actors, **kwargs)
+        super(Network, self).__init__(actors=actors, **kwargs)
         for actor in actors:
             self._graph.add_edge(self, actor)
 
@@ -326,26 +324,6 @@ def message_propogate(
         if reply:
             yield reply
             yield from message_propogate(reply, send_fn)
-
-
-def throttle(seconds):
-    """Decorator ensures function that can only be called once every `seconds` seconds."""
-
-    def decorate(f):
-        t = None
-
-        @functools.wraps(f)
-        def wrapped(*args, **kwargs):
-            nonlocal t
-            start = time()
-            if t is None or start - t >= seconds:
-                result = f(*args, **kwargs)
-                t = start
-                return result
-
-        return wrapped
-
-    return decorate
 
 
 Object.model_rebuild()
