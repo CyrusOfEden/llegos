@@ -43,7 +43,7 @@ class Dialogue(llegos.Network):
         Since actors can be a part of multiple networks, its important to
         scope their usage within the network by using `with {network}:`
         """
-        return llegos.message_propogate(
+        return llegos.message_propagate(
             ChatMessage(
                 content="Hello",
                 sender=self.actors[0],

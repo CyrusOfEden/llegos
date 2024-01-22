@@ -77,7 +77,7 @@ def test_student_question() -> None:
     )
     msg = Question(sender=student, receiver=teacher, content="What should I learn?")
 
-    messages = list(llegos.message_propogate(msg))
+    messages = list(llegos.message_propagate(msg))
     assert len(messages) == 2, "Did not terminate after Ack"
     assert messages[0].content in {"math", "science", "history"}
     assert messages[0].sender == teacher
@@ -103,7 +103,7 @@ def test_student_reflection() -> None:
     assert student.state.learnings == teachings[:-1]
 
     list(student.receive(teach(teachings[2])))
-    assert len(student.state.learnings) == 2, "Should have trimmed learnings"
+    assert len(student.state.learnings) == 2, "should have trimmed learnings"
 
 
 class LearningTeacher(llegos.Actor):
@@ -140,12 +140,18 @@ def test_learning_teacher() -> None:
         content="What should I learn?",
     )
 
-    messages = list(llegos.message_propogate(msg))
-    assert len(messages) == 2, "Did not terminate after Ack"
-    assert messages[0].content in {"biology", "chemistry", "physics"}
+    messages = list(llegos.message_propagate(msg))
+    assert len(messages) == 2
+    assert isinstance(messages[0], Teaching)
     assert messages[0].sender == science_teacher
-    assert messages[1].content == "I have learned 1 things!"
+    assert messages[0].content in {
+        "biology",
+        "chemistry",
+        "physics",
+    }
+    assert isinstance(messages[1], Ack)
     assert messages[1].sender == maths_teacher
+    assert messages[1].content == "I have learned 1 things!", "Ack content incorrect"
 
     msg = Question(
         sender=science_teacher,
@@ -153,9 +159,15 @@ def test_learning_teacher() -> None:
         content="What should I learn?",
     )
 
-    messages = list(llegos.message_propogate(msg))
-    assert len(messages) == 2, "Did not terminate after Ack"
-    assert messages[0].content in {"algebra", "geometry", "calculus"}
+    messages = list(llegos.message_propagate(msg))
+    assert len(messages) == 2
+    assert isinstance(messages[0], Teaching)
     assert messages[0].sender == maths_teacher
-    assert messages[1].content == "I have learned 1 things!"
+    assert messages[0].content in {
+        "algebra",
+        "geometry",
+        "calculus",
+    }
+    assert isinstance(messages[1], Ack)
     assert messages[1].sender == science_teacher
+    assert messages[1].content == "I have learned 1 things!"

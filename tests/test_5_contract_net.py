@@ -192,9 +192,9 @@ def test_contract_net():
     """
     We can use matchref to match on the reference of the actor that sent the message.
     """
-    for msg in llegos.message_propogate(req):
+    for msg in llegos.message_propagate(req):
         """
-        message_propogate that keeps calling message_send on yielded messages.
+        message_propagate that keeps calling message_send on yielded messages.
         """
         match msg:
             case Inform(sender=ref.manager, receiver=ref.user):
@@ -234,9 +234,9 @@ def test_nested_contract_net():
         task="do the thing",
     )
 
-    for msg in llegos.message_propogate(req):
+    for msg in llegos.message_propagate(req):
         """
-        message_propogate that keeps calling message_send on yielded messages.
+        message_propagate that keeps calling message_send on yielded messages.
         """
         match msg:
             case Inform(receiver=ref.user, sender=ref.manager):
