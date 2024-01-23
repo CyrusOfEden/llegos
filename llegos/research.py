@@ -318,14 +318,14 @@ def message_send(message: Message) -> Iterator[Message]:
 
 
 @beartype
-def message_propogate(
+def message_propagate(
     message: Message,
     send_fn: Callable[[Message], Iterator[Message]] = message_send,
 ) -> Iterator[Message]:
     for reply in send_fn(message):
         if reply:
             yield reply
-            yield from message_propogate(reply, send_fn)
+            yield from message_propagate(reply, send_fn)
 
 
 def throttle(seconds):

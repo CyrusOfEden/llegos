@@ -43,7 +43,7 @@ class Dialogue(llegos.Network):
         Since actors can be a part of multiple networks, its important to
         scope their usage within the network by using `with {network}:`
         """
-        return llegos.message_propogate(
+        return llegos.message_propagate(
             ChatMessage(
                 content="Hello",
                 sender=self.actors[0],
@@ -61,6 +61,7 @@ def test_dialogue():
     with dialogue:
         # get the first 5 messages
         for msg, _ in zip(dialogue.start(), range(4)):
+            print(f"{msg.sender.id}->{msg.receiver.id}: {msg.content}")
             assert a1.network == dialogue, "the actor's network is dialogue"
             match msg:
                 case ChatMessage(sender=ref.a1, receiver=ref.a2):

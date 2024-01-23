@@ -63,7 +63,7 @@ def test_inner_critic():
     user = llegos.Actor()
     thinker = Thinker()
 
-    train_of_thought = llegos.message_propogate(
+    train_of_thought = llegos.message_propagate(
         Thought(
             sender=user,
             receiver=thinker,
