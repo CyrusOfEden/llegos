@@ -47,7 +47,7 @@ def test_shell_input():
     initial_content = input("Enter the initial message: ")
 
     for _ in zip(
-        llegos.message_propogate(
+        llegos.message_propagate(
             ShellMessage(sender=user, receiver=bot, content=initial_content)
         ),
         range(2),

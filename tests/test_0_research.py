@@ -10,7 +10,7 @@ from matchref import ref
 from more_itertools import take
 from pydash import sample
 
-from llegos.research import Actor, Message, Network, Object, message_propogate
+from llegos.research import Actor, Message, Network, Object, message_propagate
 
 
 def test_message_hydration() -> None:
@@ -87,14 +87,14 @@ def test_ping_pong() -> None:
     ponger = Ponger()
 
     """
-    actor.receive(message), llegos.message_send(message), and llegos.message_propogate(message)
+    actor.receive(message), llegos.message_send(message), and llegos.message_propagate(message)
     all return a generator, you can iterate on it as much as you like.
 
     This generate yields all yielded and returned messages.
 
     In this case, we only want to iterate 4 times, so we use zip(..., range(4))
     """
-    messages = message_propogate(Ping(sender=ponger, receiver=pinger))
+    messages = message_propagate(Ping(sender=ponger, receiver=pinger))
 
     for m in take(4, messages):
         match m:
@@ -118,7 +118,7 @@ def test_actor_callbacks() -> None:
     ponger = Ponger()
     ponger.on("before:receive", lambda _: incr())
 
-    message_chain = message_propogate(Ping(sender=ponger, receiver=pinger))
+    message_chain = message_propagate(Ping(sender=ponger, receiver=pinger))
 
     take(2, message_chain)
     assert counter == 2
@@ -138,7 +138,7 @@ def test_actor_inheritance() -> None:
     a = PingPonger()
     b = PingPonger()
 
-    for m in take(4, message_propogate(Ping(sender=a, receiver=b))):
+    for m in take(4, message_propagate(Ping(sender=a, receiver=b))):
         match m:
             case Ping():
                 ...
@@ -178,7 +178,7 @@ class SoccerGame(Network):
 
     def play(self):
         self.reset()
-        return message_propogate(
+        return message_propagate(
             BallPass(
                 ball=SoccerBall(),
                 sender=self,
