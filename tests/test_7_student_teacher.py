@@ -31,7 +31,7 @@ class Student(llegos.Actor):
         a simple reflection mechanism.
         """
 
-        def before_receive(msg: llegos.Message):
+        def before_receive(_msg: llegos.Message):
             if (
                 any(self.state.learnings)
                 and len(self.state.learnings) % self.reflect_every == 0

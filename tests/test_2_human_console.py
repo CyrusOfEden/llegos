@@ -7,7 +7,6 @@ from pprint import pprint
 import pytest
 
 from llegos import research as llegos
-from llegos.research import Message
 
 
 class ShellMessage(llegos.Message):
@@ -23,7 +22,7 @@ class ShellHuman(llegos.Actor):
     respond in the shell to the system.
     """
 
-    def receive_missing(self, message: Message):
+    def receive_missing(self, message: llegos.Message):
         print(self.id, "received new message", message.__class__.__name__)
         pprint(message.model_dump())
 

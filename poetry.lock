@@ -644,6 +644,20 @@ files = [
 ]
 
 [[package]]
+name = "cheap-repr"
+version = "0.5.1"
+description = "Better version of repr/reprlib for short, cheap string representations."
+optional = false
+python-versions = "*"
+files = [
+    {file = "cheap_repr-0.5.1-py2.py3-none-any.whl", hash = "sha256:30096998aeb49367a4a153988d7a99dce9dc59bbdd4b19740da6b4f3f97cf2ff"},
+    {file = "cheap_repr-0.5.1.tar.gz", hash = "sha256:31ec63b9d8394aa23d746c8376c8307f75f9fca0b983566b8bcf13cc661fe6dd"},
+]
+
+[package.extras]
+tests = ["Django", "Django (<2)", "Django (<3)", "chainmap", "numpy (>=1.16.3)", "numpy (>=1.16.3,<1.17)", "numpy (>=1.16.3,<1.19)", "pandas (>=0.24.2)", "pandas (>=0.24.2,<0.25)", "pandas (>=0.24.2,<0.26)", "pytest"]
+
+[[package]]
 name = "click"
 version = "8.1.7"
 description = "Composable command line interface toolkit"
@@ -3519,6 +3533,27 @@ files = [
 ]
 
 [[package]]
+name = "snoop"
+version = "0.4.3"
+description = "Powerful debugging tools for Python"
+optional = false
+python-versions = "*"
+files = [
+    {file = "snoop-0.4.3-py2.py3-none-any.whl", hash = "sha256:b7418581889ff78b29d9dc5ad4625c4c475c74755fb5cba82c693c6e32afadc0"},
+    {file = "snoop-0.4.3.tar.gz", hash = "sha256:2e0930bb19ff0dbdaa6f5933f88e89ed5984210ea9f9de0e1d8231fa5c1c1f25"},
+]
+
+[package.dependencies]
+asttokens = "*"
+cheap-repr = ">=0.4.0"
+executing = "*"
+pygments = "*"
+six = "*"
+
+[package.extras]
+tests = ["Django", "birdseye", "littleutils", "numpy (>=1.16.5)", "pandas (>=0.24.2)", "pprintpp", "prettyprinter", "pytest", "pytest-order", "pytest-order (<=0.11.0)"]
+
+[[package]]
 name = "sorcery"
 version = "0.2.2"
 description = "Dark magic delights in Python"
@@ -4136,4 +4171,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<=3.12"
-content-hash = "3829db95b304c1760fb87071f918f4f4253848462d464aed333c64810005c528"
+content-hash = "3977c80be865a41bb7b2779838f748a47601a569b40d2bbeed0b4ea9c90e8634"
