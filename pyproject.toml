@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "llegos"
-version = "0.1.0"
+version = "0.2.0"
 description = "Where we explore the future of multi-agent systems"
 authors = ["Cyrus Nouroozi, <cyrus@edendaolab.com>"]
 license = "LGPLv3"
@@ -8,7 +8,7 @@ readme = "README.md"
 packages = [{ include = "llegos" }]
 
 [tool.poetry.dependencies]
-python = ">=3.10,<=3.12"
+python = ">=3.12,<3.13"
 beartype = "^0.15.0"
 deepmerge = "^1.1.0"
 networkx = "^3.2"
@@ -20,6 +20,9 @@ pydash = "^7.0.6"
 svix-ksuid = "^0.6.2"
 match-ref = "^1.0.1"
 more-itertools = "^10.2.0"
+anyio = "^4.2.0"
+pendulum = "^3.0.0"
+aiolimiter = "^1.1.0"
 
 [tool.poetry.group.dev]
 optional = true
@@ -35,11 +38,12 @@ pyee = "^11.0.0"
 pytest = "^7.3.1"
 pytest-asyncio = "^0.21.0"
 python-dotenv = "^1.0.0"
-ruff = "^0.0.261"
+ruff = "^0.1"
 setuptools = "^67.6.1"
 types-pyyaml = "^6.0.12.9"
-ray = {extras = ["default"], version = "^2.9.0"}
 snoop = "^0.4.3"
+more-itertools = "^10.2.0"
+trio = "^0.24.0"
 
 [tool.isort]
 profile = "black"
@@ -57,7 +61,7 @@ reportPrivateImportUsage = false
 reportMissingTypeStubs = false
 reportGeneralTypeIssues = false
 reportTypedDictNotRequiredAccess = false
-pythonVersion = "3.10"
+pythonVersion = "3.12"
 pythonPlatform = "Linux"
 
 [build-system]
