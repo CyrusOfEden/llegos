@@ -219,7 +219,7 @@ class Company(Network):
         """
         For systems with static relationships, you can define them in the constructor.
 
-        For dynamic systems, you can use actor.receivers(MessageClass, [*MessageClasses]) to
+        For dynamic systems, you can use network.receivers(MessageClass, [*MessageClasses]) to
         get a list of actors in the network that can receive all the passed MessageClasses.
         """
         for a, b in combinations(actors, 2):

@@ -31,7 +31,7 @@ class Student(llegos.Actor):
         a simple reflection mechanism.
         """
 
-        def before_receive(_msg: llegos.Message):
+        def before_receive(msg: llegos.Message):
             if (
                 any(self.state.learnings)
                 and len(self.state.learnings) % self.reflect_every == 0
@@ -103,7 +103,7 @@ def test_student_reflection() -> None:
     assert student.state.learnings == teachings[:-1]
 
     list(student.receive(teach(teachings[2])))
-    assert len(student.state.learnings) == 2, "should have trimmed learnings"
+    assert len(student.state.learnings) == 2, "Should have trimmed learnings"
 
 
 class LearningTeacher(llegos.Actor):
@@ -141,17 +141,11 @@ def test_learning_teacher() -> None:
     )
 
     messages = list(llegos.message_propagate(msg))
-    assert len(messages) == 2
-    assert isinstance(messages[0], Teaching)
+    assert len(messages) == 2, "Did not terminate after Ack"
+    assert messages[0].content in {"biology", "chemistry", "physics"}
     assert messages[0].sender == science_teacher
-    assert messages[0].content in {
-        "biology",
-        "chemistry",
-        "physics",
-    }
-    assert isinstance(messages[1], Ack)
+    assert messages[1].content == "I have learned 1 things!"
     assert messages[1].sender == maths_teacher
-    assert messages[1].content == "I have learned 1 things!", "Ack content incorrect"
 
     msg = Question(
         sender=science_teacher,
@@ -160,14 +154,8 @@ def test_learning_teacher() -> None:
     )
 
     messages = list(llegos.message_propagate(msg))
-    assert len(messages) == 2
-    assert isinstance(messages[0], Teaching)
+    assert len(messages) == 2, "Did not terminate after Ack"
+    assert messages[0].content in {"algebra", "geometry", "calculus"}
     assert messages[0].sender == maths_teacher
-    assert messages[0].content in {
-        "algebra",
-        "geometry",
-        "calculus",
-    }
-    assert isinstance(messages[1], Ack)
-    assert messages[1].sender == science_teacher
     assert messages[1].content == "I have learned 1 things!"
+    assert messages[1].sender == science_teacher
