@@ -2,6 +2,7 @@
 Verifying the core, conceptual functionality of the library.
 """
 
+import pickle
 import typing as t
 from itertools import combinations
 
@@ -23,6 +24,28 @@ def test_message_hydration() -> None:
     assert isinstance(m1_.sender, Actor)
     assert isinstance(m1_.receiver, Actor)
     assert m1.model_dump() == m1_.model_dump()
+
+
+class MyMessage(Message): ...
+
+
+def serialize(msg: Message):
+    return pickle.dumps(msg)
+
+
+def deserialize(data: dict):
+    return pickle.loads(data)
+
+
+def test_message_subclass_hydration() -> None:
+    m1 = MyMessage()
+    assert isinstance(deserialize(serialize(m1)), MyMessage)
+
+    m2 = MyMessage.reply_to(m1)
+    serde = deserialize(serialize(m2))
+    assert isinstance(serde, MyMessage)
+    # the line below fails
+    assert isinstance(serde.parent, MyMessage)
 
 
 def test_message_reply_to() -> None:
@@ -50,8 +73,7 @@ def test_message_forward() -> None:
     assert m2.receiver == a3
 
 
-class Ping(Message):
-    ...
+class Ping(Message): ...
 
 
 class Pinger(Actor):
@@ -59,8 +81,7 @@ class Pinger(Actor):
         return Pong.reply_to(ping)
 
 
-class Pong(Message):
-    ...
+class Pong(Message): ...
 
 
 class Ponger(Actor):
@@ -130,8 +151,7 @@ def test_actor_callbacks() -> None:
     assert counter == 10
 
 
-class PingPonger(Pinger, Ponger):
-    ...
+class PingPonger(Pinger, Ponger): ...
 
 
 def test_actor_inheritance() -> None:
@@ -226,12 +246,10 @@ class Company(Network):
             self._graph.add_edge(a, b)
 
 
-class Direction(Message):
-    ...
+class Direction(Message): ...
 
 
-class Department(Company):
-    ...
+class Department(Company): ...
 
 
 def test_office_network() -> None:
@@ -301,4 +319,5 @@ def test_office_network() -> None:
                 assert e.network == accounting
         with warehouse:
             for e in warehouse.actors:
+                assert e.network == warehouse
                 assert e.network == warehouse
